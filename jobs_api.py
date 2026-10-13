@@ -94,8 +94,24 @@ SKILLS = [
 SKILL_RES = [(n, re.compile(p, re.I)) for n, p in SKILLS]
 
 STATES = "AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY".split()
-US_RE = re.compile(r"United States|\bUSA\b|\bU\.S\.|\bUS\b|, (?:%s)\b|\b(?:San Francisco|New York|Seattle|Austin|Boston|Chicago|Denver|Los Angeles|Atlanta|Portland)\b" % "|".join(STATES))
-FOREIGN_RE = re.compile(r"Germany|United Kingdom|\bUK\b|India|Canada|Ireland|France|Spain|Brazil|Mexico|Poland|Netherlands|Japan|Australia|Singapore|EMEA|APAC|Europe|LATAM|Berlin|London|Dublin|Toronto|Sydney|Amsterdam|Lisbon|Paris", re.I)
+STATE_NAMES = ("Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|District of Columbia|Florida|Georgia|Hawaii|Idaho|Illinois|"
+               "Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|"
+               "New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|"
+               "South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming")
+US_RE = re.compile(r"United States|\bUSA\b|\bU\.S\.|\bUS\b|, (?:%s)\b|, (?:%s)\b|\b(?:San Francisco|New York|Seattle|Austin|Boston|Chicago|Denver|Los Angeles|Atlanta|Portland)\b" % ("|".join(STATES), STATE_NAMES))
+FOREIGN_RE = re.compile(r"Germany|United Kingdom|\bUK\b|India|Canada|Ireland|France|Spain|Brazil|Mexico|Poland|Netherlands|Japan|Australia|New Zealand|\bANZ\b|Singapore|EMEA|APAC|Europe|LATAM|Latin America|Berlin|London|Dublin|Toronto|Vancouver|Montreal|Sydney|Amsterdam|Lisbon|Paris|Tokyo|Seoul|Hong Kong|Israel|Dubai|Philippines|Argentina|Colombia|Chile|Vietnam|Indonesia|Malaysia|Thailand|South Africa|Nigeria|Kenya|Egypt|Turkey|Romania|Ukraine|Czech|Portugal|Italy|Sweden|Norway|Denmark|Finland|Switzerland|Belgium|Austria", re.I)
+EXPLICIT_US = re.compile(r"United States|\bUSA\b|\bU\.S\.|\bUS\b")
+
+
+def _us_ok(loc, remote):
+    """True when a posting can be done from the United States. A location is split on ';' and '|' (one posting can list
+    several cities): any part that names the US, or is a US place with no foreign word, passes. A bare 'Remote' passes only
+    when no foreign place is named. (', CA' is California; 'Toronto, ON, CA' is Canada and must not pass on that.)"""
+    parts = [p for p in re.split(r"[;|]", loc) if p.strip()] or [loc]
+    for p in parts:
+        if EXPLICIT_US.search(p) or (US_RE.search(p) and not FOREIGN_RE.search(p)):
+            return True
+    return bool(remote and not FOREIGN_RE.search(loc))
 SAL_RE = re.compile(r"\$\s?(\d{2,3}(?:,\d{3})+|\d{2,3}\s?[kK])\s*(?:-|–|—|to)\s*\$?\s*(\d{2,3}(?:,\d{3})+|\d{2,3}\s?[kK])")
 YRS_RE = re.compile(r"(\d{1,2})\+?\s*(?:or more\s*)?(?:years|yrs)", re.I)
 
@@ -105,6 +121,52 @@ NOT_CONTACT_RE = re.compile(r"scam|fraud|phish|abuse|security|privacy|legal|comp
 
 _cache = {}
 _lock = threading.Lock()
+_disk = {"loaded": False, "dirty": False}
+DISK_MAX_AGE = 24 * 3600          # never trust a saved copy older than a day
+CACHE_VERSION = 3                  # raise this whenever the rules for keeping or classifying postings change: older saved copies are then ignored
+
+
+def _cache_file():
+    """Where the last good postings are kept, so a restart or a new deploy shows jobs at once instead of waiting
+    for every employer board (UAPLY_DATA_DIR on a host, ./data on this computer; never committed)."""
+    return os.path.join(os.environ.get("UAPLY_DATA_DIR") or os.path.join(ROOT, "data"), "jobs-cache.json")
+
+
+def _load_disk():
+    if _disk["loaded"]:
+        return
+    _disk["loaded"] = True
+    try:
+        with open(_cache_file(), encoding="utf-8") as f:
+            saved = json.load(f)
+        if not isinstance(saved, dict) or saved.pop("_version", None) != CACHE_VERSION:
+            return
+        now = time.time()
+        with _lock:
+            for key, v in saved.items():
+                kind, token, name = key.split("|", 2)
+                if isinstance(v, dict) and isinstance(v.get("jobs"), list) and now - float(v.get("at", 0)) < DISK_MAX_AGE:
+                    _cache.setdefault((kind, token, name), {"at": float(v["at"]), "jobs": v["jobs"], "status": str(v.get("status", ""))})
+    except Exception:
+        pass
+
+
+def _save_disk():
+    if not _disk["dirty"]:
+        return
+    try:
+        with _lock:
+            snap = {"|".join(k): {"at": v["at"], "jobs": v["jobs"], "status": v["status"]} for k, v in _cache.items()}
+            snap["_version"] = CACHE_VERSION
+            _disk["dirty"] = False
+        path = _cache_file()
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(snap, f)
+        os.replace(tmp, path)
+    except Exception:
+        pass
 
 
 def _contact(text):
@@ -249,8 +311,10 @@ def _fetch_raw(kind, token, name):
 def _normalize(raw, kind, name):
     title, loc, text = raw["title"], raw["loc"], raw["text"]
     remote = raw["remote"] if raw["remote"] is not None else bool(re.search(r"\bremote\b", loc, re.I))
-    if not (US_RE.search(loc) or (remote and not FOREIGN_RE.search(loc))):
+    if not _us_ok(loc, remote):
         return None
+    if FOREIGN_RE.search(title) and not EXPLICIT_US.search(loc):
+        return None                                     # a region-specific role (for example "ANZ" or "Toronto") listed as just "Remote"
     if not raw["url"].startswith("https://"):
         return None
     hay = (title + " ") * 2 + text
@@ -273,16 +337,31 @@ def _normalize(raw, kind, name):
     yrs = min(int(m.group(1)), 15) if m else 0
     edu = "Bachelor" if re.search(r"bachelor|\bB\.?S\.? degree", text, re.I) else "High school"
     blurb = text[:170].rsplit(" ", 1)[0] + "…" if len(text) > 170 else text
+    desc = text[:700].rsplit(" ", 1)[0] + "…" if len(text) > 700 else text      # longer excerpt, used in the emails
     jid = 100000 + int(hashlib.sha1(("%s:%s" % (kind, raw["id"])).encode()).hexdigest()[:6], 16)
     src = name if kind in ("remotive", "jobicy", "muse") else "%s's careers page" % raw["company"]
     # contact is deliberately empty and apply is "link": a third-party feed never gets an application emailed to anyone
     return dict(id=jid, co=raw["company"], role=title, loc=loc or "Not listed", mode=mode,
-                sal=raw.get("sal") or _salary(raw["salary_text"], text), yrs=yrs, edu=edu, skills=skills, blurb=blurb,
+                sal=raw.get("sal") or _salary(raw["salary_text"], text), yrs=yrs, edu=edu, skills=skills, blurb=blurb, desc=desc,
                 type=typ, url=raw["url"], source=src, contact="", apply="link", live=True,
                 posted=raw.get("posted", 0), perks=_perks(text), comm=bool(COMM_RE.search(text)))
 
 
 _refreshing = set()
+
+
+def job_info(job_id):
+    """What this server itself holds about a job (partner list or feed cache), or None. Used so an email describes the job from
+    our own data rather than from whatever the browser sends."""
+    for j in partner_jobs():
+        if j["id"] == job_id:
+            return j
+    with _lock:
+        for c in _cache.values():
+            for j in c["jobs"]:
+                if j["id"] == job_id:
+                    return j
+    return None
 
 
 def known_contact(job_id):
@@ -301,6 +380,7 @@ def known_contact(job_id):
 def _refresh_in_background(src):
     try:
         _fetch_source(src)
+        _save_disk()
     finally:
         with _lock:
             _refreshing.discard(src)
@@ -342,6 +422,7 @@ def _fetch_source(src):
         return jobs, status
     with _lock:
         _cache[src] = {"at": time.time(), "jobs": jobs, "status": status}
+        _disk["dirty"] = True
     return jobs, status
 
 
@@ -445,9 +526,10 @@ def job_policy(job_id):
 
 
 def get_jobs():
+    _load_disk()
     allowed = feeds_allowed()
     sources = [s for s in SOURCES if s[0] in allowed]
-    with ThreadPoolExecutor(max_workers=8) as ex:
+    with ThreadPoolExecutor(max_workers=16) as ex:
         results = list(ex.map(_load_source, sources))
     jobs, seen, summary = [], set(), {}
     for pj in partner_jobs():
@@ -462,6 +544,7 @@ def get_jobs():
                 jobs.append(j)
     if not sources:
         summary["Third-party feeds"] = "off (not verified as permitted)"
+    _save_disk()
     return {"fetched_at": int(time.time()), "sources": summary, "jobs": jobs}
 
 

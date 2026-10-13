@@ -62,6 +62,8 @@ def test_mail():
     to = uaply_api._owner_copy(cfg) or (s.get("from_addr") or "")
     if not (s.get("host") and s.get("from_addr")):
         return 200, {"ok": False, "message": "Email sending is not set up yet. Run python tools/setup-config.py first."}
+    if not uaply_api.mail_ready():
+        return 200, {"ok": False, "message": "The sending Gmail has no App Password yet. Create one at myaccount.google.com/apppasswords, then run python tools/setup-config.py."}
     if not to:
         return 200, {"ok": False, "message": "No address to send the test to."}
     msg = EmailMessage()
@@ -77,6 +79,8 @@ def test_mail():
             srv.send_message(msg)
     except smtplib.SMTPAuthenticationError:
         return 200, {"ok": False, "message": "Gmail refused the login. Use an App Password (not your normal password), with 2-Step Verification on."}
+    except smtplib.SMTPServerDisconnected:
+        return 200, {"ok": False, "message": "The mail server closed the connection. Check the host and port, and that the App Password is right."}
     except (OSError, smtplib.SMTPException) as e:
         return 200, {"ok": False, "message": "Could not send: " + type(e).__name__}
     return 200, {"ok": True, "message": "Sent to " + to + ". Check that inbox."}

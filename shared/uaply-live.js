@@ -54,9 +54,13 @@ function apply(w,host){
   var el=host&&(host.getElementById("note")||host.getElementById("what"));
   function say(m){if(el)el.textContent=m}
   var REL=!!((host&&host.defaultView&&host.defaultView.UAplyOpts)||{}).release;
-  if(REL)w.__uaplyHideSamples=true;      /* a release build never shows the made-up example listings, even before real ones load */
+  if(REL){            /* a release build never shows the made-up example listings, not even while the real ones load or if they fail to */
+    w.__uaplyHideSamples=true;w.__uaplyLoadingJobs=true;
+    try{w.__uaply.renderAll()}catch(e){}
+  }
   say("Loading real postings…");
   return fetch("/api/jobs").then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}).then(function(data){
+    w.__uaplyLoadingJobs=false;
     var now=Date.now(),fresh=(data.jobs||[]).map(function(j){j.seen=now;return j});
     if(fresh.length>=5)w.__uaplyHideSamples=true;      /* set before adding, so the deck renders once */
     var added=w.__uaplyJobs.add(fresh);
@@ -66,7 +70,7 @@ function apply(w,host){
     writeCache(all);
     var src=Object.keys(data.sources||{}).map(function(k){return k+": "+data.sources[k]}).join(" · ");
     say("Real postings: "+fresh.length+" loaded ("+added+" new). "+src);
-  }).catch(function(e){say(REL?"Could not load jobs ("+e.message+"). Check your connection and try again.":"Could not load real postings ("+e.message+"). Showing the example jobs.")});
+  }).catch(function(e){w.__uaplyLoadingJobs=false;if(REL)w.__uaplyJobsFailed=true;if(REL){try{w.__uaply.renderAll()}catch(x){}}say(REL?"Could not load jobs ("+e.message+"). Check your connection and try again.":"Could not load real postings ("+e.message+"). Showing the example jobs.")});
 }
 
 /* ---------------- kit + submit ---------------- */
@@ -164,7 +168,7 @@ function kitApply(w,host){
       var sendBtn=d.getElementById("kitSend");if(sendBtn)sendBtn.disabled=true;
       setStatus("Sending…");
       post("/api/apply",{consent:true,confirm_real:live,match:m.pct,note:ta.value,
-        job:{id:job.id,co:job.co,role:job.role,url:job.url,source:job.source,loc:job.loc,contact:contact},
+        job:{id:job.id,co:job.co,role:job.role,url:job.url,source:job.source,loc:job.loc,contact:contact,mode:job.mode,type:job.type||"job",sal:job.sal,blurb:job.blurb},
         profile:{name:p.name,email:p.email,title:p.title,years:p.years,skills:p.skills,loc:p.loc,edu:p.edu,ext:p.ext||{}}
       }).then(function(r){
         var j=r.j||{};
@@ -270,7 +274,7 @@ function kitApply(w,host){
          turned on the opt-in "Message the hiring manager" preference (Plus and Pro; off by default) */
       var msgOn=!!(w.__uaplyAutoMsg&&w.__uaplyAutoMsg()&&w.__uaplyMessage);
       post("/api/apply",{consent:true,confirm_real:live,match:m.pct,note:msgOn?w.__uaplyMessage(job,m,p):"",
-        job:{id:job.id,co:job.co,role:job.role,url:job.url||"https://example.com/example-listing",source:job.source,loc:job.loc,contact:job.contact||""},
+        job:{id:job.id,co:job.co,role:job.role,url:job.url||"https://example.com/example-listing",source:job.source,loc:job.loc,contact:job.contact||"",mode:job.mode,type:job.type||"job",sal:job.sal,blurb:job.blurb},
         profile:{name:p.name,email:p.email,title:p.title,years:p.years,skills:p.skills,loc:p.loc,edu:p.edu,ext:p.ext||{}}
       }).then(function(r){
         var j=r.j||{};
