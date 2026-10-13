@@ -25,7 +25,7 @@ function patch(s){
   var extra=cached.length?","+JSON.stringify(cached).slice(1,-1).replace(/<\//g,"<\\/"):"";
   s=once(s,'regional cookbooks."}','regional cookbooks."}'+extra);
   s=once(s,"var JOB_BY_ID={};JOBS.forEach(function(j){JOB_BY_ID[j.id]=j});",
-    "var JOB_BY_ID={};JOBS.forEach(function(j){JOB_BY_ID[j.id]=j});\nwindow.__aplyJobs={add:function(list){var n=0;list.forEach(function(j){if(!JOB_BY_ID[j.id]){JOBS.push(j);JOB_BY_ID[j.id]=j;n++}});renderAll();return n}};\n"+
+    "var JOB_BY_ID={};JOBS.forEach(function(j){JOB_BY_ID[j.id]=j});\nwindow.__aplyJobs={add:function(list){var n=0;list.forEach(function(j){if(!JOB_BY_ID[j.id]){JOBS.push(j);JOB_BY_ID[j.id]=j;n++}else{var o=JOB_BY_ID[j.id];if(j.posted)o.posted=j.posted;if(j.perks)o.perks=j.perks;if(j.type)o.type=j.type;o.comm=!!j.comm}});renderAll();return n}};\n"+
     /* Links open as real anchor clicks (a user gesture), which popup blockers accept; window.open can be refused silently. */
     "window.__aplyOpen=function(u){if(!/^https:\\/\\//.test(u||\"\"))return;var a=document.createElement(\"a\");a.href=u;a.target=\"_blank\";a.rel=\"noopener noreferrer\";document.body.appendChild(a);a.click();a.remove()};");
   s=once(s,"return !S.decisions[j.id]&&","return !S.decisions[j.id]&&(j.live||!window.__aplyHideSamples)&&");
@@ -58,7 +58,8 @@ function apply(w,host){
     if(fresh.length>=5)w.__aplyHideSamples=true;      /* set before adding, so the deck renders once */
     var added=w.__aplyJobs.add(fresh);
     var all=readCache(),ids={};all.forEach(function(j){ids[j.id]=1});
-    fresh.forEach(function(j){if(!ids[j.id])all.push(j)});
+    var byId={};fresh.forEach(function(j){byId[j.id]=j;if(!ids[j.id])all.push(j)});
+    all.forEach(function(c){var f=byId[c.id];if(f){c.posted=f.posted;c.perks=f.perks;c.type=f.type;c.comm=!!f.comm}});   /* keep saved copies current */
     writeCache(all);
     var src=Object.keys(data.sources||{}).map(function(k){return k+": "+data.sources[k]}).join(" · ");
     say("Real postings: "+fresh.length+" loaded ("+added+" new). "+src);
@@ -97,49 +98,41 @@ function kitApply(w,host){
   function sheet(job,m,p,undo,S,save){
     if(!job.url||d.getElementById("kitSheet"))return;
     var submitOn=!!w.__aplySubmitOn&&!!w.__aplyMode,mode=w.__aplyMode,live=mode==="live";
-    /* ask = show a review screen with a Send button first. Always in live mode; in test mode only where the page opts in (sandbox). */
-    var auto=live&&w.__aplyAuto!==false;     /* live + auto_send (the default): swipe right sends by itself after a short undo window */
-    var ask=(live&&!auto)||!!((host&&host.defaultView&&host.defaultView.AplyOpts)||{}).reviewBeforeSend;
-    var target=(live&&w.__aplyRedirect)||job.contact||"";
     var contact=job.contact||"",profileOk=!!(p.name&&EMAIL.test(p.email||"")&&(!live||p.custom));
     var o=d.createElement("div");o.id="kitSheet";
     o.style.cssText="position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.45);overflow:auto";
     var intro=!submitOn
       ?'Saved to your Applied list. Aply does not send applications for you: '+esc(job.co)+' only accepts them on its own page'+(contact?'':', and the posting does not list a recruiter email')+'. Here is a note and the quickest way to finish.'
-      :(live&&auto
-        ?(target
-          ?'<b>'+(w.__aplyRedirect?'Test redirect. ':'')+'Applying automatically.</b> Your application will be emailed to <b>'+esc(target)+'</b> in a few seconds. Press Undo to cancel. Replies go to your email.'
-          :'This posting lists no recruiter email, so Aply cannot email it. Use the application page below to apply on the employer\'s site.')
       :(live
         ?(w.__aplyRedirect
           ?'<b>Test redirect.</b> Pressing Send emails this application to <b>'+esc(w.__aplyRedirect)+'</b> instead of the recruiter. Replies go to your email.'
           :'Review your application. Pressing Send emails it to the recruiter'+(contact?' at <b>'+esc(contact)+'</b>':'')+', and replies go to your email.'+(contact?'':' This posting lists no recruiter email, so Aply cannot email it: use the application page instead.'))
-        :(ask
-          ?'<b>Test mode.</b> Review the note, then press Send. It goes to a simulated recruiter inbox on this computer; nothing is sent to '+esc(job.co)+'.'
-          :'<b>Test mode.</b> Your application was delivered to a simulated recruiter inbox on this computer. Nothing was sent to '+esc(job.co)+'.')));
+        :'<b>Test mode.</b> Your application was delivered to a simulated recruiter inbox on this computer. Nothing was sent to '+esc(job.co)+'.');
     o.innerHTML='<div role="dialog" aria-modal="true" aria-labelledby="kitH" style="background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:20px;max-width:460px;width:100%;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px">'+
-      '<h2 id="kitH" style="margin:0;font:800 20px var(--display)">'+(submitOn&&!ask?'Sending to ':'Finish applying to ')+esc(job.co)+'</h2>'+
+      '<h2 id="kitH" style="margin:0;font:800 20px var(--display)">'+(submitOn&&!live?'Sending to ':'Finish applying to ')+esc(job.co)+'</h2>'+
       '<p style="margin:0;color:var(--muted);font-size:14px">'+intro+'</p>'+
       (!p.custom?'<p style="margin:0;color:var(--mid);font-size:13px">This uses the example profile. Add your own details in Profile first.</p>':'')+
       (submitOn&&!profileOk?'<p style="margin:0;color:var(--no);font-size:13px">Add your name and a valid email in Profile, Settings so the recruiter can reply.</p>':'')+
       '<textarea id="kitText" rows="7" aria-label="Application note" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font:inherit;resize:vertical"></textarea>'+
       '<p id="kitStatus" role="status" style="margin:0;font-size:13.5px;font-weight:600;min-height:1.3em"></p>'+
       '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
-        (submitOn&&ask?'<button type="button" class="btn" id="kitSend"'+((!profileOk||(live&&!(contact||w.__aplyRedirect)))?' disabled':'')+'>Send application</button>':'')+
+        (submitOn&&live?'<button type="button" class="btn" id="kitSend"'+((!profileOk||!(contact||w.__aplyRedirect))?' disabled':'')+'>Send application</button>':'')+
         (submitOn&&!profileOk?'<button type="button" class="btn" id="kitProfile">Open Profile</button>':'')+
-        '<button type="button" class="btn'+(submitOn&&ask?' ghost':'')+'" id="kitOpen">Open application page ↗</button>'+
+        '<button type="button" class="btn'+(submitOn&&live&&contact?' ghost':'')+'" id="kitOpen">Open application page ↗</button>'+
         '<button type="button" class="btn ghost" id="kitCopy">Copy note</button>'+
+        (w.__aplyAnswers?'<button type="button" class="btn ghost" id="kitAnswers">Copy my answers</button>':'')+
         '<button type="button" class="btn ghost" id="kitMail">Email draft</button>'+
         (submitOn&&!live?'<a class="linkbtn" href="/outbox" target="_blank" rel="noopener noreferrer" style="align-self:center">View test inbox ↗</a>':'')+
       '</div>'+
       '<div style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap"><button type="button" class="linkbtn" id="kitUndo">Undo, do not save</button><button type="button" class="btn ghost" id="kitDone">Done</button></div></div>';
     d.body.appendChild(o);
     var ta=d.getElementById("kitText"),statusEl=d.getElementById("kitStatus"),undoBtn=d.getElementById("kitUndo");
-    ta.value=note(job,m,p);
-    var cancelled=false;
-    function close(){o.remove()}
+    ta.value=(w.__aplyAutoMsg&&w.__aplyAutoMsg()&&w.__aplyMessage)?w.__aplyMessage(job,m,p):note(job,m,p);
+    var tm=0;
+    function close(){clearInterval(tm);o.remove()}
     function setStatus(t,bad){statusEl.textContent=t;statusEl.style.color=bad?"var(--no)":"var(--yes)"}
     function send(){
+      clearInterval(tm);
       var sendBtn=d.getElementById("kitSend");if(sendBtn)sendBtn.disabled=true;
       setStatus("Sending…");
       post("/api/apply",{consent:true,confirm_real:live,match:m.pct,note:ta.value,
@@ -156,8 +149,11 @@ function kitApply(w,host){
         else if(j.status==="handoff")setStatus("This employer takes applications on its own page. Use the button below.");
         else if(j.status==="failed"){setStatus(j.error||"The email could not be sent.",true);if(sendBtn)sendBtn.disabled=false;return}
         else setStatus("Done.");
+        var rc=j.receipt,au=w.__aplyAuth?w.__aplyAuth():null;
+        if(rc)statusEl.textContent+=" "+({sent:"A receipt was emailed to "+rc.to+".",delivered_test:"Your receipt for "+rc.to+" is in the test inbox.",not_configured:"No receipt was emailed: email sending is not set up yet.",failed:"The receipt email to "+rc.to+" could not be sent."}[rc.status]||"");
+        else if(au&&au.up&&!au.user)statusEl.textContent+=" Sign in (top right) to get an email receipt.";
         if(j.status!=="handoff")undoBtn.hidden=true;
-        if(sendBtn&&(j.status==="sent"||j.status==="delivered_test"||j.status==="duplicate"))sendBtn.hidden=true;
+        if(sendBtn&&(j.status==="sent"||j.status==="duplicate"))sendBtn.hidden=true;
       }).catch(function(){setStatus("Could not reach the server.",true);if(sendBtn)sendBtn.disabled=false});
     }
     var sendBtn=d.getElementById("kitSend");if(sendBtn)sendBtn.onclick=send;
@@ -165,27 +161,26 @@ function kitApply(w,host){
     if(pb)pb.onclick=function(){close();var b=d.getElementById("nb-prof");if(b){b.click();var it=d.querySelector('.nwrap[data-k=prof] .nitem[data-v=settings]');if(it)it.click()}};
     d.getElementById("kitOpen").onclick=function(){if(w.__aplyOpen)w.__aplyOpen(job.url)};
     d.getElementById("kitCopy").onclick=function(){copy(ta.value,this)};
+    var ansBtn=d.getElementById("kitAnswers");
+    if(ansBtn)ansBtn.onclick=function(){
+      var b=this,t=w.__aplyAnswers();
+      function done(){b.textContent="Copied";setTimeout(function(){b.textContent="Copy my answers"},1500)}
+      if(w.navigator.clipboard&&w.navigator.clipboard.writeText)w.navigator.clipboard.writeText(t).then(done,function(){setStatus("Copy was blocked by the browser.",true)});else setStatus("Copy is not available here.",true);
+    };
     d.getElementById("kitMail").onclick=function(){
       var a=d.createElement("a");a.href="mailto:"+encodeURIComponent(contact).replace("%40","@")+"?subject="+encodeURIComponent("Application: "+job.role)+"&body="+encodeURIComponent(ta.value);
       d.body.appendChild(a);a.click();a.remove();
     };
     d.getElementById("kitDone").onclick=close;
-    undoBtn.onclick=function(){cancelled=true;close();undo()};
+    undoBtn.onclick=function(){close();undo()};
     o.addEventListener("keydown",function(e){if(e.key==="Escape")close()});
     (d.getElementById("kitSend")&&!d.getElementById("kitSend").disabled?d.getElementById("kitSend"):d.getElementById("kitOpen")).focus();
-    if(submitOn&&!ask&&profileOk){
-      if(!live||!target)send();          /* test mode, or nothing to email: record it now */
-      else{                              /* live: send by itself after a short window in which Undo cancels it */
-        var left=Math.max(0,w.__aplyGrace||0),timer=null;
-        var tick=function(){
-          if(cancelled){clearInterval(timer);return}
-          if(left<=0){clearInterval(timer);send();return}
-          setStatus("Sending to "+target+" in "+left+" second"+(left===1?"":"s")+". Press Undo to cancel.");left--;
-        };
-        timer=setInterval(tick,1000);tick();
-      }
+    if(submitOn&&!live&&profileOk)send();   /* test mode: swipe right delivers immediately */
+    else if(submitOn&&!live&&!profileOk)setStatus("Not sent yet: your profile needs a name and email.",true);
+    else if(submitOn&&live&&profileOk&&(contact||w.__aplyRedirect)&&w.__aplyAutoMsg&&w.__aplyAutoMsg()){
+      var left=5;setStatus("Sending your message in "+left+"… tap Undo to stop.");
+      tm=setInterval(function(){left--;if(left>0){setStatus("Sending your message in "+left+"… tap Undo to stop.");return}clearInterval(tm);send()},1000);
     }
-    else if(submitOn&&!ask&&!profileOk)setStatus("Not sent yet: your profile needs a name and email.",true);
   }
 
   w.__aplyOnApplied=sheet;   /* also tells the live patch not to show its own toast */
@@ -199,7 +194,7 @@ function kitApply(w,host){
 
 function submitApply(w){
   w.__aplySubmitOn=true;
-  return w.fetch("/api/apply/config").then(function(r){return r.json()}).then(function(c){w.__aplyMode=c.mode==="live"?"live":"test";w.__aplyRedirect=c.redirect||"";w.__aplyAuto=c.autoSend!==false;w.__aplyGrace=typeof c.graceSeconds==="number"?c.graceSeconds:5}).catch(function(){});
+  return w.fetch("/api/apply/config").then(function(r){return r.json()}).then(function(c){w.__aplyMode=c.mode==="live"?"live":"test";w.__aplyRedirect=c.redirect||""}).catch(function(){});
 }
 
 window.AplyLive={patch:patch,apply:apply,kit:{patch:kitPatch,apply:kitApply},submit:{apply:submitApply}};

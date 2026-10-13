@@ -25,8 +25,10 @@ console.log("Scripts inside the pages");
 });
 
 console.log("Python files");
-const py = process.platform === "win32" ? "python" : "python3";
-["serve.py", "jobs_api.py", "apply_api.py"].forEach((f) => {
+/* On Windows "python" is often only a Microsoft Store shortcut; fall back to the "py" launcher when it does not run. */
+const py = process.platform !== "win32" ? "python3"
+  : (spawnSync("python", ["--version"], { encoding: "utf8" }).status === 0 ? "python" : "py");
+["serve.py", "jobs_api.py", "apply_api.py", "auth_api.py"].forEach((f) => {
   const r = spawnSync(py, ["-m", "py_compile", f], { encoding: "utf8" });
   r.status === 0 ? ok(f) : bad(f + "\n" + (r.stderr || r.error));
 });
