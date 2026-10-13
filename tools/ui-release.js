@@ -11,7 +11,7 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   const sub = (s) => ev("(()=>{const e=[...(" + F + ").querySelectorAll('button,a,[role=tab]')].find(b=>b.offsetParent&&b.innerText.split(/\\s+/).join(' ').trim().startsWith(" + JSON.stringify(s) + "));if(e)e.click();return !!e})()");
   const setVal = (id, v) => ev("(()=>{const e=" + F + ".getElementById('" + id + "');if(!e)return false;e.value=" + JSON.stringify(v) + ";e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
   // words that must never reach a real user of the release build
-  const BANNED = /SANDBOX|TEST MODE|\(test\)|simulated|Sandbox controls|Northwind|Calloway|Ironbridge|Seaside Software|Redwood Marketing|Atlas Robotics|Harbor Bank|Summit Health|Corner Table|Brightpath|Lumen Labs|example profile|Release candidate|Plan & billing|Choose Plus|Choose Pro|Jordan Lee/i;
+  const BANNED = /SANDBOX|TEST MODE|\(test\)|simulated|Sandbox controls|Northwind|Calloway|Ironbridge|Seaside Software|Redwood Marketing|Atlas Robotics|Harbor Bank|Summit Health|Corner Table|Brightpath|Lumen Labs|Release candidate|Plan & billing|Choose Plus|Choose Pro|Jordan Lee/i;
   const scan = async (where) => {
     const t = await pageText();
     const m = t.match(BANNED);
@@ -23,6 +23,8 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   check("developer bar is hidden", await ev("getComputedStyle(document.getElementById('devbar')).display === 'none'"));
   check("tab title is just UAply", (await ev("document.title")) === "UAply");
   check("jobs loaded from the server", (await ev("document.querySelector('iframe').contentWindow.__uaplyHideSamples === true")));
+  check("a new visitor is told the scores use an example profile", await ev("getComputedStyle(" + F + ".getElementById('banner')).display !== 'none'"));
+  check("no 'N jobs left' counters in the release build", await ev("getComputedStyle(" + F + ".getElementById('progress')).display === 'none'"));
   await scan("the first screen");
   console.log("   first card:", (await ev("(" + F + ").body.innerText.split(" + nl + ").filter(x=>x.trim()).slice(3,12).join(' | ')")).slice(0, 180));
 
@@ -61,23 +63,29 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   await sub("Internships"); await sleep(700);
   const hidden = await ev("(" + F + ").body.innerText.split(" + nl + ").join(' ').match(/(\\d+) listings? (are|is) hidden because/)");
   check("saving just a name and email leaves the real jobs visible", !hidden, hidden ? hidden[0] : "");
+  check("the example-profile notice goes away once there is a real profile", await ev("getComputedStyle(" + F + ".getElementById('banner')).display === 'none'"));
   check("a real internship card shows", (await ev(F + ".querySelectorAll('.card').length")) >= 1);
   await scan("the deck after saving a profile");
 
-  // each service tab shows its own kind of job (co-ops are rare in real feeds, so an empty co-op deck is allowed)
-  const kinds = { "Full-time": null, "Part-time": /part[- ]time|weekend|seasonal/i, "Internships": /intern/i, "Co-ops": /co-?op/i };
-  for (const [tab, rx] of Object.entries(kinds)) {
-    await ev(F + ".getElementById('nb-svc').click()"); await sleep(300);
-    await sub(tab); await sleep(700);
-    const t = await pageText();
-    const has = (await ev(F + ".querySelectorAll('.card').length")) > 0 && /APPLY/.test(t);
-    if (!rx) check("Services > " + tab + " shows a job to swipe", has);
-    else check("Services > " + tab + (has ? " shows a matching job" : " is empty with a friendly message"), has ? rx.test(t) : /seen every|No jobs|nothing/i.test(t), has ? "" : t.slice(0, 80));
+  // each service tab shows its own kind of job. Read the actual top card and look it up in the job list: no guessing from page text.
+  const topJob = () => ev("JSON.stringify((()=>{const w=document.querySelector('iframe').contentWindow;const c=w.document.querySelector('.card.top');" +
+    "if(!c)return {type:w.__uaply.getType(),card:null};const n=x=>String(x).split(/\\s+/).join(' ');const t=n(c.innerText);const j=w.__uaply.JOBS.find(j=>t.includes(n(j.role))&&t.includes(n(j.co)));" +
+    "return {type:w.__uaply.getType(),card:j?{role:j.role,co:j.co,jtype:j.type||'job',live:!!j.live}:'unmatched'}})())");
+  const pick = async (nb, label) => {                                   // open the menu and choose an item, the way a tap does
+    await ev(F + ".getElementById('" + nb + "').click()"); await sleep(450);
+    return ev("(()=>{const e=[...(" + F + ").querySelectorAll('.nitem')].find(b=>b.innerText.trim().startsWith(" + JSON.stringify(label) + "));if(!e)return false;e.click();return true})()");
+  };
+  const kinds = { "Full-time": "job", "Part-time": "parttime", "Internships": "internship", "Co-ops": "coop" };
+  for (const [tab, want] of Object.entries(kinds)) {
+    check("choosing " + tab + " works", await pick("nb-svc", tab)); await sleep(800);
+    const r = JSON.parse(await topJob());
+    if (r.card === null) check("Services > " + tab + " is empty with a friendly message", want === "coop" || want === "parttime", "no card (only acceptable for rare types)");
+    else check("Services > " + tab + " shows a real " + want + " job", r.type === want && r.card !== "unmatched" && r.card.jtype === want && r.card.live === true,
+      r.card === "unmatched" ? "card not found in job list" : r.card.co + ": " + r.card.role + " [" + r.card.jtype + ", live=" + r.card.live + "]");
   }
 
   // swiping right on a real job: consent once, then the hand-off to the employer's own page, and it appears under Applied
-  await ev(F + ".getElementById('nb-svc').click()"); await sleep(300);
-  await sub("Internships"); await sleep(700);
+  await pick("nb-svc", "Internships"); await sleep(800);
   await ev(F + ".getElementById('btnYes').click()"); await sleep(1200);
   await ev("(()=>{const m=" + F + ".getElementById('kcYes');if(m)m.click()})()"); await sleep(2200);
   const after = await pageText();

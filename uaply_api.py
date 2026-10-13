@@ -36,6 +36,7 @@ DATA = os.path.join(ROOT, "data")
 CONFIG_PATH = os.path.join(ROOT, "uaply-config.json")
 import jobs_api
 import auth_api
+import emails
 
 EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")   # strict: one plain address, no lists or names
 
@@ -165,9 +166,8 @@ def _ext(raw):
             "sponsor": _pick(x.get("sponsor"), ("yes", "no")), "start": _pick(x.get("start"), _START), "types": types}
 
 
-def _detail_text(c, note=""):
-    """Candidate details as plain lines for the email body and the test inbox (empty if none were given).
-    A line whose value already appears in the note is left out, so nothing is said twice."""
+def _detail_rows(c, note=""):
+    """Candidate details as (label, value) pairs. Empty values, and any value already said in the note, are left out."""
     x = c.get("ext") or {}
     skills = ", ".join(c.get("skills") or [])
     exp = ("%s year%s" % (c["years"], "" if c.get("years") == 1 else "s")) if c.get("years") else ""
@@ -180,7 +180,12 @@ def _detail_text(c, note=""):
             ("Work authorization", _AUTH.get(x.get("auth"), "") + ("; needs sponsorship" if x.get("sponsor") == "yes" else "; no sponsorship needed" if x.get("sponsor") == "no" else "") if x.get("auth") else ""),
             ("Earliest start", _START.get(x.get("start"), "")),
             ("Looking for", ", ".join(_TYPES[t] for t in x.get("types", [])))]
-    lines = ["%s: %s" % (k, v) for k, v in rows if v and str(v) not in note]
+    return [(k, str(v)) for k, v in rows if v and str(v) not in note]
+
+
+def _detail_text(c, note=""):
+    """Candidate details as plain lines for the recruiter email and the test inbox (empty if none were given)."""
+    lines = ["%s: %s" % kv for kv in _detail_rows(c, note)]
     return ("\n\nApplication details\n" + "\n".join(lines)) if lines else ""
 
 
@@ -242,18 +247,29 @@ def _owner_copy(cfg):
     return r.strip() if isinstance(r, str) and EMAIL_RE.match(r.strip()) else ""
 
 
+def _site_base(cfg):
+    """The public address of this site for links in emails ('' when it only runs on this computer)."""
+    g = cfg.get("google") if isinstance(cfg.get("google"), dict) else {}
+    for v in (cfg.get("public_url"), g.get("public_url")):
+        if isinstance(v, str) and v.startswith("https://"):
+            return v.rstrip("/")
+    return ""
+
+
+def _mail_ctx(cfg, rec, note, user_email=""):
+    """Everything emails.py needs to write the receipt or the owner copy of one application."""
+    return {"test": rec["mode"] != "live", "status": rec["status"], "cand": rec["candidate"], "job": rec["job"], "at": rec["at"],
+            "match": rec.get("match", 0), "to": rec.get("to", ""), "rows": _detail_rows(rec["candidate"], note), "note": note,
+            "user_email": user_email, "base_url": _site_base(cfg), "support_email": _s(cfg.get("support_email"), 120)}
+
+
 def _copy_message(cfg, rec):
-    """A labelled copy of one application for the owner's inbox (built separately so it can be tested without sending)."""
-    c, j = rec["candidate"], rec["job"]
-    where = {"delivered_test": "the simulated test inbox on this computer (nothing was sent to %s)" % j["co"],
-             "sent": "%s by email" % rec.get("to", ""),
-             "handoff": "no one: %s takes applications on its own site" % j["co"]}.get(rec["status"], rec["status"])
+    """The owner's copy of one application, as plain text plus an HTML version (built apart from sending so it can be tested)."""
+    subject, text, page = emails.owner_copy(_mail_ctx(cfg, rec, rec.get("note", "")))
     msg = EmailMessage()
-    msg["From"] = cfg["smtp"]["from_addr"]
-    msg["To"] = _owner_copy(cfg)
-    msg["Subject"] = "[UAply copy] Application: %s at %s (%s)" % (j["role"], j["co"], rec["status"])
-    msg.set_content("This is a copy for you, the UAply owner. The application went to: %s.\n\n%s\n\n--\nPosting: %s\n"
-                    % (where, _application_text(c, j, rec.get("note", "")), j["url"]))
+    msg["From"], msg["To"], msg["Subject"] = cfg["smtp"]["from_addr"], _owner_copy(cfg), subject
+    msg.set_content(text)
+    msg.add_alternative(page, subtype="html")
     return msg
 
 
@@ -275,29 +291,15 @@ def _send_owner_copy(cfg, rec):
         return False
 
 
-def _receipt_text(cand, job, note, rec, user):
-    what = {
-        "delivered_test": "Test mode: your application went to a simulated recruiter inbox. Nothing was sent to %s." % job["co"],
-        "sent": "Your application was emailed to the recruiter at %s. Replies will come to %s." % (rec["to"], cand["email"]),
-        "handoff": "%s takes applications only on its own page. Finish your application here: %s" % (job["co"], job["url"]),
-    }.get(rec["status"], "Status: %s" % rec["status"])
-    subject = "You applied: %s at %s" % (job["role"], job["co"])
-    details = ("Your details, ready for the employer's form:" if rec["status"] == "handoff"
-               else "What the employer receives:" if rec["status"] == "sent" else "What was delivered to the test inbox:")
-    body = ("Hi %s,\n\nYou swiped right on %s at %s%s on UAply.\n\n%s\n\nPosting: %s\nMatch: %d%%\n\n%s\n%s\n\n"
-            "Track it in UAply under Dashboard, Applied.\n\n--\nUAply\nYou get this email because you are signed in as %s."
-            % (cand["name"] or "there", job["role"], job["co"], (" (%s)" % job["loc"]) if job.get("loc") else "", what,
-               job["url"], rec["match"], details, _application_text(cand, job, note), user["email"]))
-    return _s(subject, 200), body
-
-
-def _send_receipt(cfg, to, subject, body):
+def _send_receipt(cfg, to, subject, body, page=None):
     s = cfg["smtp"]
     msg = EmailMessage()
     msg["From"] = s["from_addr"]
     msg["To"] = to
     msg["Subject"] = subject
     msg.set_content(body)
+    if page:
+        msg.add_alternative(page, subtype="html")
     with smtplib.SMTP(s["host"], int(s.get("port", 587)), timeout=20) as srv:
         if s.get("starttls", True):
             srv.starttls()
@@ -334,17 +336,16 @@ def mail_ready():
 def _receipt(cfg, user, cand, job, note, rec):
     """Email the signed-in applicant a copy of what happened. Never raises: a receipt problem must not undo an application."""
     to = user["email"]
-    subject, body = _receipt_text(cand, job, note, rec, user)
+    subject, body, page = emails.applicant_receipt(_mail_ctx(cfg, rec, note, user["email"]))
     status = "delivered_test"
-    if cfg["delivery"] == "live":
-        if _smtp_ready(cfg):
-            try:
-                _send_receipt(cfg, to, subject, body)
-                status = "sent"
-            except Exception:
-                status = "failed"
-        else:
-            status = "not_configured"
+    if _smtp_ready(cfg):                      # the receipt goes only to the applicant's own address, so it is safe to send in test mode too
+        try:
+            _send_receipt(cfg, to, subject, body, page)
+            status = "sent"
+        except Exception:
+            status = "failed"
+    elif cfg["delivery"] == "live":
+        status = "not_configured"
     try:
         auth_api.add_mail(user["id"], to, subject, body, status)
     except Exception:
@@ -361,6 +362,13 @@ def submit(p, user=None):
     mode = cfg["delivery"]
     job = {k: _s(p["job"].get(k), 600) for k in ("co", "role", "url", "source", "loc", "contact")}
     job["id"] = int(p["job"]["id"])
+    known = jobs_api.job_info(job["id"]) or {}            # what this server holds about the job beats what the browser says
+    pj = p["job"]
+    job["type"] = _pick(known.get("type") or pj.get("type"), ("job", "parttime", "internship", "coop")) or "job"
+    job["mode"] = _pick(known.get("mode") or pj.get("mode"), ("remote", "hybrid", "onsite"))
+    sal = known.get("sal") or pj.get("sal")
+    job["sal"] = [int(sal[0]), int(sal[1])] if isinstance(sal, list) and len(sal) == 2 and all(isinstance(x, (int, float)) for x in sal) else [0, 0]
+    job["desc"] = _s(known.get("desc") or known.get("blurb") or pj.get("blurb"), 900)
     prof = p["profile"]
     cand = {"name": _s(prof.get("name"), 100), "email": _s(prof.get("email"), 200).lower(),
             "title": _s(prof.get("title"), 100), "loc": _s(prof.get("loc"), 100), "edu": _s(prof.get("edu"), 40)}

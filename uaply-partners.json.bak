@@ -1,0 +1,24 @@
+{
+  "_comment": "LOCAL ONLY, git-ignored. Employers who agreed to receive applications from UAply. The only entry is the owner's own test posting.",
+  "employers": [
+    {
+      "name": "UAply Test Employer",
+      "consent": "The UAply owner posting their own test job and receiving the applications themselves (2026-10-12)",
+      "contact": "saifsiddiqueep@gmail.com",
+      "url": "https://saifsiddiqueep-sketch.github.io/uaply/",
+      "jobs": [
+        {
+          "role": "Test Posting: Software Intern",
+          "loc": "Remote (US)",
+          "mode": "remote",
+          "type": "internship",
+          "sal": [0, 0],
+          "yrs": 0,
+          "edu": "High school",
+          "skills": ["JavaScript", "React", "CSS"],
+          "blurb": "A test posting by the UAply owner to check that an application reaches a real inbox. It is not a real opening."
+        }
+      ]
+    }
+  ]
+}

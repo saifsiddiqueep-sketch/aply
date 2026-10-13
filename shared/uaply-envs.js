@@ -7,6 +7,7 @@ function once(src,a,b){if(src.indexOf(a)<0)throw new Error("patch target not fou
 var CSS_RISE="@keyframes rise{from{transform:translateY(14px) scale(.96);opacity:.6}to{transform:none;opacity:1}}@media (prefers-reduced-motion:no-preference){.card.top{animation:rise .35s ease-out}}";
 var CSS_FIT=".card.under>*,.card.under2>*{visibility:hidden}.deck{min-height:430px}@media (max-height:700px){.card{padding:16px;gap:12px}.chead{margin:-16px -16px 0;padding:16px 16px 10px}.chead h2{font-size:22px}.logo{width:46px;height:46px;font-size:21px}.pay{font-size:26px}}";
 var CSS_GUIDE="#banner:not([hidden]){display:flex!important}#progress{display:flex!important}@media (max-height:700px){#banner,#progress{display:none!important}}";
+var CSS_NOTICE="#banner:not([hidden]){display:flex!important}@media (max-height:700px){#banner{display:none!important}}";   /* the example-profile notice alone, without the "N jobs left" counters */
 var CSS_TAP=".tab,.filters button,.tips button,.banner button,.linkbtn,.row .btn,.checks label,.btn{min-height:44px}.chip.pick{min-height:36px}.rb.small{width:48px;height:48px}";
 var CSS_TOP2=".crit:not(.open) li.extra{display:none}.crit li.more{display:block}.crit li.more .linkbtn{font-size:13.5px}";
 
@@ -100,6 +101,7 @@ var FEATURES={
    d.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-more]");if(b&&e.detail===0)toggle(b)},true);
  }},
  fit:{name:"Compact fit",note:"Short windows: the card keeps a usable minimum height (the page scrolls instead of crushing it), the cards behind it no longer show through, and padding tightens.",patch:function(s){return once(s,"</style>",CSS_FIT+"</style>")}},
+ notice:{name:"Example-profile notice",note:"While you are still on the example profile, a notice says so and offers Enter your details. No job counters.",patch:function(s){return once(s,"</style>",CSS_NOTICE+"</style>")}},
  guide:{name:"Progress & profile notice",note:"Shows 'N jobs left · M applied' above the deck, and a notice with an Enter your details button while you are still on the example profile.",patch:function(s){return once(s,"</style>",CSS_GUIDE+"</style>")}},
  tap:{name:"Bigger tap targets",note:"Tabs, filters, buttons and checkboxes are at least 44px tall so they are easy to hit on a phone.",patch:function(s){return once(s,"</style>",CSS_TAP+"</style>")}},
  dates:{name:"Applied dates",note:"Each application in the Applied tab shows the date you applied.",patch:function(s){return once(s,"'<small>Sent as '","'<small>Applied '+new Date(x.d.at).toLocaleDateString(undefined,{month:\"short\",day:\"numeric\"})+' · sent as '")}},
@@ -145,7 +147,7 @@ var FEATURES={
  }}
 };
 FEATURES.chat={name:"Assistant and feedback",note:"A Help button (bottom right) opens UAply Assistant: answers from UAply's help articles (written by AI when an API key is set on the server, and labeled AI or Automated either way), one-question-at-a-time feedback, problem reports, a way to reach a person, and a one-tap rating after the third application in a visit. Needs this server's back end.",apply:function(w,host){window.UAplyChat.apply(w,host)}};
-var ORDER=["easy","confirm","axis","caps","smart","top2","nav","profile","live","kit","submit","fit","guide","tap","dates","hint","anim","a11y","backend","chat"];   /* chat last: it wraps the apply hook set by kit */
+var ORDER=["easy","confirm","axis","caps","smart","top2","nav","profile","live","kit","submit","fit","guide","notice","tap","dates","hint","anim","a11y","backend","chat"];   /* chat last: it wraps the apply hook set by kit */
 
 function build(on,key){
   return fetch("prod-index.html",{cache:"no-store"}).then(function(r){return r.text()}).then(function(src){

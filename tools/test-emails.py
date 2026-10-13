@@ -1,0 +1,138 @@
+"""Tests the swipe-right emails: what they say, that test mode is labelled, that nothing a person typed can inject HTML, and a real
+send through the stand-in mail server (tools/fake-smtp.py).
+  python tools/test-emails.py"""
+import email
+import email.policy
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import time
+from html.parser import HTMLParser
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, ".."))
+TMP = tempfile.mkdtemp(prefix="uaply-emails-")
+os.environ["UAPLY_DATA_DIR"] = TMP
+os.environ["UAPLY_CONFIG_JSON"] = "{}"
+
+import auth_api  # noqa: E402
+import emails  # noqa: E402
+import uaply_api  # noqa: E402
+
+R = []
+
+
+def t(name, got, want):
+    ok = got == want
+    R.append(ok)
+    print(("PASS " if ok else "FAIL ") + name + ("" if ok else "  -> got %r, wanted %r" % (got, want)))
+
+
+class Tags(HTMLParser):
+    """Counts open and close tags, so an unbalanced email is caught."""
+    VOID = {"meta", "br", "img", "hr", "input", "link"}
+
+    def __init__(self):
+        super().__init__()
+        self.stack, self.bad, self.scripts = [], 0, 0
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "script":
+            self.scripts += 1
+        if tag not in self.VOID:
+            self.stack.append(tag)
+
+    def handle_endtag(self, tag):
+        if tag in self.VOID:
+            return
+        if self.stack and self.stack[-1] == tag:
+            self.stack.pop()
+        else:
+            self.bad += 1
+
+
+def ctx(status, test=True, **over):
+    c = {"test": test, "status": status, "at": 1791932764, "match": 87, "to": "jobs@acme.example",
+         "cand": {"name": "Sam Rivera", "email": "sam@example.com"},
+         "job": {"co": "Acme Robotics", "role": "Software Engineering Intern", "loc": "Philadelphia, PA", "type": "internship", "mode": "hybrid",
+                 "sal": [30000, 38000], "url": "https://acme.example/jobs/42", "desc": "Build and test the software that drives our warehouse robots."},
+         "rows": [("Applicant", "Sam Rivera"), ("Email", "sam@example.com"), ("Skills", "Python, SQL"), ("Resume", "https://example.com/sam.pdf")],
+         "note": "", "user_email": "sam@example.com", "base_url": "https://uaply.example", "support_email": "help@uaply.example"}
+    c.update(over)
+    return c
+
+
+# ---- what each email says ----
+for status in ("handoff", "sent", "delivered_test"):
+    sub, text, page = emails.applicant_receipt(ctx(status))
+    t("%s: subject starts with [TEST] in test mode" % status, sub.startswith("[TEST] "), True)
+    t("%s: subject names the job and company" % status, "Software Engineering Intern" in sub and "Acme Robotics" in sub, True)
+    t("%s: text has every section" % status, all(k in text for k in ("THE JOB", "ABOUT THE JOB", "WHAT A SWIPE RIGHT MEANS", "WHAT HAPPENS NEXT", "TRACK IT")), True)
+    t("%s: text shows date and time, pay, type and match" % status, all(k in text for k in ("Oct 13, 2026", "UTC", "$30k to $38k a year", "Internship", "87%")), True)
+    t("%s: text says what a swipe right means" % status, "Swiping right means" in text and "Swiping left only hides" in text, True)
+    t("%s: says it is a test and nothing went to the employer" % status, "TEST EMAIL" in text, True)
+    p = Tags()
+    p.feed(page)
+    t("%s: HTML tags are balanced and has no script" % status, (p.bad, len(p.stack), p.scripts), (0, 0, 0))
+    t("%s: HTML links to the posting" % status, 'href="https://acme.example/jobs/42"' in page, True)
+
+_, text, page = emails.applicant_receipt(ctx("handoff"))
+t("handoff: tells the person the application is NOT complete yet", "not complete yet" in text, True)
+t("handoff: has a Finish your application button", "Finish your application" in page, True)
+sub, text, _ = emails.applicant_receipt(ctx("sent", test=False))
+t("live mode: no [TEST] in the subject", not sub.startswith("[TEST]") and sub == "Applied: Software Engineering Intern at Acme Robotics", True)
+t("live mode: no test banner", "TEST EMAIL" not in text, True)
+sub, _, _ = emails.applicant_receipt(ctx("handoff", test=False))
+t("live handoff subject asks the person to finish", sub, "Finish your application: Software Engineering Intern at Acme Robotics")
+
+# ---- nothing a person or a job feed typed can inject markup or a bad link ----
+evil = ctx("sent", cand={"name": "<script>alert(1)</script>", "email": "x@example.com"},
+           job={"co": "Fish & Chips <b>Ltd</b>", "role": "Cook", "loc": "", "url": "javascript:alert(1)", "desc": "<img src=x onerror=alert(1)>"},
+           note="<iframe src=//evil></iframe>")
+_, _, page = emails.applicant_receipt(evil)
+t("a script tag in a name is escaped", "<script>" not in page and "&lt;script&gt;" in page, True)
+t("markup in a company, description or note is escaped", "<b>Ltd</b>" not in page and "<img" not in page and "<iframe" not in page, True)
+t("a javascript: link is never used", "javascript:" not in page, True)
+sub, text, page = emails.owner_copy(ctx("handoff"))
+t("owner copy: says where the application went", "no one: Acme Robotics takes applications on its own site" in text, True)
+t("owner copy: lists the applicant and the job", "Sam Rivera" in text and "THE JOB" in text and "THE APPLICANT" in text, True)
+
+# ---- a real send through the stand-in mail server ----
+mail_file = os.path.join(TMP, "mail.jsonl")
+port = 2527
+proc = subprocess.Popen([sys.executable, os.path.join(HERE, "fake-smtp.py"), str(port), mail_file], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+try:
+    time.sleep(1.5)
+    cfg = {"delivery": "test", "smtp": {"host": "127.0.0.1", "port": port, "starttls": False, "from_addr": "uaply@example.com"},
+           "owner_copy": "owner@example.com", "support_email": "help@uaply.example", "daily_limit": 20}
+    uaply_api.config = lambda: cfg
+    uaply_api.init("emailtest")
+    auth_api.init("emailtest")
+    s, out, tok = auth_api.signup("sam@example.com", "correct horse 99", "127.0.0.1", True)
+    user = auth_api.user_for(tok)
+    payload = {"consent": True, "job": {"id": 424242, "co": "Acme Robotics", "role": "Software Engineering Intern", "url": "https://acme.example/jobs/42",
+                                         "source": "Acme careers", "loc": "Philadelphia, PA", "type": "internship", "mode": "hybrid", "sal": [30000, 38000],
+                                         "blurb": "Build and test the software that drives our warehouse robots."},
+               "profile": {"name": "Sam Rivera", "email": "sam@example.com", "skills": ["Python", "SQL"]}, "match": 87}
+    code, res = uaply_api.submit(payload, user)
+    time.sleep(1)
+    sent = [json.loads(x) for x in open(mail_file, encoding="utf-8")] if os.path.exists(mail_file) else []
+    t("swiping right in test mode answers ok", code, 200)
+    t("two emails went out: the receipt and the owner copy", sorted(sum((m["to"] for m in sent), [])), ["owner@example.com", "sam@example.com"])
+    rec = next((m for m in sent if m["to"] == ["sam@example.com"]), None)
+    if rec:
+        msg = email.message_from_string(rec["raw"], policy=email.policy.default)
+        t("the receipt subject says TEST and names the job", msg["Subject"].startswith("[TEST] ") and "Acme Robotics" in msg["Subject"], True)
+        t("the receipt has a plain-text and an HTML version", [p.get_content_type() for p in msg.walk() if not p.is_multipart()], ["text/plain", "text/html"])
+        body = msg.get_body(preferencelist=("plain",)).get_content()
+        t("the receipt shows the job description and what a swipe means", "warehouse robots" in body and "Swiping right means" in body, True)
+        t("the receipt is recorded in the test inbox with status sent", auth_api.mail_list(5)[0]["status"], "sent")
+    owner = next((m for m in sent if m["to"] == ["owner@example.com"]), None)
+    t("the owner copy is labelled as a copy and shows the job", bool(owner) and "[UAply copy]" in owner["raw"] and "warehouse robots" in owner["raw"], True)
+finally:
+    proc.terminate()
+
+print(sum(R), "/", len(R))
+sys.exit(0 if all(R) else 1)

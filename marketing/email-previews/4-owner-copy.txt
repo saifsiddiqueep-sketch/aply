@@ -1,0 +1,33 @@
+Subject: [UAply copy] Software Engineering Intern at Acme Robotics: applicant sent to the employer's site
+
+This is a copy for you, the UAply owner.
+
+A swipe right on Software Engineering Intern at Acme Robotics
+Applied on: Oct 13, 2026 at 11:06 PM UTC
+It went to: no one: Acme Robotics takes applications on its own site, so the applicant was pointed there.
+
+THE JOB
+  Company: Acme Robotics
+  Job title: Software Engineering Intern
+  Location: Philadelphia, PA
+  Job type: Internship
+  Work style: Hybrid
+  Pay: $30k to $38k a year
+  Your match: 87%
+  Posting: https://acmerobotics.example/careers/42
+
+ABOUT THE JOB
+  Build and test the software that drives our warehouse robots. You will pair with senior engineers, ship small features every week, and learn how production systems are monitored. Python and SQL experience helps; curiosity matters more.
+
+THE APPLICANT
+  Name: Sam Rivera
+  Email: sam@example.com
+  Current or target title: Software Intern
+  Experience: 1 year
+  Skills: Python, SQL, Git
+  Education: Drexel University, Computing & Security Technology, 2026-06
+  Resume: https://example.com/sam-rivera.pdf
+  Work authorization: US citizen; no sponsorship needed
+
+WHAT A SWIPE RIGHT MEANS
+  Swiping right means: I want this job. UAply saves it to your Applied list and, if the employer accepts applications through UAply, sends them your profile. If the employer takes applications only on its own site, UAply gives you the link and your details so you can finish there. Swiping left only hides the job; nothing is sent.

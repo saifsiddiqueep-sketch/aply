@@ -1,0 +1,53 @@
+Subject: [TEST] Applied: Software Engineering Intern at Acme Robotics
+
+*** TEST EMAIL ***
+This is a test email. In test mode UAply does not send applications to employers. In the live app this swipe would have emailed your application to careers@acmerobotics.example. Your test application is saved in the test inbox.
+
+Hi Sam Rivera,
+
+You applied to Software Engineering Intern at Acme Robotics
+
+You swiped right on Software Engineering Intern at Acme Robotics. This is a test: UAply recorded the application in its test inbox and sent nothing to Acme Robotics.
+
+Applied on: Oct 13, 2026 at 11:06 PM UTC
+
+THE JOB
+  Company: Acme Robotics
+  Job title: Software Engineering Intern
+  Location: Philadelphia, PA
+  Job type: Internship
+  Work style: Hybrid
+  Pay: $30k to $38k a year
+  Your match: 87%
+  Posting: https://acmerobotics.example/careers/42
+
+ABOUT THE JOB
+  Build and test the software that drives our warehouse robots. You will pair with senior engineers, ship small features every week, and learn how production systems are monitored. Python and SQL experience helps; curiosity matters more.
+
+WHAT A SWIPE RIGHT MEANS
+  Swiping right means: I want this job. UAply saves it to your Applied list and, if the employer accepts applications through UAply, sends them your profile. If the employer takes applications only on its own site, UAply gives you the link and your details so you can finish there. Swiping left only hides the job; nothing is sent.
+
+WHAT WAS SHARED
+  Applicant: Sam Rivera
+  Email: sam@example.com
+  Current or target title: Software Intern
+  Experience: 1 year
+  Skills: Python, SQL, Git
+  Education: Drexel University, Computing & Security Technology, 2026-06
+  Resume: https://example.com/sam-rivera.pdf
+  Work authorization: US citizen; no sponsorship needed
+  Your voluntary answers (such as race, gender, veteran or disability status) are never sent.
+
+WHAT HAPPENS NEXT
+  - The employer reviews applications in its own time, and many employers get a lot of them, so you may not hear from every one.
+  - A sensible pace: wait one to two weeks; if you have heard nothing after two to three weeks, send a short, polite follow-up; after three to four weeks it is reasonable to move on to other jobs.
+  - Keep track in UAply: open Dashboard, then Applied, and mark the application Interview, Accepted or Rejected as things happen.
+  - An application cannot be edited after it is sent. To correct something, contact the employer directly.
+
+TRACK IT
+  Open UAply, then Dashboard, then Applied. https://uaply.example
+
+--
+UAply
+You get this email because you are signed in to UAply as sam@example.com.
+Questions: help@uaply.example

@@ -29,7 +29,7 @@ function patch(s){
   s=once(s,'&&(F==="all"||j.mode===F)}).map(function(j){return {j:j,m:evaluate(j,S.profile)}}).sort(',
            '&&(j.type||"job")===TYPE&&!(window.__uaplyHide&&window.__uaplyHide(j))&&(F==="all"||j.mode===F)}).map(function(j){return {j:j,m:evaluate(j,S.profile)}}).filter(function(x){return x.m.pct>=MINPCT}).sort(');
   s=once(s,'<h2>You have seen every job</h2><p>Jobs you passed on can come back, and your applications are in the Applied tab.</p>',
-    `<h2>'+(MINPCT>0?"No jobs at "+MINPCT+"% match or higher":(JOBS.filter(function(j){return (j.type||"job")===TYPE&&(j.live||!window.__uaplyHideSamples)}).length?"You have seen every one of these":"Nothing listed here right now"))+'</h2><p>'+(MINPCT>0?"Lower the minimum match in Profile, then Filters.":(JOBS.filter(function(j){return (j.type||"job")===TYPE&&(j.live||!window.__uaplyHideSamples)}).length?"Jobs you passed on can come back, and your applications are in the Dashboard.":"New postings appear as employers publish them. Try another section or check back soon."))+'</p>`);
+    `<h2>'+(window.__uaplyLoadingJobs?"Finding jobs for you…":window.__uaplyJobsFailed?"Could not load jobs":MINPCT>0?"No jobs at "+MINPCT+"% match or higher":(JOBS.filter(function(j){return (j.type||"job")===TYPE&&(j.live||!window.__uaplyHideSamples)}).length?"You have seen every one of these":"Nothing listed here right now"))+'</h2><p>'+(window.__uaplyLoadingJobs?"Looking for current postings. This takes a few seconds.":window.__uaplyJobsFailed?"Check your internet connection, then close and reopen UAply.":MINPCT>0?"Lower the minimum match in Profile, then Filters.":(JOBS.filter(function(j){return (j.type||"job")===TYPE&&(j.live||!window.__uaplyHideSamples)}).length?"Jobs you passed on can come back, and your applications are in the Dashboard.":"New postings appear as employers publish them. Try another section or check back soon."))+'</p>`);
   s=once(s,'title:String(x.title||"")};','title:String(x.title||""),st:(x.st==="interview"||x.st==="accepted"||x.st==="rejected")?x.st:"applied",sent:(x.sent&&typeof x.sent==="object")?{at:+x.sent.at||0,to:String(x.sent.to||"").slice(0,120),status:String(x.sent.status||"").slice(0,20)}:undefined};');
   /* profile gets an email so a recruiter can reply */
   s=once(s,'salary:100000,loc:"New York",','salary:100000,loc:"New York",email:"jordan.lee@example.com",');
@@ -653,7 +653,7 @@ function apply(w,host){
     var job=A.JOBS.filter(function(j){return j.id===id})[0],a=ap(id),t=new Date(a.when);
     if(!job||isNaN(t))return;
     download("interview-"+job.co.replace(/[^a-z0-9]+/gi,"-").toLowerCase()+".ics","text/calendar",
-      ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//UAply//EN","BEGIN:VEVENT","UID:aply-"+id+"-"+t.getTime()+"@aply","DTSTAMP:"+icsTime(new Date()),"DTSTART:"+icsTime(t),"DTEND:"+icsTime(new Date(t.getTime()+36e5)),
+      ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//UAply//EN","BEGIN:VEVENT","UID:uaply-"+id+"-"+t.getTime()+"@uaply","DTSTAMP:"+icsTime(new Date()),"DTSTART:"+icsTime(t),"DTEND:"+icsTime(new Date(t.getTime()+36e5)),
        "SUMMARY:"+icsText("Interview: "+job.role+" at "+job.co),"DESCRIPTION:"+icsText((a.fmt?a.fmt+". ":"")+(a.who?"With "+a.who+". ":"")+(a.note||"")),"END:VEVENT","END:VCALENDAR"].join("\r\n"));
   }
   function csvCell(v){v=String(v==null?"":v);if(/^[=+\-@\t\r]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'}
@@ -663,7 +663,7 @@ function apply(w,host){
       var x=A.S.decisions[j.id];if(!x||x.s!=="applied")return;var a=ap(j.id);
       rows.push([j.co,j.role,TYPE_LABEL[j.type||"job"],j.loc,x.st||"applied",x.pct,new Date(x.at).toISOString().slice(0,10),a.when||"",a.offer||"",a.deadline||"",a.note||"",j.url||""]);
     });
-    download("aply-applications.csv","text/csv",rows.map(function(r){return r.map(csvCell).join(",")}).join("\r\n"));
+    download("uaply-applications.csv","text/csv",rows.map(function(r){return r.map(csvCell).join(",")}).join("\r\n"));
   }
 
   /* dashboard overview */
@@ -1116,7 +1116,7 @@ function apply(w,host){
     else if(a==="resub"){acct.canceled=false;if(acct.renews<Date.now())acct.renews=Date.now()+30*DAY;saveA();renderAcct("plan");msg("Subscription resumed.")}
     else if(a==="rtrial"){acct.plan="trial";acct.since=Date.now();acct.canceled=false;acct.renews=0;saveA();renderAcct("plan");msg("You're on Free.")}
     else if(a==="exp"){
-      download("aply-backup.json","application/json",JSON.stringify({app:"aply",v:1,exported:new Date().toISOString(),profile:A.S.profile,decisions:A.S.decisions,acct:acct}));
+      download("uaply-backup.json","application/json",JSON.stringify({app:"uaply",v:1,exported:new Date().toISOString(),profile:A.S.profile,decisions:A.S.decisions,acct:acct}));
     }
     else if(a==="wipe"){
       if(b.getAttribute("data-sure")!=="1"){b.setAttribute("data-sure","1");b.textContent="Click again to delete everything";return}
@@ -1126,7 +1126,7 @@ function apply(w,host){
   });
   function importBackup(txt){
     var o;try{o=JSON.parse(txt)}catch(e){return "That is not a valid backup file."}
-    if(!o||o.app!=="aply"||o.v!==1||typeof o.profile!=="object"||o.profile===null)return "That file was not made by UAply.";
+    /* "aply" is accepted too: backups made before the rename */ if(!o||(o.app!=="uaply"&&o.app!=="aply")||o.v!==1||typeof o.profile!=="object"||o.profile===null)return "That file was not made by UAply.";
     function str(x,n){return typeof x==="string"?x.slice(0,n):""}
     function num(x,lo,hi){x=+x;return isFinite(x)?Math.min(hi,Math.max(lo,x)):lo}
     var p=o.profile,m=(p.modes&&typeof p.modes==="object")?p.modes:{},LV=["High school","Associate","Bachelor","Master","Doctorate"];
@@ -1365,6 +1365,7 @@ function apply(w,host){
       apiPost("/api/auth/forgot",{email:fem}).then(function(r){
         b.disabled=false;
         if(!r.ok){msg((r.j&&r.j.error)||"Something went wrong. Try again.");return}
+        if(r.j&&r.j.delivery==="unavailable"){msg(r.j.message||"Password reset by email is not available right now.");return}
         AUI.forgotSent=true;renderAcct("account");
       });
       return;

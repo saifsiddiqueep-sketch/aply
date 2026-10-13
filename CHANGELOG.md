@@ -4,6 +4,37 @@ How versions move: work happens in `sandbox`, is tested there, and goes to `dev`
 build: it is what the hosted site and the phone apps run. Each version is tagged on GitHub (Releases). `main` is the original
 production page and only changes when the owner decides.
 
+## 1.0.0-rc.2 (release candidate)
+
+Found by running dev the way a real host runs it (public, behind HTTPS, cold start, no test data), and fixed.
+
+- **Cold start:** for ~20-40 seconds after a restart a visitor saw a made-up example job. The release build now shows
+  "Finding jobs for you…", and "Could not load jobs" if the feed fails; it never shows example jobs.
+- **Restarts are instant:** the last good postings are saved on disk (`jobs-cache.json` in the data folder), so a restart or a new
+  deploy shows jobs at once and refreshes in the background. Feed fetches now run 16 at a time.
+- **Honest scores:** a new visitor now sees "Matches below use an example profile. Enter your details" (it was hidden in dev, so
+  the card claimed a 100% match for a person with no profile). The "N jobs left" counters stay off.
+- **Forgot password on a server without email** now says reset by email is not available and points to Help, instead of
+  promising a link that goes to a private test inbox.
+- **Right swipe emails rewritten** (`emails.py`): every swipe right now sends the applicant a clear receipt and the owner a copy. Each
+  one says what happened in a plain headline, shows the job (company, title, place, type, work style, pay, match, date and time),
+  the job description, what was shared, what a swipe right means, what happens next and where to track it. A swipe that sends nothing
+  (the employer takes applications on its own site) says so and gives a "Finish your application" button. In test mode the subject
+  starts with [TEST] and a banner explains that nothing went to the employer. Plain text plus HTML; all text from people and job feeds
+  is escaped. The design follows what Handshake and Indeed document about their confirmations; LinkedIn and ZipRecruiter do not
+  publish theirs. With an email login set up, receipts are really sent in test mode too (to the applicant's own address only).
+- **Foreign jobs removed from the US feed:** "Toronto, ON, CA" was read as California, and roles titled ANZ or LATAM passed because
+  their location said "Remote". Locations are now checked part by part; the saved job cache is versioned so old results are dropped.
+- **Test emails to the owner:** the owner copy address and the setup page's test email can be pointed at any address. The setup page
+  now says "no App Password yet" instead of a mail-server error.
+- **Old name leftovers fixed:** the backup file, the applications CSV and calendar reminders still used "aply"; old backups still import.
+- **Deep file audit** (`tools/audit-files.py`, also run in CI): every file by type, links, secrets, line endings, git hygiene.
+- **The test suite no longer touches your servers:** `tools/run-all-tests.sh` uses its own ports (18766 and up).
+- A pull request template and `CONTRIBUTING.md` set the standard: every PR gets a plain-words title and a full description.
+- New tests: `tools/test-emails.py` (41), `tools/test-jobs.py` (23), `tools/test-public.py` (cookies, headers, owner pages, path traversal, limits: 33), `tools/test-smtp.py` with
+  `tools/fake-smtp.py` (real SMTP end to end: 12), `tools/ui-widths.js` (nothing cut off from 320 to 430 px) and
+  `tools/run-all-tests.sh`, which runs everything with one command on throwaway data.
+
 ## 1.0.0-rc.1 (release candidate)
 
 The first release build. Everything below is in `dev`.

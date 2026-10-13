@@ -226,6 +226,9 @@ class H(http.server.SimpleHTTPRequestHandler):
                 code, out = setup_api.test_mail()
                 return self._send(code, out)
             if p == "/api/auth/forgot":
+                if PUBLIC and not uaply_api.mail_ready():       # a real server that cannot send email must not pretend to
+                    return self._send(200, {"ok": False, "delivery": "unavailable",
+                                            "message": "Password reset by email is not available right now. Use Help, then Talk to a person, and we will help you get back in."})
                 code, out, mail = auth_api.request_reset(payload.get("email"), ip)
                 if mail:
                     uid, addr, tok = mail

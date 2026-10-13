@@ -24,3 +24,7 @@ jobs:
         run: python -m pip install pyflakes
       - name: Run all checks
         run: node check.js
+      - name: Audit every file
+        run: |
+          python -m pip install pyyaml
+          python tools/audit-files.py
