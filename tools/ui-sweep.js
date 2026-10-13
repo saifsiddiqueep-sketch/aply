@@ -32,16 +32,16 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   await sleep(500);
   // swipe right on a job: the application must reach the simulated recruiter inbox
   const before = JSON.parse(await ev("fetch('/api/outbox').then(r=>r.json()).then(j=>JSON.stringify({n:j.applications.length}))")).n;
-  // fill in the profile the way a person would (Profile, Settings), then save
+  // fill in the profile the way a person would (Profile, Profile setup), then save
   await ev(F + ".getElementById('nb-prof').click()");
   await sleep(400);
-  await clickText("Settings");
+  await clickText("Profile setup");
   await sleep(400);
   const setVal = (id, v) => ev("(()=>{const e=" + F + ".getElementById('" + id + "');if(!e)return false;e.value=" + JSON.stringify(v) + ";e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
   check("profile name field", await setVal("pName", "Test User"));
   check("profile email field", await setVal("pEmail", "sweep.tester@example.com"));
   await setVal("pSkills", "Python, SQL, Git");
-  await ev("(()=>{const f=" + F + ".getElementById('saveBtn');f.click();return true})()");
+  await ev("(()=>{const f=" + F + ".getElementById('wzNext');f.click();return true})()");
   await sleep(800);
   await ev(F + ".getElementById('nb-svc').click()");
   await sleep(600);
@@ -65,7 +65,7 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   // profile sections
   await ev(F + ".getElementById('nb-prof').click()");
   await sleep(500);
-  for (const t of ["Account", "Settings", "Resume", "Preferences", "Filters", "Plan", "Data"].filter((x) => !(REL && x === "Plan"))) {
+  for (const t of ["Account", "Profile setup", "Filters", "Plan", "Data"].filter((x) => !(REL && x === "Plan"))) {
     const ok = await clickText(t);
     await sleep(350);
     const txt = await visibleText();
@@ -74,9 +74,9 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   // data & privacy has the legal block
   check("Data & privacy shows Legal links", (await ev(F + ".querySelectorAll('[data-legal]').length")) === 5);
   // settings controls
-  await clickText("Settings");
+  await clickText("Profile setup");
   await sleep(400);
-  check("Settings has a Save button", !!(await ev("!!" + F + ".getElementById('saveBtn')")));
+  check("Profile setup has a Save and continue button", !!(await ev("!!" + F + ".getElementById('wzNext')")));
   // help assistant
   check("Help button opens the assistant", await ev("(()=>{const b=" + F + ".getElementById('uaChatBtn');if(!b)return false;b.click();return true})()"));
   await sleep(500);

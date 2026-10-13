@@ -4,9 +4,9 @@ module.exports = async ({ ev, sleep, nav, shot }) => {
   await nav("http://127.0.0.1:8766/");
   await sleep(1200);
   await ev(F + ".getElementById('nb-prof').click()"); await sleep(400);
-  await ev("(" + F + ").querySelectorAll('button')[0]&&[...(" + F + ").querySelectorAll('button')].find(b=>b.innerText.trim().startsWith('Settings')).click()"); await sleep(400);
+  await ev("(" + F + ").querySelectorAll('button')[0]&&[...(" + F + ").querySelectorAll('button')].find(b=>b.innerText.trim().startsWith('Profile setup')).click()"); await sleep(400);
   await setVal("pName", "Test User"); await setVal("pEmail", "sweep.tester@example.com");
-  await ev(F + ".getElementById('saveBtn').click()"); await sleep(800);
+  await ev(F + ".getElementById('wzNext').click()"); await sleep(800);
   await ev(F + ".getElementById('nb-svc').click()"); await sleep(500);
   await ev(F + ".getElementById('btnYes').click()"); await sleep(1500);
   await ev("(()=>{const m=" + F + ".getElementById('kcYes');if(m)m.click()})()"); await sleep(2500);
