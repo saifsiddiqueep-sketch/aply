@@ -29,7 +29,13 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 HELP_PATH = os.path.join(ROOT, "help", "articles.json")
 DATA = os.path.join(ROOT, "data")
 EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
-TOPICS = ("general", "bug", "answer", "contact", "nudge")
+TOPICS = ("general", "bug", "answer", "contact", "nudge", "exit")
+# Exit survey (shown when someone deletes their account). Answers are fixed ids so they can be counted.
+EXIT_REASONS = {"found_job": "I found a job", "not_looking": "I'm not looking right now", "no_fit": "Not enough jobs that fit me",
+                "hard_to_use": "Hard to use or confusing", "too_expensive": "Too expensive", "privacy": "Privacy concerns",
+                "technical": "Technical problems", "other": "Something else"}
+EXIT_OUTCOMES = {"hired_uaply": "Got a job through UAply", "hired_other": "Got a job somewhere else",
+                 "still_looking": "Still looking", "break": "Taking a break"}
 DEFAULT_MODEL = "claude-opus-5-5"
 
 _lock = threading.RLock()
@@ -322,14 +328,30 @@ def feedback(p, ip, user=None, notify=None):
         return 400, {"error": "That email doesn't look right."}
     if topic == "contact" and not (text and email):
         return 400, {"error": "Add a message and an email so we can reply."}
-    if rating is None and not text and helpful is None:
+    survey = None
+    if topic == "exit":
+        sv = p.get("survey") if isinstance(p.get("survey"), dict) else {}
+        try:
+            nps = int(sv["nps"]) if sv.get("nps") is not None else None
+            nps = nps if nps is None or 0 <= nps <= 10 else None
+        except (TypeError, ValueError):
+            nps = None
+        survey = {"reason": sv.get("reason") if sv.get("reason") in EXIT_REASONS else "",
+                  "outcome": sv.get("outcome") if sv.get("outcome") in EXIT_OUTCOMES else "",
+                  "nps": nps, "better": _s(sv.get("better"), 1000), "return": _s(sv.get("return"), 600)}
+        if not (survey["reason"] or survey["outcome"] or nps is not None or survey["better"] or survey["return"]):
+            return 400, {"error": "Answer at least one question, or skip the survey."}
+    elif rating is None and not text and helpful is None:
         return 400, {"error": "Add a rating or a few words first."}
     rec = {"id": uuid.uuid4().hex[:10], "at": int(time.time()), "topic": topic, "rating": rating, "text": text,
            "helpful": helpful, "email": email, "page": _s(p.get("page"), 40), "source": _s(p.get("source"), 20),
            "articles": [_s(x, 60) for x in (p.get("articles") if isinstance(p.get("articles"), list) else [])[:3] if isinstance(x, str)],
-           "user": user["id"] if user else None}
+           # an exit survey is deliberately NOT linked to the account being deleted, so deleting the account keeps it anonymous
+           "user": None if topic == "exit" else (user["id"] if user else None)}
+    if survey is not None:
+        rec["survey"] = survey
     delivery = "saved"
-    if notify and text and (topic in ("contact", "bug") or email):
+    if notify and text and topic != "exit" and (topic in ("contact", "bug") or email):
         try:
             delivery = notify(rec, user)               # slow network call: made outside the lock
         except Exception as e:
@@ -378,13 +400,44 @@ def feedback_html():
                    for n in (5, 4, 3, 2, 1))
     helped = [r["helpful"] for r in recs if r.get("helpful") is not None]
     help_rate = ("%d%%" % round(100 * sum(1 for h in helped if h) / len(helped))) if helped else "–"
-    label = {"general": "FEEDBACK", "bug": "PROBLEM", "answer": "ANSWER", "contact": "MESSAGE", "nudge": "QUICK RATING"}
+    label = {"general": "FEEDBACK", "bug": "PROBLEM", "answer": "ANSWER", "contact": "MESSAGE", "nudge": "QUICK RATING",
+             "exit": "EXIT SURVEY"}
+    exits = [r["survey"] for r in recs if r.get("topic") == "exit" and r.get("survey")]
+    leave = ""
+    if exits:
+        reasons = "".join("<li><b>%d</b> %s</li>" % (n, e(EXIT_REASONS[k])) for k, n in sorted(
+            ((k, sum(1 for s in exits if s["reason"] == k)) for k in EXIT_REASONS), key=lambda x: -x[1]) if n)
+        outs = "".join("<li><b>%d</b> %s</li>" % (n, e(EXIT_OUTCOMES[k])) for k, n in sorted(
+            ((k, sum(1 for s in exits if s["outcome"] == k)) for k in EXIT_OUTCOMES), key=lambda x: -x[1]) if n)
+        scores = [s["nps"] for s in exits if s["nps"] is not None]
+        nps = ("%+d" % round(100 * (sum(1 for x in scores if x >= 9) - sum(1 for x in scores if x <= 6)) / len(scores))) if scores else "–"
+        leave = ("<h2 style='margin:12px 0 0;font-size:18px'>Why people leave (%d exit surveys)</h2>"
+                 "<div class='stats'><div><b>%s</b><small>Recommend score (NPS)</small></div><div><b>%d</b><small>Answered</small></div></div>"
+                 "<article><b>Main reason</b><ul>%s</ul><b>How their search went</b><ul>%s</ul></article>") % (len(exits), nps, len(exits), reasons or "<li>No answers</li>", outs or "<li>No answers</li>")
+    def exit_detail(r):
+        s = r.get("survey")
+        if not s:
+            return ""
+        bits = []
+        if s["reason"]:
+            bits.append("Reason: " + e(EXIT_REASONS[s["reason"]]))
+        if s["outcome"]:
+            bits.append("Search: " + e(EXIT_OUTCOMES[s["outcome"]]))
+        if s["nps"] is not None:
+            bits.append("Would recommend: %d/10" % s["nps"])
+        out = "<p class='m'>%s</p>" % " · ".join(bits) if bits else ""
+        if s["better"]:
+            out += "<pre>Do better or add: %s</pre>" % e(s["better"])
+        if s["return"]:
+            out += "<pre>What would bring them back: %s</pre>" % e(s["return"])
+        return out
     rows = "".join(
-        '<article><header><span class="b">%s</span>%s<time>%s</time></header>%s%s</article>' % (
+        '<article><header><span class="b">%s</span>%s<time>%s</time></header>%s%s%s</article>' % (
             e(label.get(r["topic"], r["topic"].upper())),
             ("<b>%s</b>" % ("&#9733;" * r["rating"] + "&#9734;" * (5 - r["rating"]))) if r.get("rating") else
             ("<b>%s</b>" % ("Answer helped" if r.get("helpful") else "Answer did not help")) if r.get("helpful") is not None else "",
             time.strftime("%b %d, %H:%M", time.localtime(r["at"])),
+            exit_detail(r),
             ("<pre>%s</pre>" % e(r["text"])) if r.get("text") else "",
             '<p class="m">%s%s%s</p>' % (("Reply to: " + e(r["email"]) + " · ") if r.get("email") else "No reply requested · ",
                                          ("from " + e(r["source"]) + " · ") if r.get("source") else "",
@@ -407,4 +460,4 @@ pre{white-space:pre-wrap;margin:8px 0 0;font:inherit;background:var(--bg);border
 </style></head><body><main><h1>UAply feedback</h1><p class="m">Everything people sent through the UAply Assistant. Only people who asked for a reply left an email.</p>
 <div class="stats"><div><b>%d</b><small>Messages</small></div><div><b>%s</b><small>Average rating</small></div><div><b>%s</b><small>Answers that helped</small></div></div>
 <div class="stats">%s</div>
-%s</main></body></html>""" % (len(recs), avg, help_rate, dist, rows)).encode("utf-8")
+%s%s</main></body></html>""" % (len(recs), avg, help_rate, dist, leave, rows)).encode("utf-8")

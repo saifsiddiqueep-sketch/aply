@@ -106,7 +106,7 @@
    "id": "delete",
    "title": "Deleting my account or my data",
    "tags": "delete remove account data erase privacy close cancel account",
-   "body": "To delete your account, open Profile, then Account, tap Delete account and enter your password. That also removes your receipts and application records on UAply's server. To erase what is saved on this device, open Profile, then Data and privacy, and use Delete all my data.",
+   "body": "To delete your account, open Profile, then Account, scroll to the bottom and open More account options, then tap Delete my account. You'll be offered a short, anonymous survey (you can skip it), then asked for your password and to confirm. That removes your receipts and application records from UAply's server and can't be undone. To erase what is saved on this device, open Profile, then Data and privacy, and use Delete all my data.",
    "go": "prof:account"
   },
   {

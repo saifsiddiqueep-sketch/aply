@@ -115,6 +115,22 @@ body{padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
 #tChips button{border:0;background:none;color:var(--muted);min-width:28px;min-height:28px;font-size:16px}
 .nomiles{display:none!important}
 .px-dup{display:none!important}
+.mgr{margin-top:14px;border-top:1px solid var(--line);padding-top:4px}
+.mgr summary{cursor:pointer;min-height:44px;display:flex;align-items:center;color:var(--muted);font-weight:600;font-size:13.5px}
+.mgr summary:focus-visible,.dangerlink:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.dangerlink{color:#B3261E;text-decoration:underline;min-height:44px;font-weight:600;font-size:14px;padding:0}
+@media (prefers-color-scheme: dark){.dangerlink{color:#FF8A80}}
+.btn.danger{background:#B3261E;color:#fff;border-color:transparent}
+.svform{display:flex;flex-direction:column;gap:14px;border-top:1px solid var(--line);padding-top:14px}
+.svcol{flex-direction:column;align-items:stretch}
+.svcol label{border-radius:12px;min-height:44px}
+.nps{display:grid;grid-template-columns:repeat(auto-fit,minmax(44px,1fr));gap:6px}
+.npsb{position:relative;display:block}
+.npsb input{position:absolute;opacity:0;inset:0;width:100%;height:100%;cursor:pointer;margin:0}
+.npsb span{display:grid;place-items:center;min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-weight:700}
+.npsb input:checked+span{background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--accent-ink);border-color:transparent}
+.npsb input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
+.npsend{display:flex;justify-content:space-between;gap:10px}
 /* form polish: labels sit directly on the page (no white boxes), softer inputs, clear focus */
 .field label:not(.chip){background:none;color:var(--muted);font-weight:600;font-size:12.5px;letter-spacing:.02em}
 .checks label{background:var(--surface)}
@@ -1069,7 +1085,7 @@ function apply(w,host){
   var acctSec=d.createElement("div");acctSec.id="acctSec";acctSec.className="form";acctSec.hidden=true;form.after(acctSec);
   var AUTH=["Authorized to work in the US without sponsorship","Authorized now, will need sponsorship later","Need sponsorship now","Authorized to work outside the US"];
   var NOTICE=["Immediately","2 weeks","1 month","2 months or more"];
-  function msg(t){var m=d.getElementById("aMsg");if(m)m.textContent=t}
+  function msg(t){var m=d.getElementById("aMsg");if(!m)return;m.textContent=t;if(t&&m.scrollIntoView)m.scrollIntoView({block:"nearest",behavior:"smooth"})}
   function cleanUrl(u){u=String(u||"").trim();if(!u)return "";if(!URL_OK.test(u))u="https://"+u;try{var x=new w.URL(u);return /^https?:$/.test(x.protocol)?x.href.slice(0,300):null}catch(e){return null}}
   function opts(list,cur){return '<option value="">Choose</option>'+list.map(function(x){return '<option'+(cur===x?" selected":"")+'>'+E(x)+'</option>'}).join("")}
   function renderAcct(v){
@@ -1353,14 +1369,42 @@ function apply(w,host){
       '<div class="field"><label for="sNew2">Confirm new password</label><input type="password" id="sNew2" autocomplete="new-password" maxlength="128"></div>'+
       '<div class="acts"><button type="button" class="btn" data-auth="schgo">Save new password</button><button type="button" class="btn ghost" data-auth="schgno">Cancel</button></div>';
   }
+  /* Deleting an account is deliberately three quiet steps away from the main Account screen:
+     1) "More account options" (folded shut) > 2) a short, skippable exit survey > 3) password (or typing DELETE) to confirm. */
+  var SV_REASONS=[["found_job","I found a job"],["not_looking","I'm not looking right now"],["no_fit","Not enough jobs that fit me"],["hard_to_use","Hard to use or confusing"],["too_expensive","Too expensive"],["privacy","Privacy concerns"],["technical","Technical problems"],["other","Something else"]];
+  var SV_OUTCOMES=[["hired_uaply","I got a job through UAply"],["hired_other","I got a job somewhere else"],["still_looking","I'm still looking"],["break","I'm taking a break"]];
+  function surveyHTML(){
+    var nps="";for(var i=0;i<=10;i++)nps+='<label class="npsb"><input type="radio" name="svNps" value="'+i+'" aria-label="'+i+' out of 10"><span>'+i+'</span></label>';
+    return '<div class="svform" role="group" aria-labelledby="svT"><b id="svT">Before you go, help us get better</b>'+
+      '<p class="note" style="margin:0">Five quick questions, about a minute. Your answers are anonymous: we do not link them to your account, and deleting your account does not need them. Skip any or all.</p>'+
+      '<div class="field"><span class="l" id="svQ1">What is the main reason you are leaving?</span><div class="checks svcol" role="radiogroup" aria-labelledby="svQ1">'+SV_REASONS.map(function(r){return '<label><input type="radio" name="svReason" value="'+r[0]+'"> '+E(r[1])+'</label>'}).join("")+'</div></div>'+
+      '<div class="field"><label for="svOutcome">How did your job search go?</label><select id="svOutcome"><option value="">Choose</option>'+SV_OUTCOMES.map(function(r){return '<option value="'+r[0]+'">'+E(r[1])+'</option>'}).join("")+'</select></div>'+
+      '<div class="field"><span class="l" id="svQ3">How likely are you to recommend UAply to a friend?</span><div class="nps" role="radiogroup" aria-labelledby="svQ3">'+nps+'</div><div class="npsend"><small>0 = not at all likely</small><small>10 = extremely likely</small></div></div>'+
+      '<div class="field"><label for="svBetter">What is one thing we should have done better, or added?</label><textarea id="svBetter" maxlength="1000" rows="3"></textarea></div>'+
+      '<div class="field"><label for="svReturn">What, if anything, would bring you back?</label><textarea id="svReturn" maxlength="600" rows="2"></textarea></div>'+
+      '<div class="acts"><button type="button" class="btn" data-auth="sdelsend">Send and continue</button><button type="button" class="btn ghost" data-auth="sdelskip">Skip survey</button></div>'+
+      '<div class="acts"><button type="button" class="linkbtn" data-auth="sdelno">Keep my account</button></div></div>';
+  }
+  function deleteHTML(){
+    if(AUI.survey)return surveyHTML();
+    if(AUI.delOpen){
+      var nopw=SRV.user&&SRV.user.hasPassword===false;
+      return '<div class="svform"><b>Delete your account</b>'+
+        '<div class="field"><label for="sDelPw">'+(nopw?'Type DELETE to confirm':'Enter your password to confirm')+'</label><input type="'+(nopw?'text':'password')+'" id="sDelPw" autocomplete="'+(nopw?'off':'current-password')+'" maxlength="128"></div>'+
+        '<p class="note" style="margin:0">This removes your account, your receipts and your application records from UAply\'s server. It cannot be undone. Your profile on this device stays until you delete it in Data and privacy.</p>'+
+        '<div class="checks"><label><input type="checkbox" id="sDelAck"> I understand this cannot be undone</label></div>'+
+        '<div class="acts"><button type="button" class="btn danger" data-auth="sdelgo">Delete my account</button><button type="button" class="btn ghost" data-auth="sdelno">Keep my account</button></div></div>';
+    }
+    return '<details class="mgr"><summary>More account options</summary><p class="note" style="margin:6px 0">Closing your account is permanent.</p>'+
+      '<button type="button" class="linkbtn dangerlink" data-auth="sdel">Delete my account…</button></details>';
+  }
   function serverHTML(){
     if(!SRV.user&&AUI.reset)return resetHTML();
     if(!SRV.user&&AUI.forgot&&AUI.sMode==="in")return forgotHTML();
     if(SRV.user)return '<div class="plan" style="display:flex;flex-direction:column;gap:8px"><span class="tag" style="background:var(--accent);color:var(--accent-ink)">ACCOUNT</span><b>You are signed in</b><small>'+E(SRV.user.email)+(SRV.user.emailVerified===false?' · email not verified yet':' · email verified')+'</small>'+verifyHTML()+
       '<p class="note" style="margin:0">'+(SRV.user.emailVerified===false?'Once your email is verified, each swipe right sends a confirmation to it':'Every time you swipe right, a confirmation goes to this email')+(SRV.canEmail?'':' (no real email is connected here yet, so it is saved in the <a href="/outbox" target="_blank" rel="noopener noreferrer">test inbox</a>; <a href="/setup#gmail" target="_blank" rel="noopener noreferrer">connect Gmail</a> to send real ones)')+'.</p>'+
-      '<div class="acts"><button type="button" class="btn ghost" data-auth="sout">Sign out</button><button type="button" class="btn ghost" data-auth="sdel">Delete account</button></div>'+changeHTML()+
-      (AUI.delOpen?'<div class="field"><label for="sDelPw">'+(SRV.user.hasPassword===false?'Type DELETE to delete your account':'Enter your password to delete your account')+'</label><input type="'+(SRV.user.hasPassword===false?'text':'password')+'" id="sDelPw" autocomplete="'+(SRV.user.hasPassword===false?'off':'current-password')+'" maxlength="128"><small>This removes your account, your receipts and your application records on UAply\'s server. It cannot be undone. Your profile on this device stays until you delete it in Data and privacy.</small></div>'+
-        '<div class="acts"><button type="button" class="btn" data-auth="sdelgo">Delete my account</button><button type="button" class="btn ghost" data-auth="sdelno">Keep my account</button></div>':'')+
+      (AUI.survey||AUI.delOpen?'':'<div class="acts"><button type="button" class="btn ghost" data-auth="sout">Sign out</button></div>'+changeHTML())+
+      deleteHTML()+
       '</div>';
     var up=AUI.sMode!=="in";
     return '<div class="plan" style="display:flex;flex-direction:column;gap:10px"><b>'+(up?"Create your UAply account":"Log in to UAply")+'</b>'+
@@ -1428,18 +1472,33 @@ function apply(w,host){
       });
       return;
     }
-    if(a==="sout"){apiPost("/api/auth/logout",{}).then(function(){SRV.user=null;AUI.delOpen=false;paintHeader();renderAcct("account");msg("Signed out.")});return}
-    if(a==="sdel"){AUI.delOpen=true;renderAcct("account");var dp=d.getElementById("sDelPw");if(dp)dp.focus();return}
-    if(a==="sdelno"){AUI.delOpen=false;renderAcct("account");return}
+    if(a==="sout"){apiPost("/api/auth/logout",{}).then(function(){SRV.user=null;AUI.delOpen=false;AUI.survey=false;paintHeader();renderAcct("account");msg("Signed out.")});return}
+    if(a==="sdel"){AUI.survey=true;AUI.delOpen=false;renderAcct("account");var f1=d.querySelector("#acctSec .svform input");if(f1)f1.focus();return}
+    if(a==="sdelno"){AUI.delOpen=false;AUI.survey=false;renderAcct("account");return}
+    if(a==="sdelskip"){AUI.survey=false;AUI.delOpen=true;renderAcct("account");var dp=d.getElementById("sDelPw");if(dp)dp.focus();return}
+    if(a==="sdelsend"){
+      var chk=function(n){var x=d.querySelector('#acctSec input[name="'+n+'"]:checked');return x?x.value:""};
+      var sv={reason:chk("svReason"),outcome:val("svOutcome"),better:(d.getElementById("svBetter")||{}).value||"",return:(d.getElementById("svReturn")||{}).value||""};
+      var nv=chk("svNps");if(nv!=="")sv.nps=+nv;
+      var any=sv.reason||sv.outcome||sv.better.trim()||sv.return.trim()||nv!=="";
+      b.disabled=true;
+      var go=function(){AUI.survey=false;AUI.delOpen=true;renderAcct("account");var dp2=d.getElementById("sDelPw");if(dp2)dp2.focus();msg(any?"Thank you, that really helps us.":"")};
+      if(!any){go();return}
+      msg("Sending…");
+      /* the survey is sent without waiting on the result: a problem here must never get in the way of deleting an account */
+      apiPost("/api/feedback",{topic:"exit",survey:sv,source:"delete",page:"Account"}).then(go,go);
+      return;
+    }
     if(a==="sdelgo"){
       var dpw=(d.getElementById("sDelPw")||{}).value||"";
       var nopw=SRV.user&&SRV.user.hasPassword===false;
       if(!dpw){msg(nopw?"Type DELETE to confirm.":"Enter your password.");return}
+      if(!(d.getElementById("sDelAck")||{}).checked){msg("Tick the box to confirm you understand this cannot be undone.");return}
       b.disabled=true;msg("Deleting your account…");
       apiPost("/api/auth/delete",nopw?{confirm:dpw}:{password:dpw}).then(function(r){
         b.disabled=false;
         if(!r.ok){msg((r.j&&r.j.error)||"Could not delete the account. Try again.");return}
-        SRV.user=null;AUI.delOpen=false;paintHeader();renderAcct("account");
+        SRV.user=null;AUI.delOpen=false;AUI.survey=false;paintHeader();renderAcct("account");
         msg("Your account was deleted"+(r.j.applicationsRemoved?", along with "+r.j.applicationsRemoved+" application record"+(r.j.applicationsRemoved===1?"":"s")+" on the server":"")+".");
       });
       return;
