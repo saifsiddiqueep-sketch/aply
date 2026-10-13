@@ -104,7 +104,8 @@ function apply(w,host){
   }
   function goTo(dest){
     var parts=String(dest||"").split(":"),nb=d.getElementById("nb-"+parts[0]);if(!nb)return;
-    nb.click();var it=d.querySelector('.nwrap[data-k='+parts[0]+'] .nitem[data-v="'+parts[1]+'"]');if(it)it.click();
+    nb.click();var it=d.querySelector('.nwrap[data-k='+parts[0]+'] .nitem[data-v="'+parts[1]+'"]');
+    if(it)it.click();else if(parts[0]==="prof"&&w.__uaplyOpenProf)w.__uaplyOpenProf(parts[1]);   /* "preferences" and "resume" now live inside Profile setup */
     if(w.innerWidth<=520)close();
   }
   function post(path,body){

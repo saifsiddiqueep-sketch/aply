@@ -71,7 +71,9 @@ console.log("Release build (dev)");
 
 console.log("Python lint (pyflakes, when installed)");
 {
-  const r = spawnSync("python", ["-m", "pyflakes", "."], { encoding: "utf8" });
+  /* the same interpreter as above (the Windows "py" launcher when "python" is only a Store shortcut), on the project's own scripts */
+  const mine = fs.readdirSync(".").filter((f) => f.endsWith(".py")).concat(fs.existsSync("tools") ? fs.readdirSync("tools").filter((f) => f.endsWith(".py")).map((f) => "tools/" + f) : []);
+  const r = spawnSync(py, ["-m", "pyflakes"].concat(mine), { encoding: "utf8" });
   if (/No module named pyflakes/.test((r.stderr || "") + (r.stdout || ""))) console.log("  skip  pyflakes is not installed (pip install pyflakes)");
   else if (r.status === 0) ok("no unused imports, undefined names or other pyflakes findings");
   else bad("pyflakes found problems:\n" + (r.stdout || r.stderr).slice(0, 1500));

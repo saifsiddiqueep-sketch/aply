@@ -51,7 +51,7 @@ build("sandbox/index.html", "share/sandbox.html", "UAply Sandbox", [
   ["Experiment freely. Reads a copy of index.html (prod); prod is never changed.", "Experiment freely. Hosted copy: example jobs only, and your swipes stay in your own browser."],
 ]);
 build("dev/index.html", "share/dev.html", "UAply", [
-  ['var PROMOTED=["nav","live","kit","submit",', 'var PROMOTED=["nav",'],
+  ['var PROMOTED=["nav","profile","live","kit","submit",', 'var PROMOTED=["nav","profile",'],
   // the hosted copy has no server, so it must say so instead of posing as the real app
   ['<div class="bar" id="devbar" hidden><span class="badge">DEV</span><span id="what">Release candidate</span></div>',
    '<div class="bar" id="devbar"><span class="badge">PREVIEW</span><span id="what">Static preview: example jobs only. Accounts and real jobs run on the UAply server.</span></div>'],

@@ -39,13 +39,13 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   await ev(F + ".getElementById('nb-prof').click()"); await sleep(500);
   const items = await ev("[...(" + F + ").querySelectorAll('button')].filter(b=>b.offsetParent).map(b=>b.innerText.trim().split(" + nl + ")[0]).join('|')");
   check("Profile menu has Plan & billing (real plans, backed by Stripe)", /Plan/.test(items), items.split("|").slice(-8).join(", "));
-  for (const s of ["Account", "Settings", "Resume", "Preferences", "Filters", "Plan", "Data"]) {
+  for (const s of ["Account", "Profile setup", "Filters", "Plan", "Data"]) {
     if (!(await sub(s))) { await ev(F + ".getElementById('nb-prof').click()"); await sleep(350); await sub(s); }   // reopen the menu only if it closed
     await sleep(500);
     await scan("Profile > " + s);
-    if (s === "Settings") {
-      const vals = JSON.parse(await ev("JSON.stringify(['pName','pEmail','pTitle','pYears','pSkills','pSalary','pLoc'].map(id=>(" + F + ".getElementById(id)||{}).value))"));
-      check("a new profile starts blank (no sample name, email, title, skills, pay or city)", vals.every((v) => v === ""), JSON.stringify(vals));
+    if (s === "Profile setup") {
+      const vals = JSON.parse(await ev("JSON.stringify(['pName','pTitle','pYears','pSkills','pSalary','pLoc'].map(id=>(" + F + ".getElementById(id)||{}).value))"));
+      check("a new profile starts blank (no sample name, title, skills, pay or city)", vals.every((v) => v === ""), JSON.stringify(vals));
     }
     if (s === "Account") {
       await sleep(600);
@@ -56,9 +56,9 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   }
 
   // saving only a name and email must not hide the real jobs
-  await sub("Settings"); await sleep(400);
+  await sub("Profile setup"); await sleep(400);
   await setVal("pName", "Release Tester"); await setVal("pEmail", "release.tester@example.com");
-  await ev(F + ".getElementById('saveBtn').click()"); await sleep(900);
+  await ev(F + ".getElementById('wzNext').click()"); await sleep(900);
   await ev(F + ".getElementById('nb-svc').click()"); await sleep(300);
   await sub("Internships"); await sleep(700);
   const hidden = await ev("(" + F + ").body.innerText.split(" + nl + ").join(' ').match(/(\\d+) listings? (are|is) hidden because/)");

@@ -17,7 +17,7 @@ var EXTRA=`,
  {id:20,type:"coop",co:"Lumen Labs",role:"Web Co-op",loc:"Remote (US)",mode:"remote",sal:[46000,56000],yrs:0,edu:"Associate",skills:["React","TypeScript","CSS","JavaScript"],blurb:"Full-semester co-op building customer-facing pages for a lighting startup."}`;
 
 var API=`
-window.__uaply={S:S,JOBS:JOBS,save:save,renderAll:renderAll,show:show,setFilter:setFilter,esc:esc,hue:hue,money:money,tone:tone,cap:cap,
+window.__uaply={S:S,JOBS:JOBS,save:save,renderAll:renderAll,show:show,setFilter:setFilter,esc:esc,hue:hue,money:money,tone:tone,cap:cap,evaluate:evaluate,
  setType:function(t){TYPE=t;renderDeck();renderDash()},getType:function(){return TYPE},
  setMin:function(n){MINPCT=n;renderDeck();renderDash()},getMin:function(){return MINPCT},getFilter:function(){return F}};`;
 
@@ -43,6 +43,16 @@ function patch(s){
   s=once(s,'{k:"Experience",w:20,','{k:"Experience",w:15,');
   s=once(s,'var pe=LEVELS.indexOf(p.edu),je=LEVELS.indexOf(job.edu);','var tt=window.__uaplyTitle?window.__uaplyTitle(job,p):{s:1,have:"No target titles set"};var pe=LEVELS.indexOf(p.edu),je=LEVELS.indexOf(job.edu);');
   s=once(s,'{k:"Education",w:5,','{k:"Title",w:15,s:tt.s,ask:job.role,have:tt.have},\n   {k:"Education",w:5,');
+  /* a new person starts with nothing ticked under "Work style", which means no preference (every style scores full points) */
+  s=once(s,'var mo=p.modes[job.mode]?1:((job.mode==="hybrid"&&p.modes.remote)?0.5:0);','var anyM=p.modes.remote||p.modes.hybrid||p.modes.onsite;var mo=!anyM?1:(p.modes[job.mode]?1:((job.mode==="hybrid"&&p.modes.remote)?0.5:0));');
+  s=once(s,'have:mo===1?"Accepted":(mo?"Hybrid, you prefer remote":"Not on your list")','have:mo===1?(anyM?"Accepted":"No preference set"):(mo?"Hybrid, you prefer remote":"Not on your list")');
+  s=once(s,'$("pm-remote").checked=!!p.modes.remote;$("pm-hybrid").checked=!!p.modes.hybrid;$("pm-onsite").checked=!!p.modes.onsite;$("pReloc").checked=!!p.reloc;','var mm=X?{}:p.modes;$("pm-remote").checked=!!mm.remote;$("pm-hybrid").checked=!!mm.hybrid;$("pm-onsite").checked=!!mm.onsite;$("pReloc").checked=X?false:!!p.reloc;');
+  /* skills also count when your headline, About you or major says them (a job asking for "SQL" is met if your summary mentions SQL) */
+  s=once(s,'var have=p.skills.map(norm);','var have=p.skills.map(norm).concat(window.__uaplyTextSkills?window.__uaplyTextSkills(job,p).map(norm):[]);');
+  s=once(s,'have:matched.length+" of "+job.skills.length+" skills"}','have:matched.length+" of "+job.skills.length+" skills"+(window.__uaplyTextNote?window.__uaplyTextNote(job,p):"")}');
+  s=once(s,'var have=S.profile.skills.map(norm);','var have=S.profile.skills.map(norm).concat(window.__uaplyTextSkills?window.__uaplyTextSkills(j,S.profile).map(norm):[]);');
+  /* saving inside the guided setup stays on the same screen; saving from anywhere else still shows the matches */
+  s=once(s,'save();renderAll();show("swipe");toast("Profile saved. Matches updated.","OK",clearToast);','save();renderAll();if(!(window.__uaplyAfterSave&&window.__uaplyAfterSave()))show("swipe");if(!window.__uaplyAutoSave)toast("Profile saved. Matches updated.","OK",clearToast);');
   /* subscription gate: the page (apply) defines window.__uaplyGate; false means "not allowed, a paywall was shown" */
   s=once(s,'var job=JOB_BY_ID[id];','var job=JOB_BY_ID[id];if(dir==="applied"&&window.__uaplyGate&&window.__uaplyGate(job)===false){busy=false;renderAll();return}');
   s=once(s,'function show(t,focusPane){','function show(t,focusPane){if(window.__uaplyOnShow)window.__uaplyOnShow(t);');
@@ -101,7 +111,8 @@ body{padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
 .mchip.m-remote{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);border-color:transparent}
 .mchip.m-hybrid{background:color-mix(in srgb,var(--accent2) 18%,transparent);color:var(--ink);border-color:transparent}
 .mchip.m-onsite{background:var(--bg);color:var(--muted)}
-#aEeo{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:14px}
+#aEeo{display:block;border-top:1px solid var(--line);padding-top:6px}
+#aElig{display:flex;flex-direction:column;gap:10px}
 #tBox{display:flex;flex-direction:column;gap:8px}
 #skillList{list-style:none;margin:4px 0 0;padding:4px;border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:var(--shadow);max-height:260px;overflow:auto}
 #skillList[hidden]{display:none}
@@ -144,6 +155,72 @@ body{padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
 #setMeter[hidden]{display:none!important}
 #filtersSec{display:flex;flex-direction:column;gap:14px}
 #filtersSec input[type=range]{width:100%;accent-color:var(--accent)}
+/* guided setup: one group of questions per screen. Desktop (960px and wider) also shows what employers will see. */
+#form{max-width:640px;padding-bottom:150px}
+#form.wz{display:grid;grid-template-columns:minmax(0,1fr);row-gap:0}
+#form.wz>*:not(#wzPrev){margin:0 0 14px;min-width:0}
+#form:not(.wz) #wzTop,#form:not(.wz) #wzPrev,#form:not(.wz) #wzFoot,#form:not(.wz) #wzUse,#form:not(.wz) #wzMsg{display:none}
+#wzMsg:empty{display:none}
+.wz-off{display:none!important}
+#wzTop{display:flex;flex-direction:column;gap:8px}
+.wzRow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font:600 12.5px var(--mono);color:var(--muted)}
+.wzBar{height:8px;border-radius:999px;background:var(--line);overflow:hidden}
+.wzBar i{display:block;height:100%;background:linear-gradient(135deg,var(--accent),var(--accent2));transition:width .25s}
+.wzDots{list-style:none;margin:0;padding:0;display:flex;gap:6px}
+.wzDots li{flex:1;min-width:0}
+.wzDots button{width:100%;min-height:44px;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:12px;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;padding:4px 6px}
+.wzDots button .t{display:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wzDots button[data-done="true"]::after{content:"\\2713";color:var(--yes)}
+.wzDots button[aria-current="step"]{background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--accent-ink);border-color:transparent}
+.wzDots button[aria-current="step"]::after{color:var(--accent-ink)}
+.wzDots button:focus-visible,.wzFoot .btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+@media (min-width:640px){.wzDots button .t{display:inline}}
+#form.wz h3#secTitle{font:800 22px var(--display);letter-spacing:-.01em;text-transform:none;color:var(--ink);margin:6px 0 0}
+#form.wz p.lead{font-size:15px}
+.wzUse{padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--line);font-size:13px;color:var(--muted)}
+.wzUse b{color:var(--ink);font-weight:600}
+#wzFoot{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+#wzFoot .btn{min-height:48px;padding:10px 22px}
+#wzFoot .grow{flex:1}
+#wzPrev{display:none;flex-direction:column;gap:10px}
+#wzPrev .pvh{font:800 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+#wzPrev .pv{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow)}
+#wzPrev .pvTop{display:flex;gap:12px;align-items:center}
+#wzPrev .pvAv{flex:none;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--accent-ink);display:grid;place-items:center;font:800 18px var(--display)}
+#wzPrev .pvTop b{display:block;font:800 17px/1.2 var(--display);overflow-wrap:anywhere}
+#wzPrev .pvTop span{color:var(--muted);font-size:13.5px;overflow-wrap:anywhere}
+#wzPrev .pvMeta{font:500 13px var(--mono);color:var(--muted)}
+#wzPrev .chips{gap:6px}
+#wzPrev .chip{font-size:12px;padding:3px 10px}
+#wzPrev ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;font-size:13.5px}
+#wzPrev li{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding-top:7px}
+#wzPrev li span:first-child{color:var(--muted);flex:none}
+#wzPrev li span:last-child{text-align:right;overflow-wrap:anywhere;min-width:0}
+#wzPrev li.no span:last-child{color:var(--muted);font-style:italic}
+@media (min-width:960px){
+ #form.wz{max-width:1020px;grid-template-columns:minmax(0,1fr) 340px;column-gap:28px;align-items:start}
+ #form.wz>*:not(#wzPrev){grid-column:1}
+ #form.wz>#wzPrev{display:flex;grid-column:2;grid-row:1 / span 8;position:sticky;top:8px;margin:0}
+ #form.wz .grid{grid-template-columns:1fr 1fr}
+}
+@media (prefers-reduced-motion:reduce){.wzBar i{transition:none}}
+/* controls that were left unstyled (password, month, link, file) now match the rest, with 44px targets */
+#form input[type=month],#form input[type=url],#form input[type=email],#form textarea,#acctSec input[type=password],#acctSec input[type=email]{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:var(--ink);font:inherit;width:100%;min-height:44px}
+#form input[type=text],#form input[type=number],#form input[type=tel],#form select,#acctSec input[type=text],#acctSec input[type=password],#acctSec select{min-height:44px}
+#form input[type=file],#acctSec input[type=file]{width:100%;padding:8px;border:1px dashed var(--line);border-radius:12px;background:var(--surface);color:var(--muted)}
+#form input[type=file]::file-selector-button,#acctSec input[type=file]::file-selector-button{border:0;background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--accent-ink);border-radius:8px;padding:8px 12px;margin-right:10px;font-weight:600;min-height:36px;cursor:pointer}
+input[type=checkbox],input[type=radio]{accent-color:var(--accent);width:20px;height:20px;flex:none}
+input[type=range]{accent-color:var(--accent);min-height:44px}
+#form .checks label,#acctSec .checks label,#filtersSec .checks label{min-height:44px}
+.chip.pick{min-height:40px}
+#tChips button{min-width:36px;min-height:36px}
+#acctSec{padding-bottom:150px}
+#filtersSec{padding-bottom:20px}
+#aEeo>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600;color:var(--muted)}
+#aEeo[open]>summary{color:var(--ink)}
+#aEeo>.eeoBody{display:flex;flex-direction:column;gap:10px;padding-top:6px}
+#banner:not([hidden]){display:flex!important}
+@media (max-width:480px){.hdrbtn .em{display:none}.hdrbtn{padding:5px;max-width:none}}
 `;
 
 function apply(w,host){
@@ -155,17 +232,17 @@ function apply(w,host){
   var SECS={
     svc:{label:"Services",items:[["job","Full-time"],["parttime","Part-time"],["internship","Internships"],["coop","Coop"]]},
     dash:{label:"Dashboard",items:[["overview","Overview"],["applied","Applied"],["accepted","Accepted"],["rejected","Rejected"],["interview","Interviews"]]},
-    prof:{label:"Profile",items:[["account","Account"],["settings","Settings"],["resume","Resume & links"],["preferences","Preferences"],["filters","Filters"],["plan","Plan & billing"],["data","Data & privacy"]]}
+    prof:{label:"Profile",items:[["settings","Profile setup"],["filters","Filters"],["account","Account"],["plan","Plan & billing"],["data","Data & privacy"]]}
   };
+  /* Settings, Preferences and Resume are now one guided setup. The old names still work as shortcuts into it. */
+  var WIZV={settings:1,preferences:1,resume:1},SUB_ALIAS={preferences:"settings",resume:"settings"};
   /* the Plan screen is in every build: on a real server it is backed by Stripe (see billingHTML); the simulated one remains only without a server */
-  var ACCT={account:1,resume:1,plan:1,data:1};
+  var ACCT={account:1,plan:1,data:1};
   var LEADS={
     account:"Sign in so your profile and applications follow you to any device.",
-    resume:"What employers ask for besides your skills. Fill these in once; they are saved on this device and sent with every application.",
     plan:"Choose your plan. Payments are made on Stripe's secure page; you can cancel any time.",
     data:"Back up, move or delete everything UAply keeps about you.",
     settings:"Your details. Every card is scored against them, and they fill in your application note and the email address recruiters reply to.",
-    preferences:"What you want in a job. These change every match score.",
     filters:"Choose which opportunities appear in your feed."
   };
   var FIELDS={settings:["pName","pEmail","pTitle","pYears","pEdu","pSkills","pLoc"],preferences:["pSalary","pm-remote"]};
@@ -177,7 +254,7 @@ function apply(w,host){
   phoneField.innerHTML='<label for="pPhone">Phone</label><input type="tel" id="pPhone" autocomplete="tel" maxlength="20" placeholder="+1 555 123 4567"><small id="pPhoneErr" role="alert"></small>';
   emailField.after(phoneField);FIELDS.settings.push("pPhone");
   var cur="svc",sub={svc:"job",dash:"overview",prof:"settings"},going=false;
-  function label(k,v){var r="";SECS[k].items.forEach(function(i){if(i[0]===v)r=i[1]});return r}
+  function label(k,v){if(k==="prof"&&SUB_ALIAS[v])v=SUB_ALIAS[v];var r="";SECS[k].items.forEach(function(i){if(i[0]===v)r=i[1]});return r}
 
   var st=d.createElement("style");st.textContent=CSS;d.head.appendChild(st);
 
@@ -185,6 +262,8 @@ function apply(w,host){
   var prefs={};try{prefs=JSON.parse(w.localStorage.getItem(NK))||{}}catch(e){}
   function savePrefs(){try{w.localStorage.setItem(NK,JSON.stringify({type:sub.svc,min:A.getMin(),mode:A.getFilter()}))}catch(e){}}
   if(label("svc",prefs.type)){sub.svc=prefs.type;A.setType(sub.svc)}
+  else{var tc0=typesChosen0();if(tc0.length){sub.svc=tc0[0];A.setType(sub.svc)}}   /* first visit: open the first opportunity type picked in the profile */
+  function typesChosen0(){var t=((A.S.profile&&A.S.profile.ext)||{}).types,m={fulltime:"job",parttime:"parttime",internship:"internship",coop:"coop"};return Array.isArray(t)?t.map(function(k){return m[k]}).filter(Boolean):[]}
   if(prefs.min>0&&prefs.min<=90)A.setMin(+prefs.min);
   if(["remote","hybrid","onsite"].indexOf(prefs.mode)>-1)A.setFilter(prefs.mode);
 
@@ -232,9 +311,11 @@ function apply(w,host){
   function openMenu(wrap,focusLast){
     var k=wrap.getAttribute("data-k"),menu=wrap.querySelector(".nmenu");
     closeMenus(wrap);
-    menu.innerHTML=SECS[k].items.map(function(i){
-      var c=count(k,i[0]);
-      return '<button type="button" class="nitem" role="menuitemradio" aria-checked="'+(sub[k]===i[0])+'" data-v="'+i[0]+'"><span>'+i[1]+'</span>'+(c===""?"":'<span class="c">'+c+'</span>')+'</button>';
+    var tc=k==="svc"?typesChosen():[],list0=SECS[k].items.slice();
+    if(tc.length)list0.sort(function(a,b){return (tc.indexOf(b[0])>-1)-(tc.indexOf(a[0])>-1)});   /* the types you picked in your profile come first */
+    menu.innerHTML=list0.map(function(i){
+      var c=count(k,i[0]),off=tc.length&&tc.indexOf(i[0])<0;
+      return '<button type="button" class="nitem" role="menuitemradio" aria-checked="'+(sub[k]===i[0])+'" data-v="'+i[0]+'"><span>'+i[1]+(off?' <small class="c">not in your profile</small>':'')+'</span>'+(c===""?"":'<span class="c">'+c+'</span>')+'</button>';
     }).join("");
     menu.hidden=false;wrap.querySelector(".nb").setAttribute("aria-expanded","true");
     var items=menu.querySelectorAll(".nitem"),on=menu.querySelector('[aria-checked="true"]');
@@ -327,7 +408,7 @@ function apply(w,host){
   d.getElementById("saveBtn").textContent="Save changes";
   form.addEventListener("submit",function(e){
     var ph=d.getElementById("pPhone").value.trim();
-    if(ph&&!/^[+0-9 ()\-.]{7,20}$/.test(ph)){e.preventDefault();e.stopImmediatePropagation();d.getElementById("pPhoneErr").textContent="Phone numbers can only have digits, spaces, + ( ) - and .";d.getElementById("pPhone").focus();return}
+    if(ph&&!/^[+0-9 ()\-.]{7,20}$/.test(ph)){e.preventDefault();e.stopImmediatePropagation();d.getElementById("pPhoneErr").textContent="Phone numbers can only have digits, spaces, + ( ) - and .";goField("pPhone");return}
     acct.phone=ph;saveA();
   },true);
   var fs=d.createElement("div");fs.id="filtersSec";fs.hidden=true;
@@ -349,23 +430,27 @@ function apply(w,host){
     A.S.history=A.S.history.filter(function(i){return !!A.S.decisions[i]});
     A.save();A.renderAll();this.textContent="Done";var b=this;setTimeout(function(){b.textContent="Bring them back"},1500);
   };
+  /* Profile setup (settings, preferences and resume together) is a guided setup, one group of questions per screen.
+     Filters, Account, Plan and Data keep their own screens. */
   function section(v){
-    secTitle.textContent=label("prof",v);lead.textContent=LEADS[v];
+    if(SUB_ALIAS[v]){wz.want=v==="resume"?"back":"where";v=sub.prof="settings"}
+    var isWiz=!!WIZV[v],grid=form.querySelector(".grid");
     form.hidden=!!ACCT[v];acctSec.hidden=!ACCT[v];
+    form.classList.toggle("wz",isWiz);
     d.getElementById("pPhone").value=acct.phone;d.getElementById("pPhoneErr").textContent="";
-    meter.hidden=v!=="settings";
-    if(v==="settings"){
-      var cl=checklist(),dn=cl.filter(function(c){return c[1]}).length,miss=cl.filter(function(c){return !c[1]})[0];
-      meter.innerHTML='<b>Profile '+Math.round(dn/cl.length*100)+'% complete</b><div class="bar"><i style="width:'+Math.round(dn/cl.length*100)+'%"></i></div><small>'+(miss?'Next: '+E(miss[0])+({resume:' (in Resume &amp; links)',preferences:' (in Preferences)'}[miss[2]]||''):'Everything employers usually ask for is filled in.')+'</small>';
-    }
+    meter.hidden=true;   /* the guided setup has its own progress bar */
+    if(!isWiz){secTitle.textContent=label("prof",v);lead.textContent=LEADS[v]}
     if(ACCT[v])renderAcct(v);
     if(w.__uaplySyncPrefs)w.__uaplySyncPrefs();
-    Object.keys(FIELDS).forEach(function(key){FIELDS[key].forEach(function(id){d.getElementById(id).closest(".field").hidden=(key!==v)})});
-    d.querySelectorAll("[data-sec]").forEach(function(x){x.hidden=(" "+x.getAttribute("data-sec")+" ").indexOf(" "+v+" ")<0});   /* fields other experiments add */
+    Object.keys(FIELDS).forEach(function(key){FIELDS[key].forEach(function(id){var e=d.getElementById(id),f=e&&e.closest(".field");if(f)f.hidden=false})});
+    d.querySelectorAll("[data-sec]").forEach(function(x){x.hidden=false});   /* fields other experiments add; the guided setup decides what shows */
+    grid.hidden=!isWiz;
     fs.hidden=v!=="filters";
+    form.querySelector(".formacts").hidden=isWiz;
     d.getElementById("saveBtn").hidden=v==="filters";
     d.getElementById("resetBtn").hidden=v!=="filters";
     syncFilters();
+    if(isWiz)wzOpen();
   }
 
   /* ---------- account: per-application details, preferences/filters, resume, plan, data, dashboard overview ---------- */
@@ -398,7 +483,7 @@ function apply(w,host){
     a.fPerks=Array.isArray(a.fPerks)?a.fPerks.filter(function(k){return PERK_KEYS.indexOf(k)>-1}).slice(0,PERKS.length):[];
     if(MILES.indexOf(String(a.fMiles))<0)a.fMiles="any";a.fMiles=String(a.fMiles);
     if(POSTED.indexOf(a.fPosted)<0)a.fPosted="any";
-    a.fApp=!!a.fApp;a.fInstant=!!a.fInstant;a.fStrict=!!a.fStrict;a.fAuto=!!a.fAuto;a.fTitleOnly=!!a.fTitleOnly;a.fNoComm=!!a.fNoComm;a.fEdu=!!a.fEdu;
+    a.fApp=!!a.fApp;a.fInstant=!!a.fInstant;a.fStrict=!!a.fStrict;a.fAuto=!!a.fAuto;a.fTitleOnly=!!a.fTitleOnly;a.fNoComm=!!a.fNoComm;a.fEdu=!!a.fEdu;a.fWs=a.fWs!==false;
     var seen={};
     a.titles=(Array.isArray(a.titles)?a.titles:[]).filter(function(t){return typeof t==="string"}).map(function(t){return t.trim().replace(/\s+/g," ").slice(0,60)}).filter(function(t){var k=t.toLowerCase();if(!t||seen[k])return false;seen[k]=1;return true}).slice(0,4);
     a.fLevels=(Array.isArray(a.fLevels)?a.fLevels:[]).filter(function(k){return LEVEL_KEYS.indexOf(k)>-1});
@@ -411,7 +496,7 @@ function apply(w,host){
     return a;
   }
   var DAY=864e5,DATA_URL=/^data:[\w\/+.\-]+;base64,[A-Za-z0-9+\/=]+$/,URL_OK=/^https?:\/\//i;
-  function defAcct(){return {phone:"",linkedin:"",portfolio:"",summary:"",auth:"",notice:"",cover:"",resumeName:"",resumeSize:0,resumeData:"",plan:"trial",since:Date.now(),renews:0,canceled:false,enforce:false,pay:[],apps:{},fSal:false,fYrs:"any",fCo:"",fKw:"",fPosted:"any",fApp:false,fPerks:[],fMiles:"any",fStrict:false,fAuto:false,titles:[],fTitleOnly:true,fNoComm:false,fLevels:[],fEdu:false,eeo:{auth:"",sponsor:"",veteran:"",hisp:"",race:[],disability:"",gender:""},addr:{street:"",unit:"",state:"",zip:""},resumeUrl:""}}
+  function defAcct(){return {phone:"",linkedin:"",portfolio:"",summary:"",auth:"",notice:"",cover:"",resumeName:"",resumeSize:0,resumeData:"",plan:"trial",since:Date.now(),renews:0,canceled:false,enforce:false,pay:[],apps:{},fSal:false,fYrs:"any",fCo:"",fKw:"",fPosted:"any",fApp:false,fPerks:[],fMiles:"any",fStrict:false,fAuto:false,titles:[],fTitleOnly:true,fNoComm:false,fLevels:[],fEdu:false,fWs:true,eeo:{auth:"",sponsor:"",veteran:"",hisp:"",race:[],disability:"",gender:""},addr:{street:"",unit:"",state:"",zip:""},resumeUrl:""}}
   function loadA(){
     var a=defAcct();
     try{var r=JSON.parse(w.localStorage.getItem(AK));if(r&&typeof r==="object"){Object.keys(a).forEach(function(k){if(r[k]!==undefined&&typeof r[k]===typeof a[k])a[k]=r[k]})}}catch(e){}
@@ -440,6 +525,11 @@ function apply(w,host){
   /* posted date, applicant count, benefits and distance. Missing data is "unknown": shown unless "hide listings that don't say" is on. */
   var CITIES=[["philadelphia|philly",39.9526,-75.1652],["camden",39.9259,-75.1196],["wilmington",39.7447,-75.5484],["newark,? de|newark, delaware",39.6837,-75.7497],["trenton",40.2171,-74.7429],["cherry hill",39.9348,-75.0307],["king of prussia",40.1013,-75.3836],["princeton",40.3573,-74.6672],["allentown",40.6084,-75.4902],["reading, pa",40.3356,-75.9269],["lancaster, pa",40.0379,-76.3055],["atlantic city",39.3643,-74.4229],["harrisburg",40.2732,-76.8867],["pittsburgh",40.4406,-79.9959],["new york|nyc|brooklyn|manhattan",40.7128,-74.006],["newark",40.7357,-74.1724],["jersey city",40.7178,-74.0431],["boston",42.3601,-71.0589],["washington,? d\\.?c|washington dc",38.9072,-77.0369],["baltimore",39.2904,-76.6122],["richmond, va",37.5407,-77.436],["charlotte",35.2271,-80.8431],["raleigh",35.7796,-78.6382],["atlanta",33.749,-84.388],["miami",25.7617,-80.1918],["orlando",28.5383,-81.3792],["tampa",27.9506,-82.4572],["chicago",41.8781,-87.6298],["detroit",42.3314,-83.0458],["columbus, oh|columbus, ohio",39.9612,-82.9988],["cleveland",41.4993,-81.6944],["cincinnati",39.1031,-84.512],["indianapolis",39.7684,-86.1581],["minneapolis",44.9778,-93.265],["st\\.? louis",38.627,-90.1994],["kansas city",39.0997,-94.5786],["dallas",32.7767,-96.797],["houston",29.7604,-95.3698],["austin",30.2672,-97.7431],["san antonio",29.4241,-98.4936],["denver",39.7392,-104.9903],["phoenix",33.4484,-112.074],["salt lake city",40.7608,-111.891],["las vegas",36.1699,-115.1398],["los angeles",34.0522,-118.2437],["san diego",32.7157,-117.1611],["san francisco",37.7749,-122.4194],["san jose",37.3382,-121.8863],["oakland",37.8044,-122.2712],["seattle",47.6062,-122.3321],["portland, or|portland, oregon",45.5152,-122.6784],["nashville",36.1627,-86.7816],["new orleans",29.9511,-90.0715],["providence",41.824,-71.4128],["hartford",41.7658,-72.6734],["buffalo",42.8864,-78.8784],["albany, ny",42.6526,-73.7562]].map(function(c){return [new w.RegExp("\\b(?:"+c[0]+")\\b","i"),c[1],c[2]]});
   function geo(text){var s=String(text||"");for(var i=0;i<CITIES.length;i++)if(CITIES[i][0].test(s))return [CITIES[i][1],CITIES[i][2]];return null}
+  /* the first three digits of a ZIP code point to a metro area. Used only to find your location for the distance filter. */
+  var ZIP3=[["190 191",39.9526,-75.1652],["198",39.7447,-75.5484],["081",39.9259,-75.1196],["086",40.2171,-74.7429],["181",40.6084,-75.4902],["171",40.2732,-76.8867],["100 101 102 103 104 111 112 113 114",40.7128,-74.006],["070 071 072",40.7357,-74.1724],["073",40.7178,-74.0431],["021 022",42.3601,-71.0589],["029",41.824,-71.4128],["060 061",41.7658,-72.6734],["142",42.8864,-78.8784],["200 202 203 204 205",38.9072,-77.0369],["212",39.2904,-76.6122],["232",37.5407,-77.436],["150 151 152",40.4406,-79.9959],["276",35.7796,-78.6382],["282",35.2271,-80.8431],["303",33.749,-84.388],["331",25.7617,-80.1918],["328",28.5383,-81.3792],["336",27.9506,-82.4572],["606",41.8781,-87.6298],["482",42.3314,-83.0458],["432",39.9612,-82.9988],["441",41.4993,-81.6944],["452",39.1031,-84.512],["462",39.7684,-86.1581],["554",44.9778,-93.265],["631",38.627,-90.1994],["641",39.0997,-94.5786],["752",32.7767,-96.797],["770",29.7604,-95.3698],["787",30.2672,-97.7431],["782",29.4241,-98.4936],["802",39.7392,-104.9903],["850",33.4484,-112.074],["841",40.7608,-111.891],["891",36.1699,-115.1398],["900 901",34.0522,-118.2437],["921",32.7157,-117.1611],["941",37.7749,-122.4194],["951",37.3382,-121.8863],["946",37.8044,-122.2712],["981",47.6062,-122.3321],["972",45.5152,-122.6784],["372",36.1627,-86.7816],["701",29.9511,-90.0715]];
+  function zipGeo(z){var p=String(z||"").slice(0,3);if(!/^\d{3}$/.test(p))return null;for(var i=0;i<ZIP3.length;i++)if((" "+ZIP3[i][0]+" ").indexOf(" "+p+" ")>-1)return [ZIP3[i][1],ZIP3[i][2]];return null}
+  /* where you live: your city plus state (so "Columbus" + OH works), then your ZIP code if the city is not one we know */
+  function homeGeo(){var p=A.S.profile,ad=acct.addr||{};return geo((p.loc||"")+(ad.state?", "+ad.state:""))||geo(p.loc)||zipGeo(ad.zip)}
   function miles(a,b){var R=3958.8,r=Math.PI/180,dl=(b[0]-a[0])*r,dn=(b[1]-a[1])*r,x=Math.sin(dl/2)*Math.sin(dl/2)+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dn/2)*Math.sin(dn/2);return 2*R*Math.asin(Math.sqrt(x))}
   /* target titles: the main title plus up to four more. Words must appear in the job's role name (plurals allowed). */
   function titleList(){return [A.S.profile.title].concat(acct.titles).map(function(t){return String(t||"").trim()}).filter(Boolean)}
@@ -475,13 +565,44 @@ function apply(w,host){
     n.hidden=!(shown===0&&byTitle>0);
     if(!n.hidden)n.textContent=byTitle+" listing"+(byTitle===1?" is":"s are")+" hidden because "+(byTitle===1?"it does":"they do")+" not match your target titles. Add more titles in Profile, Settings, or turn off \"Hide roles that do not match my target titles\" in Profile, Filters.";
   }
-  if(d.getElementById("deck"))new w.MutationObserver(titleNote).observe(d.getElementById("deck"),{childList:true});
+  /* a short note when you are looking at an opportunity type you did not pick in your profile */
+  function typeNote(){
+    var n=d.getElementById("typeNote");
+    if(!n){n=d.createElement("p");n.id="typeNote";n.className="note";n.setAttribute("role","status");n.style.cssText="margin:0 0 8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)";var deck=d.getElementById("deck");if(!deck)return;deck.parentNode.insertBefore(n,deck)}
+    var tc=typesChosen(),ty=A.getType();
+    n.hidden=!(tc.length&&tc.indexOf(ty)<0);
+    if(!n.hidden)n.textContent="You did not pick "+label("svc",ty)+" in your profile, so these are extras. Change your picks in Profile setup, under Jobs you want.";
+  }
+  if(d.getElementById("deck"))new w.MutationObserver(function(){titleNote();typeNote()}).observe(d.getElementById("deck"),{childList:true});
   w.__uaplyTitle=function(job,p){
     if(!p.custom||!titleList().length)return {s:1,have:"No target titles set"};
     var b=titleBest(job);
     return b.fr>=0.99?{s:1,have:'Matches "'+b.name+'"'}:(b.fr>=0.6?{s:0.5,have:'Partly matches "'+b.name+'"'}:{s:0,have:"Not one of your titles"});
   };
-  w.__uaplyHome=function(){return geo(A.S.profile.loc)};
+  w.__uaplyHome=function(){return homeGeo()};
+  /* skills your own words already say: your headline, About you and major count as skills a job asks for (JS counts as JavaScript) */
+  var TXT_ALIAS={js:"javascript",ts:"typescript",py:"python",postgres:"postgresql",reactjs:"react","react.js":"react",nodejs:"node","node.js":"node",k8s:"kubernetes",ml:"machine learning"};
+  function normTxt(s){return " "+String(s).toLowerCase().replace(/[^a-z0-9+#.\s]/g," ").replace(/\.(?=\s|$)/g,"").replace(/\s+/g," ").trim()+" "}
+  var TXT={key:null,hay:" "};
+  function textHay(){
+    var x=XV(),key=[x.headline,x.major,x.summary,acct.summary].join("|");
+    if(TXT.key===key)return TXT.hay;
+    var h=normTxt([x.headline,x.major,x.summary,acct.summary].filter(Boolean).join(" . "));
+    Object.keys(TXT_ALIAS).forEach(function(k){h=h.split(" "+k+" ").join(" "+TXT_ALIAS[k]+" ")});
+    TXT.key=key;TXT.hay=h;return h;
+  }
+  w.__uaplyTextSkills=function(job,p){
+    var h=textHay();if(h.length<4||!job||!job.skills)return [];
+    return job.skills.filter(function(s){var n=normTxt(TXT_ALIAS[String(s).toLowerCase()]||s);return n.length>4&&h.indexOf(n)>-1});
+  };
+  w.__uaplyTextNote=function(job,p){
+    var own=(p.skills||[]).map(function(s){return String(s).trim().toLowerCase()});
+    var n=w.__uaplyTextSkills(job,p).filter(function(s){return own.indexOf(String(s).toLowerCase())<0}).length;
+    return n?" ("+n+" from your summary)":"";
+  };
+  /* opportunity types picked in Profile setup. They decide which Services section opens first and are marked in the menu. */
+  var TYPEMAP={fulltime:"job",parttime:"parttime",internship:"internship",coop:"coop"};
+  function typesChosen(){var t=XV().types;return Array.isArray(t)?t.map(function(k){return TYPEMAP[k]}).filter(Boolean):[]}
   function hideByMeta(j){
     var strict=!!acct.fStrict,now=Date.now();
     if(acct.fPosted!=="any"){
@@ -500,8 +621,10 @@ function apply(w,host){
     if(acct.fLevels.length&&acct.fLevels.indexOf(levelOf(j.yrs)[0])<0)return true;
     if(acct.fEdu){var je=LEVELS.indexOf(j.edu),pe=LEVELS.indexOf(A.S.profile.edu);if(je>-1&&pe>-1&&je>pe)return true}
     var pm=A.S.profile.modes||{};
+    /* work styles you did not pick in your profile (nothing picked means no preference) */
+    if(acct.fWs&&A.S.profile.custom&&(pm.remote||pm.hybrid||pm.onsite)&&!pm[j.mode])return true;
     if(acct.fMiles!=="any"&&j.mode!=="remote"&&(pm.hybrid||pm.onsite)){
-      var home=geo(A.S.profile.loc),there=geo(j.loc);
+      var home=homeGeo(),there=geo(j.loc);
       if(!home||!there){if(strict)return true}else if(miles(home,there)>+acct.fMiles)return true;
     }
     return false;
@@ -571,9 +694,15 @@ function apply(w,host){
 
   /* profile completeness */
   function checklist(){
-    var p=A.S.profile,a=acct,c=!!p.custom,px=PX();
-    return [["Your name",c&&!!p.name,"settings"],["An email recruiters can reply to",c&&/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(p.email||""),"settings"],["Job title",c&&!!p.title,"settings"],["At least 3 skills",c&&p.skills.length>=3,"settings"],["Your city",c&&!!p.loc,"settings"],
-      ["Phone number",!!phoneOf(),px?"settings":"resume"],["Work authorization",!!authOf(),px?"preferences":"settings"],["Home address",!!(a.addr&&a.addr.street&&a.addr.zip),"settings"],["Resume file or link",!!(a.resumeName||resumeLinkOf()),px&&!a.resumeName?"settings":"preferences"],["Short summary (40+ characters)",summaryOf().length>=40,px?"settings":"resume"],["LinkedIn or portfolio link",!!(linkOf("linkedin")||linkOf("portfolio")),px?"settings":"resume"]];
+    var p=A.S.profile,a=acct,c=!!p.custom,px=PX(),x=XV();
+    /* [what is missing, done, the setup step it lives in, counts toward that step's check mark]. One list feeds the setup bar, the step marks and the Dashboard. */
+    var L=[["Your name",c&&!!p.name,"about",true],["An email recruiters can reply to",c&&/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(p.email||""),"about",true],["Phone number",!!phoneOf(),"about",false],
+      ["Job title",c&&!!p.title,"jobs",true],["At least 3 skills",c&&p.skills.length>=3,"jobs",true]];
+    if(px)L.push(["Opportunity types",Array.isArray(x.types)&&x.types.length>0,"jobs",false]);
+    L.push(["Your city",c&&!!p.loc,"where",true],["Home address",!!(a.addr&&a.addr.street&&a.addr.zip),"where",false],["Earliest start",!!startOf(),"where",false]);
+    if(px)L.push(["School",!!x.school,"back",false]);
+    L.push(["Resume file or link",!!(a.resumeName||resumeLinkOf()),"back",true],["Short summary (40+ characters)",summaryOf().length>=40,"back",false],["LinkedIn or portfolio link",!!(linkOf("linkedin")||linkOf("portfolio")),"back",false],["Work authorization",!!authOf(),"final",true]);
+    return L;
   }
 
   /* per-application details (interview time, offer, rejection reason, notes) */
@@ -708,7 +837,7 @@ function apply(w,host){
   }
   tp.addEventListener("click",function(e){
     var g=e.target.closest("[data-go]");
-    if(g){var v=g.getAttribute("data-go");if(v==="svc"){cur="svc";go("svc")}else if(v.indexOf("dash:")===0){sub.dash=v.slice(5);cur="dash";go("dash")}else{sub.prof=v;cur="prof";go("prof")}return}
+    if(g){var v=g.getAttribute("data-go");if(v==="svc"){cur="svc";go("svc")}else if(v.indexOf("dash:")===0){sub.dash=v.slice(5);cur="dash";go("dash")}else{if(stepIndex(v)>-1){wz.want=v;v="settings"}sub.prof=v;cur="prof";go("prof")}return}
     if(e.target.closest("[data-csv]"))exportCsv();
   });
 
@@ -717,8 +846,7 @@ function apply(w,host){
     var f=d.createElement("div");f.className="field full";f.id="aPrefs";
     f.innerHTML='<span class="l">Dealbreakers</span><div class="checks"><label><input type="checkbox" id="aSal"> Hide jobs whose top pay is below my minimum</label><label><input type="checkbox" id="aEdu"> Hide jobs that require more education than I have</label></div>'+
       '<label for="aYrs">Hide jobs asking for more experience than I have by</label><select id="aYrs"><option value="any">Show all</option><option value="0">Any amount</option><option value="1">1+ year</option><option value="2">2+ years</option><option value="3">3+ years</option></select><small>Takes effect right away in Jobs, Internships and Coop.</small>';
-    d.querySelector("#form .grid").appendChild(f);
-    FIELDS.preferences.push("aPrefs");
+    fs.insertBefore(f,fs.firstChild);   /* dealbreakers hide jobs, so they live with the other filters */
     var extra=d.createElement("div");extra.className="field";
     extra.innerHTML='<label for="fCo">Hide these companies</label><input type="text" id="fCo" maxlength="200" placeholder="Acme, Globex"><small>Separate with commas.</small>'+
       '<label for="fKw" style="margin-top:8px">Hide roles or skills containing</label><input type="text" id="fKw" maxlength="200" placeholder="sales, php"><small>Matches the job title and its skills.</small>';
@@ -739,7 +867,8 @@ function apply(w,host){
     f.innerHTML='<label for="fPosted">Posted</label><select id="fPosted"><option value="any">Any time</option><option value="24h">Past 24 hours</option><option value="7d">Past week</option><option value="30d">Past month</option></select>'+
       '<div class="checks" style="margin-top:8px"><label><input type="checkbox" id="fApp"> Under 10 applicants</label><label><input type="checkbox" id="fInstant"> Only jobs I can apply to instantly</label></div><small id="fAppNote">Applicant counts come from UAply. Listings from outside feeds do not have one yet.</small>'+
       '<div id="fMilesWrap"><label for="fMiles">Distance from your city</label><select id="fMiles"><option value="any">Any distance</option><option value="10">Within 10 miles</option><option value="20">Within 20 miles</option><option value="50">Within 50 miles</option><option value="100">Within 100 miles</option></select><small id="fMilesNote"></small></div>'+
-      '<div class="checks" style="margin-top:8px"><label><input type="checkbox" id="fTitleOnly"> Hide roles that do not match my target titles</label></div><small>Uses your target titles in Profile, Settings. Off if you have not set your own details.</small>'+
+      '<div class="checks" style="margin-top:8px"><label><input type="checkbox" id="fTitleOnly"> Hide roles that do not match my target titles</label></div><small>Uses your target titles in Profile setup. Off if you have not set your own details.</small>'+
+      '<div class="checks" style="margin-top:8px"><label><input type="checkbox" id="fWsPick"> Hide work styles I did not pick</label></div><small>Uses the work styles ticked in Profile setup, under Where and pay. If none are ticked, every style shows.</small>'+
       '<div id="fCommWrap"><div class="checks" style="margin-top:8px"><label><input type="checkbox" id="fNoComm"> Remove commission-only roles</label></div><small>Shown because your titles are in sales. Based on what the posting says.</small></div>'+
       '<span class="l" style="margin-top:8px;display:block">Experience level</span><div class="checks" id="fLevels">'+XP.map(function(x){return '<label><input type="checkbox" data-lvl="'+x[0]+'"> '+x[1]+'</label>'}).join("")+'</div><small>Pick none to see every level.</small>'+
       '<details id="fPerks" style="margin-top:8px"><summary style="cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600" id="fPerksSum">Benefits</summary><div class="checks" style="flex-direction:column;align-items:flex-start;gap:6px">'+
@@ -753,23 +882,23 @@ function apply(w,host){
       d.getElementById("fCount").textContent=ok+" of "+tot+" listings in "+label("svc",ty)+" match your filters.";
     }
     function sync(){
-      d.getElementById("fPosted").value=acct.fPosted;d.getElementById("fApp").checked=acct.fApp;d.getElementById("fInstant").checked=acct.fInstant;d.getElementById("fMiles").value=acct.fMiles;d.getElementById("fStrict").checked=acct.fStrict;d.getElementById("fTitleOnly").checked=acct.fTitleOnly;d.getElementById("fNoComm").checked=acct.fNoComm;
+      d.getElementById("fPosted").value=acct.fPosted;d.getElementById("fApp").checked=acct.fApp;d.getElementById("fInstant").checked=acct.fInstant;d.getElementById("fMiles").value=acct.fMiles;d.getElementById("fStrict").checked=acct.fStrict;d.getElementById("fTitleOnly").checked=acct.fTitleOnly;d.getElementById("fWsPick").checked=acct.fWs;d.getElementById("fNoComm").checked=acct.fNoComm;
       d.getElementById("fCommWrap").hidden=!isSales();
       f.querySelectorAll("[data-lvl]").forEach(function(c){c.checked=acct.fLevels.indexOf(c.getAttribute("data-lvl"))>-1});
       f.querySelectorAll("[data-perk]").forEach(function(c){c.checked=acct.fPerks.indexOf(c.getAttribute("data-perk"))>-1});
       d.getElementById("fPerksSum").textContent="Benefits"+(acct.fPerks.length?" ("+acct.fPerks.length+" selected)":"");
-      d.getElementById("fMilesNote").textContent=acct.fMiles==="any"||A.S.profile.loc&&geo(A.S.profile.loc)?(acct.fMiles==="any"?"Remote jobs always show.":"Remote jobs always show. Distances are straight-line from "+A.S.profile.loc+"."):"We do not recognize your city yet. Set a larger US city in Profile, Settings.";
+      d.getElementById("fMilesNote").textContent=acct.fMiles==="any"||homeGeo()?(acct.fMiles==="any"?"Remote jobs always show.":"Remote jobs always show. Distances are straight-line from "+(A.S.profile.loc||"your ZIP code")+"."+(A.S.profile.reloc?" You said you would relocate: pick Any distance to see far-away jobs too.":"")):"We do not recognize your city yet. Add your state and ZIP code in Profile setup, or use a larger US city.";
       count();
     }
     function changed(){
-      acct.fPosted=d.getElementById("fPosted").value;acct.fApp=d.getElementById("fApp").checked;acct.fInstant=d.getElementById("fInstant").checked;acct.fMiles=d.getElementById("fMiles").value;acct.fStrict=d.getElementById("fStrict").checked;acct.fTitleOnly=d.getElementById("fTitleOnly").checked;acct.fNoComm=d.getElementById("fNoComm").checked;
+      acct.fPosted=d.getElementById("fPosted").value;acct.fApp=d.getElementById("fApp").checked;acct.fInstant=d.getElementById("fInstant").checked;acct.fMiles=d.getElementById("fMiles").value;acct.fStrict=d.getElementById("fStrict").checked;acct.fTitleOnly=d.getElementById("fTitleOnly").checked;acct.fWs=d.getElementById("fWsPick").checked;acct.fNoComm=d.getElementById("fNoComm").checked;
       acct.fLevels=[].slice.call(f.querySelectorAll("[data-lvl]")).filter(function(c){return c.checked}).map(function(c){return c.getAttribute("data-lvl")});
       acct.fPerks=[].slice.call(f.querySelectorAll("[data-perk]")).filter(function(c){return c.checked}).map(function(c){return c.getAttribute("data-perk")});
       cleanF(acct);saveA();A.renderAll();sync();
     }
     f.addEventListener("change",changed);
     d.getElementById("fClear").onclick=function(){
-      acct.fPosted="any";acct.fApp=false;acct.fInstant=false;acct.fPerks=[];acct.fMiles="any";acct.fStrict=false;acct.fTitleOnly=false;acct.fNoComm=false;acct.fLevels=[];acct.fEdu=false;acct.fSal=false;acct.fYrs="any";acct.fCo="";acct.fKw="";
+      acct.fPosted="any";acct.fApp=false;acct.fInstant=false;acct.fPerks=[];acct.fMiles="any";acct.fStrict=false;acct.fTitleOnly=false;acct.fWs=false;acct.fNoComm=false;acct.fLevels=[];acct.fEdu=false;acct.fSal=false;acct.fYrs="any";acct.fCo="";acct.fKw="";
       saveA();A.setMin(0);A.setFilter("all");A.renderAll();sync();if(w.__uaplySyncPrefsBase)w.__uaplySyncPrefsBase();savePrefs();syncFilters();
     };
     var base=w.__uaplySyncPrefs;w.__uaplySyncPrefsBase=base;
@@ -809,7 +938,7 @@ function apply(w,host){
       '<div class="field" id="adCityF"></div>'+
       '<div class="field"><label for="adState">State</label><select id="adState" autocomplete="address-level1"><option value="">Choose</option>'+US_STATES.map(function(s){return '<option>'+s+'</option>'}).join("")+'</select></div>'+
       '<div class="field"><label for="adZip">ZIP code</label><input type="text" id="adZip" inputmode="numeric" autocomplete="postal-code" maxlength="10" placeholder="19103"></div>'+
-      '</div><small id="adErr" role="alert"></small><small>Used to fill in employer forms. Only your city is used for matching and distance.</small>';
+      '</div><small id="adErr" role="alert"></small><small>Used to fill in employer forms. Your city, state and ZIP code also help find where you live for the distance filter. Your street stays on this device.</small>';
     locField.parentNode.insertBefore(af,locField);
     var cityF=d.getElementById("adCityF");
     while(locField.firstChild)cityF.appendChild(locField.firstChild);
@@ -819,7 +948,7 @@ function apply(w,host){
     function fillAddr(){var ad=acct.addr;d.getElementById("adStreet").value=ad.street;d.getElementById("adUnit").value=ad.unit;d.getElementById("adState").value=ad.state;d.getElementById("adZip").value=ad.zip;d.getElementById("adErr").textContent=""}
     form.addEventListener("submit",function(e){
       var z=d.getElementById("adZip").value.trim();
-      if(z&&!/^\d{5}(-\d{4})?$/.test(z)){e.preventDefault();e.stopImmediatePropagation();d.getElementById("adErr").textContent="Enter a 5-digit ZIP code (or ZIP+4, like 19103-1234).";d.getElementById("adZip").focus();return}
+      if(z&&!/^\d{5}(-\d{4})?$/.test(z)){e.preventDefault();e.stopImmediatePropagation();d.getElementById("adErr").textContent="Enter a 5-digit ZIP code (or ZIP+4, like 19103-1234).";goField("adZip");return}
       acct.addr={street:d.getElementById("adStreet").value,unit:d.getElementById("adUnit").value,state:d.getElementById("adState").value,zip:z};
       cleanF(acct);saveA();d.getElementById("adErr").textContent="";
     },true);
@@ -831,26 +960,31 @@ function apply(w,host){
        optional and starts as "Not answered". They stay on this device, are never used to score, rank or filter jobs, and
        leave the device only when the person taps "Copy my answers". The owner's legal review advised against collecting
        these; the product owner chose to include them on 2026-10-13, so they need the attorney review before launch. */
-    var ev=d.createElement("div");ev.className="field full";ev.id="aEeo";
     var NAMES={auth:"Work authorization",sponsor:"Visa sponsorship",veteran:"Veteran status",hisp:"Hispanic or Latino",disability:"Disability",gender:"Gender"};
-    ev.innerHTML='<h3 style="margin:0;font-size:15px">Voluntary information (optional)</h3><small>Many employers ask these on their application forms. Answering is up to you, and every question has "Prefer not to say". Your answers are used only to fill in employer forms for you, never to score, rank or filter jobs, and are shared only when you tap Copy my answers. Stored on this device.</small>'+
-      ["auth","sponsor","veteran","hisp","disability","gender"].map(function(k){
-        return '<div class="field"><label for="ev-'+k+'">'+NAMES[k]+'</label><select id="ev-'+k+'" data-eeo="'+k+'"><option value="">Not answered</option>'+EEO[k].filter(Boolean).map(function(o){return '<option>'+E(o)+'</option>'}).join("")+'</select></div>';
-      }).join("")+
+    function eeoSel(k){return '<div class="field"><label for="ev-'+k+'">'+NAMES[k]+'</label><select id="ev-'+k+'" data-eeo="'+k+'"><option value="">Not answered</option>'+EEO[k].filter(Boolean).map(function(o){return '<option>'+E(o)+'</option>'}).join("")+'</select></div>'}
+    /* work eligibility: needed to apply, so it sits in the main flow */
+    var el=d.createElement("div");el.className="field full";el.id="aElig";
+    el.innerHTML='<h3 style="margin:0;font-size:15px">Work eligibility</h3>'+eeoSel("auth")+eeoSel("sponsor")+'<small>Added to the applications you send. It never changes your match score or hides a job.</small>';
+    d.querySelector("#form .grid").appendChild(el);
+    /* voluntary self-identification: folded shut and clearly optional */
+    var ev=d.createElement("details");ev.className="field full";ev.id="aEeo";
+    ev.innerHTML='<summary>Optional: voluntary self-identification (veteran, disability, race, gender)</summary><div class="eeoBody"><small>Many employers ask these on their application forms. Skipping this section changes nothing. Every question has "Prefer not to say". Your answers are used only to fill in employer forms for you, never to score, rank or filter jobs, and are shared only when you tap Copy my answers. Stored on this device.</small>'+
+      ["veteran","hisp","disability","gender"].map(eeoSel).join("")+
       '<div class="field"><span class="l">Race or ethnicity</span><div class="checks" id="ev-race">'+EEO.race.map(function(o){return '<label><input type="checkbox" data-race="'+E(o)+'"> '+E(o)+'</label>'}).join("")+'</div></div>'+
-      '<div><button type="button" class="btn ghost" id="evClear">Clear these answers</button></div><small id="evNote" role="status"></small>';
-    d.querySelector("#form .grid").appendChild(ev);FIELDS.settings.push("aEeo");
+      '<div><button type="button" class="btn ghost" id="evClear">Clear these answers</button></div><small id="evNote" role="status"></small></div>';
+    d.querySelector("#form .grid").appendChild(ev);
     function fillEeo(){
-      ev.querySelectorAll("[data-eeo]").forEach(function(s){s.value=acct.eeo[s.getAttribute("data-eeo")]||""});
-      ev.querySelectorAll("[data-race]").forEach(function(c){c.checked=acct.eeo.race.indexOf(c.getAttribute("data-race"))>-1});
+      d.querySelectorAll("#aElig [data-eeo],#aEeo [data-eeo]").forEach(function(s){s.value=acct.eeo[s.getAttribute("data-eeo")]||""});
+      d.querySelectorAll("#aEeo [data-race]").forEach(function(c){c.checked=acct.eeo.race.indexOf(c.getAttribute("data-race"))>-1});
     }
-    ev.addEventListener("change",function(e){
+    function eeoChanged(e){
       var s=e.target.closest("[data-eeo]"),r=e.target.closest("[data-race]");
       if(s)acct.eeo[s.getAttribute("data-eeo")]=s.value;
       if(r)acct.eeo.race=[].slice.call(ev.querySelectorAll("[data-race]")).filter(function(c){return c.checked}).map(function(c){return c.getAttribute("data-race")});
       cleanF(acct);saveA();d.getElementById("evNote").textContent="Saved on this device.";
-    });
-    d.getElementById("evClear").onclick=function(){acct.eeo={auth:"",sponsor:"",veteran:"",hisp:"",race:[],disability:"",gender:""};saveA();fillEeo();d.getElementById("evNote").textContent="Cleared."};
+    }
+    el.addEventListener("change",eeoChanged);ev.addEventListener("change",eeoChanged);
+    d.getElementById("evClear").onclick=function(){acct.eeo={auth:acct.eeo.auth,sponsor:acct.eeo.sponsor,veteran:"",hisp:"",race:[],disability:"",gender:""};saveA();fillEeo();d.getElementById("evNote").textContent="Cleared."};
     w.__uaplyAnswers=function(){
       var p=A.S.profile,a=acct,e=a.eeo,L=[];
       function add(k,v){if(v!==""&&v!=null)L.push(k+": "+v)}
@@ -997,7 +1131,7 @@ function apply(w,host){
     list.addEventListener("click",function(e){var li=e.target.closest("[data-i]");if(li)pick(items[+li.getAttribute("data-i")].s)});
     d.getElementById("skillSug").addEventListener("click",function(e){if(fld.classList.contains("skillfull")&&e.target.closest("[data-add]")){e.stopImmediatePropagation();paintCount()}},true);
     form.addEventListener("submit",function(e){
-      if(allSkills().length>MAX){e.preventDefault();e.stopImmediatePropagation();paintCount();inp.focus()}
+      if(allSkills().length>MAX){e.preventDefault();e.stopImmediatePropagation();paintCount();goField("pSkills")}
     },true);
     var base=w.__uaplySyncPrefs;
     w.__uaplySyncPrefs=function(){if(base)base();setTimeout(paintCount,0)};
@@ -1088,22 +1222,39 @@ function apply(w,host){
   function msg(t){var m=d.getElementById("aMsg");if(!m)return;m.textContent=t;if(t&&m.scrollIntoView)m.scrollIntoView({block:"nearest",behavior:"smooth"})}
   function cleanUrl(u){u=String(u||"").trim();if(!u)return "";if(!URL_OK.test(u))u="https://"+u;try{var x=new w.URL(u);return /^https?:$/.test(x.protocol)?x.href.slice(0,300):null}catch(e){return null}}
   function opts(list,cur){return '<option value="">Choose</option>'+list.map(function(x){return '<option'+(cur===x?" selected":"")+'>'+E(x)+'</option>'}).join("")}
+  /* The old "Resume & links" screen is gone: its questions are part of the guided setup. They are built here as ordinary form
+     fields, and hidden (see the de-duplication pass at the end) when the Application profile experiment asks the same thing. */
+  (function(){
+    var g=d.querySelector("#form .grid");
+    function mk(id,cls,html){var f=d.createElement("div");f.className="field"+(cls?" "+cls:"");f.id=id;f.innerHTML=html;g.appendChild(f)}
+    mk("aNoticeF","",'<label for="aNotice">When can you start?</label><select id="aNotice">'+opts(NOTICE,"")+'</select>');
+    mk("aSummaryF","full",'<label for="aSummary">Short summary</label><textarea id="aSummary" maxlength="600" rows="3"></textarea><small>Two or three sentences recruiters read first. Skills you mention here also count toward your match.</small>');
+    mk("aLinkedF","",'<label for="aLinked">LinkedIn</label><input type="text" id="aLinked" inputmode="url" maxlength="300" placeholder="linkedin.com/in/you"><small class="err" id="aLinkedErr" role="alert"></small>');
+    mk("aSiteF","",'<label for="aSite">Portfolio or website</label><input type="text" id="aSite" inputmode="url" maxlength="300" placeholder="yourname.com"><small class="err" id="aSiteErr" role="alert"></small>');
+    mk("aCoverF","full",'<label for="aCover">Cover note template</label><textarea id="aCover" maxlength="1500" rows="4" placeholder="Hi, I am excited about the {role} role at {company}..."></textarea><small>Use {role}, {company} and {name}. Saved for when you write to a recruiter.</small>');
+    function fill(){
+      d.getElementById("aNotice").innerHTML=opts(NOTICE,acct.notice);
+      d.getElementById("aSummary").value=acct.summary;d.getElementById("aLinked").value=acct.linkedin;d.getElementById("aSite").value=acct.portfolio;d.getElementById("aCover").value=acct.cover;
+      d.getElementById("aLinkedErr").textContent="";d.getElementById("aSiteErr").textContent="";
+    }
+    form.addEventListener("submit",function(e){
+      var li=cleanUrl(d.getElementById("aLinked").value),si=cleanUrl(d.getElementById("aSite").value);
+      if(li===null||si===null){
+        e.preventDefault();e.stopImmediatePropagation();
+        d.getElementById("aLinkedErr").textContent=li===null?"That is not a valid web address.":"";d.getElementById("aSiteErr").textContent=si===null?"That is not a valid web address.":"";
+        goField(li===null?"aLinked":"aSite");return;
+      }
+      acct.linkedin=li;acct.portfolio=si;acct.notice=d.getElementById("aNotice").value;
+      acct.summary=d.getElementById("aSummary").value.trim().slice(0,600);acct.cover=d.getElementById("aCover").value.trim().slice(0,1500);
+      saveA();
+    },true);
+    var base=w.__uaplySyncPrefs;w.__uaplySyncPrefs=function(){if(base)base();fill()};
+    fill();
+  })();
   function renderAcct(v){
     var h='<h3>'+label("prof",v)+'</h3><p class="lead">'+LEADS[v]+'</p>';
     if(v==="account"){acctSec.innerHTML=h+accountHTML()+'<p class="note" id="aMsg" role="status"></p>';paintHeader();setTimeout(mountGoogle,0);return}
-    if(v==="resume"){
-      var a=acct;
-      h+='<div class="grid">'+(PX()
-        ?'<p class="note full" style="margin:0">Phone, LinkedIn, portfolio and About you are in Profile, Settings. Earliest start is in Profile, Preferences.</p>'
-        :'<div class="field"><label for="aPhone">Phone</label><input type="tel" id="aPhone" autocomplete="tel" maxlength="20" value="'+E(a.phone)+'" placeholder="+1 555 123 4567"></div>'+
-        '<div class="field"><label for="aLinked">LinkedIn</label><input type="text" id="aLinked" inputmode="url" maxlength="300" value="'+E(a.linkedin)+'" placeholder="linkedin.com/in/you"><small>Sent to employers with every application.</small></div>'+
-        '<div class="field"><label for="aSite">Portfolio or website</label><input type="text" id="aSite" inputmode="url" maxlength="300" value="'+E(a.portfolio)+'" placeholder="yourname.com"></div>'+
-        '<div class="field"><label for="aNotice">When can you start?</label><select id="aNotice">'+opts(NOTICE,a.notice)+'</select></div>'+
-        '<div class="field full"><label for="aSummary">Short summary</label><textarea id="aSummary" maxlength="600">'+E(a.summary)+'</textarea><small>Two or three sentences recruiters read first.</small></div>')+
-        '<div class="field full"><label for="aCover">Cover note template</label><textarea id="aCover" maxlength="1500" placeholder="Hi, I am excited about the {role} role at {company}...">'+E(a.cover)+'</textarea><small>Use {role}, {company} and {name}. Saved for when you write to a recruiter.</small></div>'+
-        '<div class="field full"><span class="l">Resume</span><small>'+(a.resumeName||a.resumeUrl?"On file: "+E([a.resumeName,a.resumeUrl?"link":""].filter(Boolean).join(" and ")):"No resume added yet.")+' Add or change your resume file and link in Profile, Preferences.</small><button type="button" class="btn ghost" data-a="toprefs" style="align-self:flex-start">Go to Preferences</button></div></div>'+
-        '<div class="acts"><button type="button" class="btn" data-a="saveres">Save</button></div>';
-    }else if(v==="plan"&&(SRV.up||REL)){
+    if(v==="plan"&&(SRV.up||REL)){
       h+=billingHTML();
     }else if(v==="plan"){
       var ps=planState();
@@ -1136,17 +1287,7 @@ function apply(w,host){
   acctSec.addEventListener("change",function(e){
     var t=e.target;
     if(t.id==="aEnf"){acct.enforce=t.checked;saveA();msg(acct.enforce?"Limits are now enforced.":"Limits are off.")}
-    else if(t.id==="aFile"&&t.files[0]){
-      var f=t.files[0];
-      if(f.size>1048576){msg("That file is over 1 MB.");t.value="";return}
-      if(!/\.(pdf|docx?|txt|md)$/i.test(f.name)){msg("Use a PDF, Word or text file.");t.value="";return}
-      readFile(f,false,function(u){
-        if(!u||!DATA_URL.test(u)){msg("Could not read that file.");return}
-        var prev=[acct.resumeName,acct.resumeSize,acct.resumeData];
-        acct.resumeName=f.name.slice(0,120);acct.resumeSize=f.size;acct.resumeData=u;
-        if(saveA()){renderAcct("resume");msg("Resume added.")}else{acct.resumeName=prev[0];acct.resumeSize=prev[1];acct.resumeData=prev[2];msg("Not enough browser storage for that file.")}
-      });
-    }else if(t.id==="aImp"&&t.files[0]){
+    else if(t.id==="aImp"&&t.files[0]){
       var g=t.files[0];if(g.size>3145728){msg("That file is too large.");return}
       readFile(g,true,function(txt){var r=importBackup(txt);msg(r===true?"Restored.":r);if(r===true)renderAcct("data")});
     }
@@ -1163,18 +1304,7 @@ function apply(w,host){
     }
     if(!b)return;
     var a=b.getAttribute("data-a");
-    if(a==="saveres"){
-      var gv=function(id,cur){var el=d.getElementById(id);return el?el.value:cur};   /* fields hidden when the Application profile is on */
-      var li=cleanUrl(gv("aLinked",acct.linkedin)),si=cleanUrl(gv("aSite",acct.portfolio)),ph=String(gv("aPhone",acct.phone)).trim();
-      if(li===null||si===null){msg("One of the links is not a valid web address.");return}
-      if(ph&&!/^[+0-9 ()\-.]{7,20}$/.test(ph)){msg("Phone numbers can only have digits, spaces, + ( ) - and .");return}
-      acct.phone=ph;acct.linkedin=li;acct.portfolio=si;acct.notice=gv("aNotice",acct.notice);
-      acct.summary=String(gv("aSummary",acct.summary)).trim().slice(0,600);acct.cover=d.getElementById("aCover").value.trim().slice(0,1500);
-      msg(saveA()?"Saved.":"Could not save: browser storage is full.");
-    }
-    else if(a==="rmres"){acct.resumeName="";acct.resumeData="";acct.resumeSize=0;saveA();renderAcct("resume");msg("Resume removed.")}
-    else if(a==="toprefs"){sub.prof="preferences";cur="prof";go("prof")}
-    else if(a==="cancel"){acct.canceled=true;saveA();renderAcct("plan");msg("Plan canceled. It stays active until the end of the period.")}
+    if(a==="cancel"){acct.canceled=true;saveA();renderAcct("plan");msg("Plan canceled. It stays active until the end of the period.")}
     else if(a==="resub"){acct.canceled=false;if(acct.renews<Date.now())acct.renews=Date.now()+30*DAY;saveA();renderAcct("plan");msg("Subscription resumed.")}
     else if(a==="rtrial"){acct.plan="trial";acct.since=Date.now();acct.canceled=false;acct.renews=0;saveA();renderAcct("plan");msg("You're on Free.")}
     else if(a==="exp"){
@@ -1192,7 +1322,10 @@ function apply(w,host){
     function str(x,n){return typeof x==="string"?x.slice(0,n):""}
     function num(x,lo,hi){x=+x;return isFinite(x)?Math.min(hi,Math.max(lo,x)):lo}
     var p=o.profile,m=(p.modes&&typeof p.modes==="object")?p.modes:{},LV=["High school","Associate","Bachelor","Master","Doctorate"];
-    var np={name:str(p.name,100),title:str(p.title,100),email:str(p.email,200),years:num(p.years,0,50),edu:LV.indexOf(p.edu)>-1?p.edu:"Bachelor",
+    /* the Application profile answers (phone, links, school, work authorization, opportunity types...) come back too */
+    var ext={};
+    if(p.ext&&typeof p.ext==="object")Object.keys(p.ext).slice(0,30).forEach(function(k){var v=p.ext[k];if(typeof v==="number"&&isFinite(v))ext[k]=v;else if(typeof v==="string")ext[k]=v.slice(0,600);else if(Array.isArray(v))ext[k]=v.filter(function(x){return typeof x==="string"}).slice(0,10).map(function(x){return x.slice(0,40)})});
+    var np={name:str(p.name,100),title:str(p.title,100),email:str(p.email,200),ext:ext,years:num(p.years,0,50),edu:LV.indexOf(p.edu)>-1?p.edu:"Bachelor",
       skills:Array.isArray(p.skills)?p.skills.filter(function(s){return typeof s==="string"&&s.trim()}).slice(0,25).map(function(s){return s.slice(0,40)}):[],
       salary:num(p.salary,0,10000000),loc:str(p.loc,100),modes:{remote:!!m.remote,hybrid:!!m.hybrid,onsite:!!m.onsite},reloc:!!p.reloc,custom:true};
     var known={};A.JOBS.forEach(function(j){known[j.id]=1});
@@ -1619,6 +1752,124 @@ function apply(w,host){
     }
   });
 
+  /* ---------- guided setup (Profile setup) ----------
+     One group of questions per screen, saved as you go, with the same progress on every screen size. On desktop (960px and
+     wider) a live "what employers see" card sits beside the questions. The fields themselves are the ordinary form fields
+     built above and by the Application profile experiment; each is assigned to a step by the ids listed in `anchors`. */
+  var STEPS=[
+    {k:"about",t:"About you",s:"About you",q:"Who should employers contact?",use:"These details go on every application you send, so an employer can reply to you.",anchors:["pName","pEmail","pPhone","px-phone","px-headline"]},
+    {k:"jobs",t:"Jobs you want",s:"Jobs",q:"What kind of work are you looking for?",use:"This is the core of your matches. Titles, skills, experience and education change every score and decide which jobs show. The opportunity types you pick open first in Services.",anchors:["pTitle","px-types-fulltime","pSkills","pYears","pEdu"]},
+    {k:"where",t:"Where and pay",s:"Where and pay",q:"Where, how, and for how much?",use:"City, work style, distance, willingness to relocate and minimum pay all change your match score and which jobs show. Your state and ZIP code only help find your location for distance. Your street stays on this device.",anchors:["aAddr","pm-remote","aMilesF","pSalary","px-start","aNoticeF"]},
+    {k:"back",t:"Background and links",s:"Background",q:"Show employers who you are.",use:"Sent with your applications. Your headline, summary and major also count as skills when a job asks for them. GPA is optional and never changes a match.",anchors:["px-school","px-major","px-grad","px-gpa","px-employer","px-summary","px-resume","px-linkedin","px-portfolio","aResF","aSummaryF","aLinkedF","aSiteF","aCoverF"]},
+    {k:"final",t:"Eligibility and extras",s:"Eligibility",q:"Last details.",use:"Work authorization is added to applications only. It never changes a match or hides a job. The optional section at the bottom is yours to skip.",anchors:["px-auth","px-sponsor","aElig","aAutoF","aEeo"]}
+  ];
+  var wz={i:0,want:null,opened:false,dirty:false,pending:null};
+  var wzGrid=form.querySelector(".grid");
+  function stepIndex(k){for(var i=0;i<STEPS.length;i++)if(STEPS[i].k===k)return i;return -1}
+  function topOf(el){while(el&&el.parentElement!==wzGrid)el=el.parentElement;return el}
+  function stepOf(el){
+    if(el.classList.contains("px-h")||el.querySelector(".ready"))return -1;   /* the Application profile's own headings and score are replaced by the steps */
+    for(var i=0;i<STEPS.length;i++)for(var j=0;j<STEPS[i].anchors.length;j++){var a=d.getElementById(STEPS[i].anchors[j]);if(a&&(a===el||el.contains(a)))return i}
+    return STEPS.length-1;   /* anything another experiment adds lands on the last screen so it is never lost */
+  }
+  var wzTop=d.createElement("div");wzTop.id="wzTop";
+  wzTop.innerHTML='<div class="wzRow"><span id="wzCount"></span><span id="wzPct"></span></div>'+
+    '<div class="wzBar" role="progressbar" aria-label="Profile completeness" aria-valuemin="0" aria-valuemax="100"><i id="wzFill"></i></div>'+
+    '<nav aria-label="Profile steps"><ol class="wzDots">'+STEPS.map(function(s,i){return '<li><button type="button" data-step="'+i+'"><span class="n">'+(i+1)+'</span><span class="t">'+s.s+'</span></button></li>'}).join("")+'</ol></nav>';
+  form.insertBefore(wzTop,secTitle);
+  var wzUse=d.createElement("p");wzUse.className="wzUse";wzUse.id="wzUse";form.insertBefore(wzUse,wzGrid);
+  var wzFoot=d.createElement("div");wzFoot.id="wzFoot";
+  wzFoot.innerHTML='<button type="button" class="btn ghost" id="wzBack">Back</button><span class="grow"></span><button type="button" class="btn" id="wzNext">Save and continue</button>';
+  wzGrid.after(wzFoot);
+  var wzMsgEl=d.createElement("p");wzMsgEl.id="wzMsg";wzMsgEl.className="note";wzMsgEl.setAttribute("role","status");wzFoot.after(wzMsgEl);
+  var wzPrev=d.createElement("aside");wzPrev.id="wzPrev";wzPrev.setAttribute("aria-label","What employers see");form.appendChild(wzPrev);
+  function wzMsg(t){wzMsgEl.textContent=t;if(t&&wzMsgEl.scrollIntoView)wzMsgEl.scrollIntoView({block:"nearest",behavior:"smooth"})}
+  function fv(id){var e=d.getElementById(id);return e?String(e.value||"").trim():""}
+  function selText(id){var e=d.getElementById(id);return e&&e.value&&e.selectedIndex>-1?e.options[e.selectedIndex].text:""}
+  /* the card mirrors what the server puts in an application (uaply_api.py, _detail_text): nothing more, nothing less */
+  function wzPrevPaint(){
+    var px=PX(),name=fv("pName"),title=fv("pTitle"),head=(px&&fv("px-headline"))||title,loc=fv("pLoc"),yrs=fv("pYears");
+    var skills=fv("pSkills").split(",").map(function(s){return s.trim()}).filter(Boolean);
+    var ini=(name||"?").split(/\s+/).slice(0,2).map(function(x){return x.charAt(0).toUpperCase()}).join("");
+    var types=px?[["fulltime","Full-time"],["parttime","Part-time"],["internship","Internship"],["coop","Co-op"]].filter(function(t){var e=d.getElementById("px-types-"+t[0]);return e&&e.checked}).map(function(t){return t[1]}).join(", "):"";
+    var edu=px?[fv("px-school"),fv("px-major"),fv("px-grad"),fv("px-gpa")?"GPA "+fv("px-gpa"):""].filter(Boolean).join(", "):"";
+    var auth=px?[selText("px-auth"),selText("px-sponsor")?"sponsorship: "+selText("px-sponsor").toLowerCase():""].filter(Boolean).join("; "):"";
+    var rows=[["Email",fv("pEmail")],["Location",loc],["Experience",yrs?yrs+(+yrs===1?" year":" years"):""]];
+    function site(u){try{var x=new w.URL(u);return x.hostname.replace(/^www\./,"")+(x.pathname.length>1?"/…":"")}catch(e){return u}}
+    if(px)rows.push(["Phone",fv("px-phone")],["Resume link",fv("px-resume")&&site(fv("px-resume"))],["LinkedIn",fv("px-linkedin")&&site(fv("px-linkedin"))],["Portfolio",fv("px-portfolio")&&site(fv("px-portfolio"))],["Education",edu],["Most recent employer",fv("px-employer")],["Work authorization",auth],["Earliest start",selText("px-start")],["Looking for",types]);
+    wzPrev.innerHTML='<div class="pvh">What employers see</div><div class="pv"><div class="pvTop"><span class="pvAv" aria-hidden="true">'+E(ini)+'</span><div><b>'+E(name||"Your name")+'</b><span>'+E(head||"Your title or headline")+'</span></div></div>'+
+      (skills.length?'<div class="chips">'+skills.slice(0,8).map(function(s){return '<span class="chip">'+E(s)+'</span>'}).join("")+(skills.length>8?'<span class="chip">+'+(skills.length-8)+' more</span>':"")+'</div>':'<div class="pvMeta">No skills added yet</div>')+
+      '<ul>'+rows.map(function(r){return '<li class="'+(r[1]?"":"no")+'"><span>'+r[0]+'</span><span>'+(r[1]?E(r[1]):"Not added yet")+'</span></li>'}).join("")+'</ul></div>'+
+      '<p class="note">This is what an employer receives when you swipe right on a listing from an employer that accepts applications through UAply. Never sent: your street address, your resume file (it stays on this device, so add a link above), and your voluntary answers.</p>';
+  }
+  function wzPaint(){
+    var S=STEPS[wz.i],cl=checklist(),done=cl.filter(function(c){return c[1]}).length,pct=Math.round(done/cl.length*100);
+    [].slice.call(wzGrid.children).forEach(function(el){el.classList.toggle("wz-off",stepOf(el)!==wz.i)});
+    secTitle.textContent=S.t;lead.textContent=S.q;wzUse.innerHTML="<b>How we use this:</b> "+S.use;
+    d.getElementById("wzCount").textContent="Step "+(wz.i+1)+" of "+STEPS.length;
+    d.getElementById("wzPct").textContent="Profile "+pct+"% complete";
+    wzTop.querySelector(".wzBar").setAttribute("aria-valuenow",pct);d.getElementById("wzFill").style.width=pct+"%";
+    [].slice.call(wzTop.querySelectorAll(".wzDots button")).forEach(function(b,i){
+      var core=cl.filter(function(c){return c[2]===STEPS[i].k&&c[3]}),ok=core.length>0&&core.every(function(c){return c[1]});
+      b.setAttribute("data-done",ok?"true":"false");
+      if(i===wz.i)b.setAttribute("aria-current","step");else b.removeAttribute("aria-current");
+      b.setAttribute("aria-label","Step "+(i+1)+": "+STEPS[i].t+(ok?", done":""));
+    });
+    d.getElementById("wzBack").hidden=wz.i===0;
+    d.getElementById("wzNext").textContent=wz.i===STEPS.length-1?"Finish and see matches":"Save and continue";
+    wzPrevPaint();
+  }
+  function wzOpen(){
+    if(wz.want!=null){var k=stepIndex(wz.want);if(k>-1)wz.i=k;wz.want=null;wz.opened=true}
+    else if(!wz.opened){
+      wz.opened=true;var cl=checklist();
+      for(var i=0;i<STEPS.length;i++){if(cl.some(function(c){return c[2]===STEPS[i].k&&c[3]&&!c[1]})){wz.i=i;break}}   /* a returning visitor lands on the first step with something missing */
+    }
+    wzPaint();
+    setTimeout(wzPrevPaint,0);   /* the page fills the fields right after this, so redraw the preview once they hold the saved values */
+  }
+  function wzSet(i,focus){
+    wz.i=Math.max(0,Math.min(STEPS.length-1,i));wzPaint();wzMsg("");main.scrollTop=0;
+    if(focus){secTitle.tabIndex=-1;secTitle.focus({preventScroll:true})}
+  }
+  function wzSave(dir){
+    wz.pending=dir;
+    if(form.requestSubmit)form.requestSubmit();else form.dispatchEvent(new w.Event("submit",{cancelable:true,bubbles:true}));
+    setTimeout(function(){wz.pending=null},0);   /* cleared on the next tick: if a check blocked the save, nothing is left pending */
+  }
+  /* the page calls this after it saves the profile. true = stay here, false = go to the job cards as before. */
+  w.__uaplyAfterSave=function(){
+    if(form.hidden||!form.classList.contains("wz"))return false;
+    var p=wz.pending;wz.pending=null;wz.dirty=false;
+    if(w.__uaplyAutoSave)return true;
+    if(p==="next"){wzSet(wz.i+1,true);wzMsg("Saved.")}
+    else if(p==="finish"){
+      var tc=typesChosen();if(tc.length&&tc.indexOf(sub.svc)<0)sub.svc=tc[0];
+      setTimeout(function(){cur="svc";go("svc")},0);
+    }else{wzPaint();wzMsg("Saved.")}
+    return true;
+  };
+  /* take a person to a field (even on another step) and focus it */
+  function goField(id){
+    var el=d.getElementById(id);if(!el)return;
+    var top=topOf(el),i=top?stepOf(top):-1;
+    if(form.hidden||!form.classList.contains("wz")){wz.want=i>-1?STEPS[i].k:null;sub.prof="settings";cur="prof";go("prof")}
+    else if(i>-1&&i!==wz.i){wz.i=i;wzPaint()}
+    setTimeout(function(){var t=d.getElementById(id);if(t){if(t.scrollIntoView)t.scrollIntoView({block:"center"});if(t.focus)t.focus()}},30);
+    wzMsg("Fix the highlighted field, then save again.");
+  }
+  w.__uaplyGoField=function(sec,id){goField(id)};
+  w.__uaplyOpenProf=function(v){
+    if(stepIndex(v)>-1){wz.want=v;v="settings"}   /* "preferences" and "resume" are mapped to their step by section() */
+    closeMenus();sub.prof=v;cur="prof";go("prof");
+  };
+  wzTop.addEventListener("click",function(e){var b=e.target.closest("[data-step]");if(b)wzSet(+b.getAttribute("data-step"),true)});
+  d.getElementById("wzBack").onclick=function(){wzSet(wz.i-1,true)};
+  d.getElementById("wzNext").onclick=function(){wzSave(wz.i===STEPS.length-1?"finish":"next")};
+  form.addEventListener("input",function(){wz.dirty=true;if(form.classList.contains("wz"))wzPrevPaint()});
+  form.addEventListener("change",function(){wz.dirty=true;if(form.classList.contains("wz"))wzPrevPaint()});
+  d.getElementById("editProfile")&&d.getElementById("editProfile").addEventListener("click",function(){sub.prof="settings";wz.want="about"},true);
+
   /* routing */
   function go(k){
     going=true;
@@ -1634,6 +1885,9 @@ function apply(w,host){
   }
   w.__uaplyOnShow=function(t){
     tp.hidden=true;
+    /* leaving Profile setup with unsaved answers saves them quietly (if they are valid) instead of losing them */
+    if(t!=="profile"&&wz.dirty&&!form.hidden&&form.classList.contains("wz")){w.__uaplyAutoSave=true;try{wzSave("quiet")}finally{w.__uaplyAutoSave=false;wz.dirty=false}}
+    if(t==="profile")wz.dirty=false;
     if(going)return;
     cur=t==="profile"?"prof":"svc";
     if(t==="profile")section(sub.prof);
@@ -1649,8 +1903,9 @@ function apply(w,host){
     dup(d.getElementById("pPhone")&&d.getElementById("pPhone").closest(".field"));
     dup(d.getElementById("resLinkWrap"));
     dup(d.getElementById("setMeter"));
-    ["ev-auth","ev-sponsor"].forEach(function(id){var x=d.getElementById(id);dup(x&&x.closest(".field"))});
-    if(!acctSec.hidden&&sub.prof==="resume")renderAcct("resume");
+    dup(d.getElementById("aElig"));
+    ["aNoticeF","aSummaryF","aLinkedF","aSiteF"].forEach(function(id){dup(d.getElementById(id))});
+    wzPaint();
   },0);
 }
 

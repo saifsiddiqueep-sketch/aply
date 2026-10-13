@@ -11,9 +11,9 @@ module.exports = async ({ ev, sleep, nav, shot, logs }) => {
   await sleep(3000);
   // a profile, the way a user would fill it
   await ev(F + ".getElementById('nb-prof').click()"); await sleep(300);
-  await clickSub("Settings"); await sleep(400);
+  await clickSub("Profile setup"); await sleep(400);
   await setVal("pName", "Audit Tester"); await setVal("pEmail", "audit.tester@example.com");
-  await ev(F + ".getElementById('saveBtn').click()"); await sleep(800);
+  await ev(F + ".getElementById('wzNext').click()"); await sleep(800);
   await ev(F + ".getElementById('nb-svc').click()"); await sleep(500);
   for (const tab of ["Full-time", "Part-time", "Internships", "Coop"]) {
     await clickSub(tab); await sleep(700);
