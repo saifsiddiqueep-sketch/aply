@@ -131,6 +131,15 @@ try:
         t("the receipt is recorded in the test inbox with status sent", auth_api.mail_list(5)[0]["status"], "sent")
     owner = next((m for m in sent if m["to"] == ["owner@example.com"]), None)
     t("the owner copy is labelled as a copy and shows the job", bool(owner) and "[UAply copy]" in owner["raw"] and "warehouse robots" in owner["raw"], True)
+    # when the person who swipes IS the owner address, one swipe sends one email (not a confirmation plus a copy)
+    n_before = len([1 for x in open(mail_file, encoding="utf-8") if x.strip()])
+    s2, out2, tok2 = auth_api.signup("owner@example.com", "correct horse 99", "127.0.0.2", True)
+    user2 = auth_api.user_for(tok2)
+    payload2 = dict(payload, job=dict(payload["job"], id=424243), profile={"name": "Owner Person", "email": "owner@example.com"})
+    code2, res2 = uaply_api.submit(payload2, user2)
+    time.sleep(1)
+    new = [json.loads(x) for x in open(mail_file, encoding="utf-8") if x.strip()][n_before:]
+    t("owner swipes: exactly one email, the confirmation", (len(new), new[0]["to"] if new else None, res2["copied"]), (1, ["owner@example.com"], False))
 finally:
     proc.terminate()
 

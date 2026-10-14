@@ -1,5 +1,5 @@
 /* "nav" experiment for the sandbox and dev instances (never loaded by prod).
-   Bottom navigation with three dropdowns: Services (Jobs, Internships, Co-ops), Dashboard (Applied, Interview, Rejected),
+   Bottom navigation with three dropdowns: Services (Jobs, Internships, Coop), Dashboard (Applied, Interview, Rejected),
    Profile (Settings, Preferences, Filters). patch() edits an in-memory copy of index.html; apply() builds the UI. */
 (function(){
 function once(src,a,b){if(src.indexOf(a)<0)throw new Error("patch target not found: "+a.slice(0,40));return src.replace(a,function(){return b})}
@@ -136,7 +136,7 @@ function apply(w,host){
   var REL=!!OPTS.release;   /* release build: no test controls, no simulated sign-in, no sample data, no paid plans */
   var NK=w.__uaplyKey+".nav";
   var SECS={
-    svc:{label:"Services",items:[["job","Full-time"],["parttime","Part-time"],["internship","Internships"],["coop","Co-ops"]]},
+    svc:{label:"Services",items:[["job","Full-time"],["parttime","Part-time"],["internship","Internships"],["coop","Coop"]]},
     dash:{label:"Dashboard",items:[["overview","Overview"],["applied","Applied"],["accepted","Accepted"],["rejected","Rejected"],["interview","Interviews"]]},
     prof:{label:"Profile",items:[["account","Account"],["settings","Settings"],["resume","Resume & links"],["preferences","Preferences"],["filters","Filters"],["plan","Plan & billing"],["data","Data & privacy"]]}
   };
@@ -144,7 +144,7 @@ function apply(w,host){
   var ACCT={account:1,resume:1,plan:1,data:1};
   var LEADS={
     account:"Sign in so your profile and applications follow you to any device.",
-    resume:"What employers ask for besides your skills. Fill these in once; they are saved on this device.",
+    resume:"What employers ask for besides your skills. Fill these in once; they are saved on this device and sent with every application.",
     plan:"Choose how you pay for UAply. Sandbox: no real payments happen and no card is needed.",
     data:"Back up, move or delete everything UAply keeps about you.",
     settings:"Your details. Every card is scored against them, and they fill in your application note and the email address recruiters reply to.",
@@ -698,7 +698,7 @@ function apply(w,host){
   (function(){
     var f=d.createElement("div");f.className="field full";f.id="aPrefs";
     f.innerHTML='<span class="l">Dealbreakers</span><div class="checks"><label><input type="checkbox" id="aSal"> Hide jobs whose top pay is below my minimum</label><label><input type="checkbox" id="aEdu"> Hide jobs that require more education than I have</label></div>'+
-      '<label for="aYrs">Hide jobs asking for more experience than I have by</label><select id="aYrs"><option value="any">Show all</option><option value="0">Any amount</option><option value="1">1+ year</option><option value="2">2+ years</option><option value="3">3+ years</option></select><small>Takes effect right away in Jobs, Internships and Co-ops.</small>';
+      '<label for="aYrs">Hide jobs asking for more experience than I have by</label><select id="aYrs"><option value="any">Show all</option><option value="0">Any amount</option><option value="1">1+ year</option><option value="2">2+ years</option><option value="3">3+ years</option></select><small>Takes effect right away in Jobs, Internships and Coop.</small>';
     d.querySelector("#form .grid").appendChild(f);
     FIELDS.preferences.push("aPrefs");
     var extra=d.createElement("div");extra.className="field";
@@ -992,6 +992,9 @@ function apply(w,host){
      2026-10-13, so it needs the attorney review before launch. */
   function autoAllowed(){if(REL)return true;var s=planState();return s.plan!==PLANS.trial&&s.ok}
   w.__uaplyAutoMsg=function(){return autoAllowed()&&!!acct.fAuto};
+  /* what the application sends besides the profile: the details saved under Resume and links (phone, LinkedIn, portfolio, About you, resume link) win over the optional profile form */
+  w.__uaplyApplyExt=function(){var x=Object.assign({},XV());var ph=phoneOf(),li=linkOf("linkedin"),pf=linkOf("portfolio"),su=summaryOf(),rs=resumeLinkOf();if(ph)x.phone=ph;if(li)x.linkedin=li;if(pf)x.portfolio=pf;if(su)x.summary=su;if(rs)x.resume=rs;return x};
+  w.__uaplyResume=function(){return acct.resumeData&&DATA_URL.test(acct.resumeData)?{name:acct.resumeName,size:acct.resumeSize,data:acct.resumeData}:null};   /* the file uploaded under Resume and links */
   w.__uaplyMessage=function(job,m,p){
     var skills=(m.matched||[]).slice(0,3),name=p.name||"[Your name]",sumv=summaryOf();
     var fit=skills.length?"My experience with "+skills.join(", ")+" lines up with what the role asks for":"My background lines up well with what the role asks for";
@@ -1038,7 +1041,7 @@ function apply(w,host){
       h+='<div class="grid">'+(PX()
         ?'<p class="note full" style="margin:0">Phone, LinkedIn, portfolio and About you are in Profile, Settings. Earliest start is in Profile, Preferences.</p>'
         :'<div class="field"><label for="aPhone">Phone</label><input type="tel" id="aPhone" autocomplete="tel" maxlength="20" value="'+E(a.phone)+'" placeholder="+1 555 123 4567"></div>'+
-        '<div class="field"><label for="aLinked">LinkedIn</label><input type="text" id="aLinked" inputmode="url" maxlength="300" value="'+E(a.linkedin)+'" placeholder="linkedin.com/in/you"></div>'+
+        '<div class="field"><label for="aLinked">LinkedIn</label><input type="text" id="aLinked" inputmode="url" maxlength="300" value="'+E(a.linkedin)+'" placeholder="linkedin.com/in/you"><small>Sent to employers with every application.</small></div>'+
         '<div class="field"><label for="aSite">Portfolio or website</label><input type="text" id="aSite" inputmode="url" maxlength="300" value="'+E(a.portfolio)+'" placeholder="yourname.com"></div>'+
         '<div class="field"><label for="aNotice">When can you start?</label><select id="aNotice">'+opts(NOTICE,a.notice)+'</select></div>'+
         '<div class="field full"><label for="aSummary">Short summary</label><textarea id="aSummary" maxlength="600">'+E(a.summary)+'</textarea><small>Two or three sentences recruiters read first.</small></div>')+

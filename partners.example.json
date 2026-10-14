@@ -1,5 +1,5 @@
 {
-  "_comment": "Partner employers: companies that gave UAply their openings AND agreed to receive applications by email. Copy this file to uaply-partners.json (git-ignored) and put real employers there. An employer with no recorded consent is ignored. An employer with no contact address is link-out only. Never add a company that has not agreed. The entries below are placeholders. Optional per job, for the filters: \"type\" can be job, parttime, internship or coop; \"posted\" is a date like 2026-10-12; \"perks\" lists any of health, dental, vision, k401, match, loan, stock, pto, maternity, paternity, tuition; \"commission_only\": true marks a commission-only role.",
+  "_comment": "Partner employers: companies that gave UAply their openings AND agreed to receive applications by email. Copy this file to uaply-partners.json (git-ignored) and put real employers there. An employer with no recorded consent is ignored. An employer with no contact address is link-out only. Never add a company that has not agreed. The entries below are placeholders. Optional per job, for the filters: \"type\" can be job, parttime, internship or coop; \"posted\" is a date like 2026-10-12; \"perks\" lists any of health, dental, vision, k401, match, loan, stock, pto, maternity, paternity, tuition; \"commission_only\": true marks a commission-only role. Delivery channels (see EMPLOYERS.md): \"contact\" is a recruiting email (applications arrive as email with the resume attached); \"webhook\" is an HTTPS address that receives each application as signed JSON, with \"webhook_secret\" used to sign it. An employer may use either or both.",
   "employers": [
     {
       "name": "Example Partner Co",
@@ -12,13 +12,22 @@
           "loc": "Remote (US)",
           "mode": "remote",
           "type": "internship",
-          "sal": [0, 0],
+          "sal": [
+            0,
+            0
+          ],
           "yrs": 0,
           "edu": "High school",
-          "skills": ["JavaScript", "HTML", "CSS"],
+          "skills": [
+            "JavaScript",
+            "HTML",
+            "CSS"
+          ],
           "blurb": "A placeholder listing that shows the format. It is not a real opening."
         }
-      ]
+      ],
+      "webhook": "",
+      "webhook_secret": ""
     }
   ]
 }

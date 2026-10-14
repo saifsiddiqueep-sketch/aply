@@ -20,6 +20,9 @@ Receipts: when the person swiping is signed in (auth_api.py), every new applicat
 to their account email. In test mode it is stored in the simulated inbox (shown on /outbox); in live mode with SMTP
 configured it is emailed to them for real.
 """
+import base64
+import hashlib
+import hmac
 import json
 import os
 import re
@@ -27,6 +30,8 @@ import smtplib
 import sys
 import threading
 import time
+import urllib.error
+import urllib.request
 import uuid
 import html
 from email.message import EmailMessage
@@ -146,6 +151,13 @@ def _https(v, n=300):
     return v if v.lower().startswith("https://") and " " not in v else ""
 
 
+def _linkedin(v):
+    """A LinkedIn profile link: https, and really on linkedin.com (so the LinkedIn field cannot carry some other site)."""
+    u = _https(v)
+    host = u.split("/")[2].split(":")[0].lower() if u else ""
+    return u if host == "linkedin.com" or host.endswith(".linkedin.com") else ""
+
+
 def _ext(raw):
     """The optional application-profile details (phone, links, education, authorization...), each checked and capped."""
     x = raw if isinstance(raw, dict) else {}
@@ -160,7 +172,7 @@ def _ext(raw):
         gpa = ""
     types = [t for t in x.get("types") if t in _TYPES] if isinstance(x.get("types"), list) else []
     return {"phone": phone, "headline": _s(x.get("headline"), 120), "summary": _s(x.get("summary"), 600),
-            "resume": _https(x.get("resume")), "linkedin": _https(x.get("linkedin")), "portfolio": _https(x.get("portfolio")),
+            "resume": _https(x.get("resume")), "linkedin": _linkedin(x.get("linkedin")), "portfolio": _https(x.get("portfolio")),
             "school": _s(x.get("school"), 100), "major": _s(x.get("major"), 100), "grad": grad, "gpa": gpa,
             "employer": _s(x.get("employer"), 100), "auth": _pick(x.get("auth"), _AUTH),
             "sponsor": _pick(x.get("sponsor"), ("yes", "no")), "start": _pick(x.get("start"), _START), "types": types}
@@ -175,6 +187,7 @@ def _detail_rows(c, note=""):
     rows = [("Applicant", c.get("name")), ("Email", c.get("email")), ("Current or target title", c.get("title")),
             ("Experience", exp), ("Location", c.get("loc")), ("Skills", skills),
             ("Phone", x.get("phone")), ("Headline", x.get("headline")), ("Resume", x.get("resume")),
+            ("Resume file", ("%s (attached)" % c["resume_file"]) if c.get("resume_file") else ""),
             ("LinkedIn", x.get("linkedin")), ("Portfolio", x.get("portfolio")), ("Education", edu),
             ("Most recent employer", x.get("employer")),
             ("Work authorization", _AUTH.get(x.get("auth"), "") + ("; needs sponsorship" if x.get("sponsor") == "yes" else "; no sponsorship needed" if x.get("sponsor") == "no" else "") if x.get("auth") else ""),
@@ -223,7 +236,81 @@ def _simulated_recipient(co):
     return "recruiting@%s.example" % (re.sub(r"[^a-z0-9]", "", co.lower()) or "company")
 
 
-def _send_email(cfg, to, cand, job, note, original=""):
+_RESUME_KINDS = {"pdf": (b"%PDF", "application", "pdf"), "doc": (b"\xd0\xcf\x11\xe0", "application", "msword"),
+                 "docx": (b"PK\x03\x04", "application", "vnd.openxmlformats-officedocument.wordprocessingml.document"),
+                 "txt": (None, "text", "plain"), "md": (None, "text", "plain")}
+
+
+def _resume(raw):
+    """The resume file the person uploaded under Profile, Resume and links, as (details, bytes). Returns (None, None) when there is
+    none and raises ValueError when it is not a real PDF, Word or text file under 1 MB (checked by content, not just the name)."""
+    if not raw:
+        return None, None
+    if not isinstance(raw, dict):
+        raise ValueError("bad resume")
+    name = re.sub(r"[^A-Za-z0-9._ -]", "_", _s(raw.get("name"), 120)).strip() or "resume.pdf"
+    m = re.match(r"^data:[\w/+.-]+;base64,([A-Za-z0-9+/=]+)$", raw.get("data") if isinstance(raw.get("data"), str) else "")
+    ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+    if not m or ext not in _RESUME_KINDS:
+        raise ValueError("bad resume")
+    data = base64.b64decode(m.group(1), validate=True)
+    magic, maintype, subtype = _RESUME_KINDS[ext]
+    if not 20 <= len(data) <= 1048576 or (magic and not data.startswith(magic)):
+        raise ValueError("bad resume")
+    if not magic:
+        data.decode("utf-8")                                   # a text resume must really be text
+    return {"name": name, "size": len(data), "type": "%s/%s" % (maintype, subtype)}, data
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *a, **k):
+        return None                                            # a webhook that redirects is a failure, never followed
+
+
+def _webhook_payload(rec, resume_bytes):
+    c, j = rec["candidate"], rec["job"]
+    x = c.get("ext") or {}
+    return {"id": rec["id"], "event": "application.created", "source": "UAply", "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(rec["at"])),
+            "job": {"id": j["id"], "title": j["role"], "company": j["co"], "location": j["loc"], "url": j["url"], "type": j.get("type"), "work_style": j.get("mode")},
+            "applicant": {"name": c["name"], "email": c["email"], "phone": x.get("phone", ""), "title": c.get("title", ""), "location": c.get("loc", ""),
+                          "years_experience": c.get("years", 0), "skills": c.get("skills", []), "headline": x.get("headline", ""), "summary": x.get("summary", ""),
+                          "education": {"level": c.get("edu", ""), "school": x.get("school", ""), "major": x.get("major", ""), "graduation": x.get("grad", ""), "gpa": x.get("gpa", "")},
+                          "links": {"resume": x.get("resume", ""), "linkedin": x.get("linkedin", ""), "portfolio": x.get("portfolio", "")},
+                          "work_authorization": x.get("auth", ""), "needs_sponsorship": x.get("sponsor", ""), "earliest_start": x.get("start", ""),
+                          "most_recent_employer": x.get("employer", "")},
+            "message": rec.get("note", ""), "match_percent": rec.get("match", 0),
+            "resume": ({"name": rec["resume"]["name"], "type": rec["resume"]["type"], "size": rec["resume"]["size"],
+                        "content_base64": base64.b64encode(resume_bytes).decode("ascii")} if resume_bytes and rec.get("resume") else None)}
+
+
+def _post_webhook(url, secret, payload):
+    """POST one application as signed JSON to the address an employer registered (the way Indeed Apply delivers). The employer's
+    system must answer 2xx; a failure is retried up to three times. Returns (ok, reason)."""
+    body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    ts = str(int(time.time()))
+    headers = {"Content-Type": "application/json", "User-Agent": "UAply/1.0", "X-UAply-Delivery": payload["id"], "X-UAply-Timestamp": ts}
+    if secret:                                                 # the signature covers the timestamp and the body, so a replay can be spotted
+        headers["X-UAply-Signature"] = "sha256=" + hmac.new(secret.encode(), (ts + ".").encode() + body, hashlib.sha256).hexdigest()
+    opener = urllib.request.build_opener(_NoRedirect)
+    reason = "no attempt"
+    for wait in (0, 1, 3):
+        if wait:
+            time.sleep(wait)
+        try:
+            with opener.open(urllib.request.Request(url, data=body, headers=headers, method="POST"), timeout=10) as r:
+                if 200 <= r.status < 300:
+                    return True, ""
+                reason = "HTTP %d" % r.status
+        except urllib.error.HTTPError as e:
+            reason = "HTTP %d" % e.code
+            if 400 <= e.code < 500 and e.code not in (408, 429):
+                break                                          # the employer's system said no; trying again will not change that
+        except Exception as e:
+            reason = type(e).__name__
+    return False, reason
+
+
+def _send_email(cfg, to, cand, job, note, original="", resume=None):
     s = cfg["smtp"]
     msg = EmailMessage()
     msg["From"] = s["from_addr"]
@@ -233,12 +320,35 @@ def _send_email(cfg, to, cand, job, note, original=""):
     msg["Subject"] = "%sApplication: %s - %s" % ("[TEST] " if test else "", job["role"], cand["name"])
     extra = ("\nTest redirect: this would have gone to %s.\n" % (original or "the company's application page")) if test else ""
     msg.set_content("%s\n\n--\nSent through UAply on behalf of %s <%s>.\nPosting: %s\n%s" % (_application_text(cand, job, note), cand["name"], cand["email"], job["url"], extra))
+    if resume:                                                 # the resume the person uploaded goes along as a real attachment
+        meta, data = resume
+        maintype, subtype = meta["type"].split("/", 1)
+        msg.add_attachment(data, maintype=maintype, subtype=subtype, filename=meta["name"])
     with smtplib.SMTP(s["host"], int(s.get("port", 587)), timeout=20) as srv:
         if s.get("starttls", True):
             srv.starttls()
         if s.get("user"):
             srv.login(s["user"], s.get("password", ""))
         srv.send_message(msg)
+
+
+def _deliver(cfg, target, cand, job, note, contact, resume_meta, resume_bytes, hook, rec):
+    """Send one application over every channel the employer opted into: email, a signed webhook, or both. The application counts as
+    sent when at least one channel accepted it. Returns (status, error_text_or_None, channels_that_worked)."""
+    done, errors = [], []
+    if target:
+        try:
+            _send_email(cfg, target, cand, job, note, contact, (resume_meta, resume_bytes) if resume_meta else None)
+            done.append("email")
+        except Exception as e:
+            errors.append("email: %s" % str(e)[:120])
+    if hook:
+        ok, why = _post_webhook(hook[0], hook[1], _webhook_payload(rec, resume_bytes))
+        if ok:
+            done.append("webhook")
+        else:
+            errors.append("webhook: %s" % why)
+    return ("sent" if done else "failed"), ("; ".join(errors) if errors else None), done
 
 
 def _owner_copy(cfg):
@@ -378,12 +488,19 @@ def submit(p, user=None):
         cand["years"] = 0
     cand["skills"] = [_s(x, 40) for x in (prof.get("skills") or [])[:30] if isinstance(x, str)]
     cand["ext"] = _ext(prof.get("ext"))
+    try:
+        resume_meta, resume_bytes = _resume(p.get("resume"))
+    except (ValueError, TypeError):
+        return 400, {"error": "Your resume file could not be used. Replace it under Profile, Resume and links with a PDF, Word or text file under 1 MB."}
+    if resume_meta:
+        cand["resume_file"] = resume_meta["name"]
     note = (p.get("note") or "").strip()
 
     # Never email an address the browser sends: only the recruiter address this server found in the job feed itself.
     claimed = job["contact"] if EMAIL_RE.match(job["contact"] or "") else ""
     contact = claimed if claimed and claimed.lower() == jobs_api.known_contact(job["id"]).lower() else ""
     policy = jobs_api.job_policy(job["id"])      # 'direct' (employer opted in), 'link' (employer's own page) or 'unknown' (example)
+    hook = jobs_api.known_webhook(job["id"]) if policy == "direct" else None      # the HTTPS address the employer registered, if any
     send_args = None
     with _lock:
         for a in APPS:
@@ -391,7 +508,7 @@ def submit(p, user=None):
                 return 200, {"status": "duplicate", "id": a["id"], "to": a.get("to", ""), "mode": a["mode"]}
         rec = {"id": uuid.uuid4().hex[:12], "at": int(time.time()), "mode": mode, "job": job, "candidate": cand,
                "note": note, "match": int(p.get("match") or 0), "to": "", "simulated": False, "status": "",
-               "user": user["id"] if user else None}
+               "user": user["id"] if user else None, "resume": resume_meta, "channels": []}
         if policy == "link" or (policy == "unknown" and mode == "live"):
             # a third-party listing, or an example in live mode: UAply never sends an application to anyone here.
             # The person is pointed to the employer's own application page instead.
@@ -402,41 +519,42 @@ def submit(p, user=None):
             rec["to"] = contact or _simulated_recipient(job["co"])
             rec["simulated"] = True
             rec["status"] = "delivered_test"
+            rec["channels"] = ["email (simulated)"] + (["webhook (simulated)"] if hook else [])
             APPS.append(rec)
             _append("applications.jsonl", rec)
         else:
             if p.get("confirm_real") is not True:
                 return 400, {"error": "Live sending needs the user to review and press Send."}
             target = _redirect(cfg) or contact
-            if target and _smtp_ready(cfg):
+            hook = None if _redirect(cfg) else hook          # a test redirect must never reach a real employer's system
+            if (target and _smtp_ready(cfg)) or hook:
                 today = time.time() - 86400
                 sent_today = sum(1 for a in APPS if a["mode"] == "live" and a["status"] in ("sent", "sending") and a["at"] > today)
                 if sent_today >= int(cfg.get("daily_limit", 20)):
                     return 429, {"error": "Daily sending limit reached."}
                 rec["to"], rec["status"] = target, "sending"      # reserved now, so a double tap cannot send twice
                 APPS.append(rec)
-                send_args = (cfg, target, cand, job, note, contact)
+                send_args = (cfg, target if _smtp_ready(cfg) else "", cand, job, note, contact, resume_meta, resume_bytes, hook, rec)
             else:
                 rec["status"] = "handoff"
                 APPS.append(rec)
                 _append("applications.jsonl", rec)
-    if send_args:                                                  # the slow network call happens outside the lock
-        try:
-            _send_email(*send_args)
-            status, err = "sent", None
-        except Exception as e:
-            status, err = "failed", str(e)[:200]
+    if send_args:                                                  # the slow network calls happen outside the lock
+        status, err, channels = _deliver(*send_args)
         with _lock:
-            rec["status"] = status
+            rec["status"], rec["channels"] = status, channels
             if err:
                 rec["error"] = err
             _append("applications.jsonl", rec)
-    out = {"status": rec["status"], "id": rec["id"], "to": rec["to"], "mode": mode, "simulated": rec["simulated"],
-           "copied": _send_owner_copy(cfg, rec) if rec["status"] != "failed" else False}
+    out = {"status": rec["status"], "id": rec["id"], "to": rec["to"], "mode": mode, "simulated": rec["simulated"], "copied": False}
     if rec.get("error"):
         out["error"] = "The email could not be sent: " + rec["error"]
     if user and rec["status"] in ("delivered_test", "sent", "handoff"):
         out["receipt"] = _receipt(cfg, user, cand, job, note, rec)
+    # the owner's copy: skipped when the person who swiped already got their own confirmation at that same address (one swipe, one email)
+    already = out.get("receipt", {}).get("status") == "sent" and user and user["email"].lower() == _owner_copy(cfg).lower()
+    if rec["status"] != "failed" and not already:
+        out["copied"] = _send_owner_copy(cfg, rec)
     return 200, out
 
 
