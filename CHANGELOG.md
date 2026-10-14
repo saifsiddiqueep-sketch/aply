@@ -19,6 +19,9 @@ A sweep of the whole site and app (every file, every screen at iPhone size, the 
 - **Job cards:** "Hiring" is listed as a skill only on recruiting and people roles (company boilerplate about "recruiting" put it on a firmware co-op).
   A remote job's place no longer repeats the word ("Remote - USA  Remote" is now "USA  Remote"). A "100%" score now fits inside its ring.
 - **Server:** an address with a null byte (`%00`) now gets a clean 400 instead of a dropped connection, and an empty POST gets 400 instead of "too large".
+  A burst of visitors no longer gets connections refused: Python's default waiting line of 5 overflowed when 300 requests arrived at once, so it is now 128.
+  A new test (`tools/stress.py`, part of the full run) fires 300 simultaneous reads three times, 24 simultaneous sign-ups and a 24-guess password attack: no
+  server errors, no locked database, and the lock-out holds.
 - **Repository hygiene:** a local-only copy of the partner list (`uaply-partners.json.bak`) had been committed; it is untracked and `.gitignore` now covers
   backups. The file audit now fails on any tracked backup, temporary or log file and on stray control characters (the sign of a mangled backslash).
   The pull-request check now also runs the five behavior tests that need no browser (jobs, codes, delivery, setup form, emails). The test runner prints

@@ -337,4 +337,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         if not PUBLIC:                                                   # keep request logs out of a host's logs (they hold IPs)
             super().log_message(fmt, *args)
 
-http.server.ThreadingHTTPServer((BIND, port), H).serve_forever()
+class Server(http.server.ThreadingHTTPServer):
+    request_queue_size = 128         # Python's default of 5 refuses connections outright when a burst of visitors arrives at once
+
+Server((BIND, port), H).serve_forever()

@@ -82,6 +82,11 @@ PIDS="$PIDS $(UAPLY_DATA_DIR="$TMP/smtp" HOST=0.0.0.0 OWNER_PASSWORD=ownerpw UAP
 wait_port 18773
 run "password reset email, link, single use, no stored link" python tools/test-smtp.py 18773 "$TMP/smtp/mail.jsonl"
 
+step "A burst of visitors (300 at once, sign-ups, a password-guessing attack)"
+PIDS="$PIDS $(UAPLY_DATA_DIR="$TMP/stress" UAPLY_CONFIG_JSON='{"feeds":[],"smtp":{},"owner_copy":""}' start python serve.py 18774 dev --api)"
+wait_port 18774
+run "simultaneous reads, sign-ups and wrong passwords: no errors, lock-out holds" python tools/stress.py 18774
+
 printf "\n"
 if [ "$FAILS" -eq 0 ]; then echo "ALL TESTS PASSED"; else echo "$FAILS test group(s) FAILED"; fi
 exit "$FAILS"
