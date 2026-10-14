@@ -11,6 +11,9 @@ import re
 import smtplib
 from email.message import EmailMessage
 
+import json
+import os
+
 import auth_api
 import google_auth
 import uaply_api
@@ -53,6 +56,38 @@ def checks(host, proto):
         {"name": "AI answers in UAply Assistant (optional)", "ok": _real(cfg.get("anthropic_api_key"), ("optional", "sk-ant-...")) and str(cfg.get("anthropic_api_key")).startswith("sk-ant-"),
          "detail": "Without a key the assistant answers with the best matching help article.", "todo": []},
     ]
+
+
+def save_mail(payload):
+    """The "Connect Gmail" form: save the sending Gmail address and its App Password into the git-ignored uaply-config.json on this
+    computer, then send a test email. The password is never echoed back and never goes anywhere except Gmail's own server.
+    Returns (status, body)."""
+    addr = payload.get("email") if isinstance(payload.get("email"), str) else ""
+    pw = "".join((payload.get("password") if isinstance(payload.get("password"), str) else "").split())      # Google shows it in groups of four
+    copy_to = payload.get("copy_to") if isinstance(payload.get("copy_to"), str) else ""
+    if not uaply_api.EMAIL_RE.match(addr.strip()):
+        return 400, {"ok": False, "message": "Enter the Gmail address that will send UAply's email."}
+    if not (12 <= len(pw) <= 64) or not pw.isalnum():
+        return 400, {"ok": False, "message": "That does not look like a Gmail App Password (16 letters, shown in four groups). Create one at myaccount.google.com/apppasswords."}
+    if copy_to.strip() and not uaply_api.EMAIL_RE.match(copy_to.strip()):
+        return 400, {"ok": False, "message": "The address for copies is not a valid email."}
+    try:
+        with open(uaply_api.CONFIG_PATH, encoding="utf-8") as f:
+            cfg = json.load(f)
+    except (OSError, ValueError):
+        cfg = {}
+    smtp = cfg.get("smtp") if isinstance(cfg.get("smtp"), dict) else {}
+    smtp.update({"host": "smtp.gmail.com", "port": 587, "starttls": True, "user": addr.strip(), "from_addr": addr.strip(), "password": pw})
+    cfg["smtp"] = smtp
+    if copy_to.strip():
+        cfg["owner_copy"] = copy_to.strip()
+    tmp = uaply_api.CONFIG_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline=chr(10)) as f:
+        json.dump(cfg, f, indent=2)
+    os.replace(tmp, uaply_api.CONFIG_PATH)
+    status, out = test_mail()
+    out["saved"] = True
+    return status, out
 
 
 def test_mail():
@@ -110,9 +145,16 @@ button{font:inherit;padding:8px 14px;border-radius:10px;border:1px solid var(--l
 code{background:var(--bg);padding:1px 5px;border-radius:5px}
 </style></head><body><main><h1>UAply setup</h1><p class="m">What is switched on, and what still needs a key. Secrets are never shown here.</p>
 %s
+<article><b>Connect Gmail</b><p class="m">Paste the Gmail address that will send UAply's email and its App Password (a 16-letter code from myaccount.google.com/apppasswords, not your normal password). It is saved only in uaply-config.json on this computer, which is never uploaded, and a test email is sent right away.</p>
+<p><input id="ge" type="email" placeholder="Sending Gmail address" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p><input id="gp" type="password" placeholder="App Password" autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p><input id="gc" type="email" placeholder="Send copies and tests to (optional)" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p><button id="sv" type="button">Save and send a test email</button> <span id="sr" class="m" role="status"></span></p></article>
 <article><b>Send a test email</b><p class="m">Sends one message to your copy address so you can see that real email works.</p>
 <p><button id="t" type="button">Send test email</button> <span id="r" class="m" role="status"></span></p></article>
 <p class="m">%d accounts and %d emails recorded on this server. <a href="/outbox">Test inbox</a></p></main>
 <script>document.getElementById('t').onclick=function(){var r=document.getElementById('r');r.textContent='Sending...';
-fetch('/api/setup/test-mail',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(function(x){return x.json()}).then(function(j){r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}</script>
+fetch('/api/setup/test-mail',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(function(x){return x.json()}).then(function(j){r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
+document.getElementById('sv').onclick=function(){var r=document.getElementById('sr'),g=function(i){return document.getElementById(i).value};r.textContent='Saving...';
+fetch('/api/setup/save-mail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:g('ge'),password:g('gp'),copy_to:g('gc')})}).then(function(x){return x.json()}).then(function(j){if(j.saved)document.getElementById('gp').value='';r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}</script>
 </body></html>""" % ("".join(rows), n["users"], n["mail"])).encode("utf-8")

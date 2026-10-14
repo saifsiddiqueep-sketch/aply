@@ -25,7 +25,7 @@ module.exports = async ({ ev, sleep, nav, logs, shot }) => {
   };
 
   const sections = [
-    ["Services", "nb-svc", ["Full-time", "Part-time", "Internships", "Co-ops"]],
+    ["Services", "nb-svc", ["Full-time", "Part-time", "Internships", "Coop"]],
     ["Dashboard", "nb-dash", ["Overview", "Applied", "Accepted", "Rejected", "Interviews"]],
     ["Profile", "nb-prof", ["Account", "Settings", "Resume", "Preferences", "Filters", "Plan", "Data"]],
   ];

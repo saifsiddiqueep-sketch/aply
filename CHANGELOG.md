@@ -4,6 +4,28 @@ How versions move: work happens in `sandbox`, is tested there, and goes to `dev`
 build: it is what the hosted site and the phone apps run. Each version is tagged on GitHub (Releases). `main` is the original
 production page and only changes when the owner decides.
 
+## 1.0.0-rc.3 (release candidate)
+
+Applications now reach employers who connect, with the person's resume, and swiping is covered by tests of every gesture.
+
+- **Employers can connect two ways** (`EMPLOYERS.md`): an email address, and/or a signed webhook (the model Indeed Apply uses: an HTTPS
+  address per employer that receives each application as JSON, retried up to three times, never followed through a redirect).
+  Employers who did not connect are never sent anything, so those jobs stay a hand-off to the employer's own page.
+- **The resume file is sent.** The file uploaded under Preferences travels with the application: attached to the employer's email and
+  inside the webhook. It is checked by content (a real PDF, Word or text file under 1 MB) and never stored on the server.
+- **LinkedIn, phone, portfolio and the short summary now reach the employer in the release build.** They were saved under Resume and links
+  but never sent, because only the optional profile form's fields were. The LinkedIn box says it is sent, and only real linkedin.com
+  links are accepted.
+- **Swipe-right messages are short:** "Applied to X." or "Saved. Finish applying at X.", plus one short line about the confirmation email.
+  No more "A copy was emailed to you" or sign-in instructions beyond one sentence.
+- **One swipe, one email** when the signed-in account is the owner address (the owner copy is skipped).
+- **Job descriptions in emails start at the role** ("What you'll do"), not the company's introduction, and end on a whole sentence.
+- **Connect Gmail form on the setup page:** paste the Gmail address and App Password into a local page (never into chat); it saves them in the
+  git-ignored config and sends a test email. Hosted servers refuse it (their secrets live in the host's dashboard).
+- **Menu wording:** Services now says "Coop" (was "Co-ops").
+- New tests: `tools/test-delivery.py` (32), `tools/test-setup.py` (17), `tools/ui-swipes.js` (every gesture: buttons, keyboard, finger drags in
+  both directions, undo, double tap, reload), and more in the email and job suites.
+
 ## 1.0.0-rc.2 (release candidate)
 
 Found by running dev the way a real host runs it (public, behind HTTPS, cold start, no test data), and fixed.

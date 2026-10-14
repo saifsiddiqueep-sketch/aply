@@ -17,7 +17,7 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   // services
   await ev(F + ".getElementById('nb-svc').click()");
   await sleep(500);
-  for (const tab of ["Full-time", "Part-time", "Internships", "Co-ops"]) {
+  for (const tab of ["Full-time", "Part-time", "Internships", "Coop"]) {
     const ok = await clickText(tab);
     await sleep(400);
     check("Services: " + tab + " (cards or an empty message shows)", ok && ((await ev(F + ".querySelectorAll('.card').length")) > 0 || (await visibleText()).length > 200));

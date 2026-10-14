@@ -53,5 +53,15 @@ n = j._normalize(raw("Engineer", "Austin, TX"), "greenhouse", "Acme")
 t("a feed job is link-out only and never has a recruiter address", (n["apply"], n["contact"]), ("link", ""))
 t("the documentation example employer is never served as jobs", [e for e in j.partner_jobs() if e["co"] == "Example Partner Co"], [])
 
+# the job description shown in emails: the role, not the company's introduction, and always ending on a whole sentence
+intro = "About Acme: We are a company that builds things people love and we are growing. " * 4
+body = "About the Role: We need an intern to help build the checkout flow. You will write code, add tests and learn from senior engineers. " + "More detail about the team and tools. " * 40
+d = j._role_summary(intro + body)
+t("the description starts at the role section", d.startswith("About the Role:"), True)
+t("the description is short enough to read in an email", len(d) <= 660, True)
+t("the description ends on a whole sentence", d.rstrip().endswith("."), True)
+t("a posting with no role heading still gets a clean summary", j._role_summary("We build robots. " * 100).endswith("robots."), True)
+t("a short posting is kept whole", j._role_summary("A short posting."), "A short posting.")
+
 print(sum(R), "/", len(R))
 sys.exit(0 if all(R) else 1)

@@ -123,7 +123,7 @@ _cache = {}
 _lock = threading.Lock()
 _disk = {"loaded": False, "dirty": False}
 DISK_MAX_AGE = 24 * 3600          # never trust a saved copy older than a day
-CACHE_VERSION = 3                  # raise this whenever the rules for keeping or classifying postings change: older saved copies are then ignored
+CACHE_VERSION = 4                  # raise this whenever the rules for keeping or classifying postings change: older saved copies are then ignored
 
 
 def _cache_file():
@@ -181,6 +181,24 @@ def _get(url):
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
     with urllib.request.urlopen(req, timeout=20) as r:
         return json.loads(r.read().decode("utf-8", "replace"))
+
+
+ROLE_HEAD = re.compile(r"(?:About (?:the|this) (?:role|job|internship|position|opportunity|team)|The (?:role|opportunity|internship|position)|Role overview|"
+                       r"Position summary|Job summary|Job description|Overview|What you.?ll (?:do|be doing)|Your role|In this role|Responsibilities)\b[:\s-]*", re.I)
+
+
+def _role_summary(text, limit=650):
+    """A short, readable description of the job for emails. Postings usually open with a paragraph about the company, so when the
+    posting has a role section ("About the role", "What you'll do", ...) the summary starts there. It ends on a whole sentence."""
+    t = text.strip()
+    m = ROLE_HEAD.search(t, 0, 6000)
+    if m and m.start() > 0:
+        t = t[m.start():]
+    if len(t) <= limit:
+        return t
+    cut = t[:limit]
+    end = max(cut.rfind(". "), cut.rfind("! "), cut.rfind("? "))
+    return (cut[:end + 1] if end > limit * 0.5 else cut.rsplit(" ", 1)[0] + "…")
 
 
 def _text(s):
@@ -337,7 +355,7 @@ def _normalize(raw, kind, name):
     yrs = min(int(m.group(1)), 15) if m else 0
     edu = "Bachelor" if re.search(r"bachelor|\bB\.?S\.? degree", text, re.I) else "High school"
     blurb = text[:170].rsplit(" ", 1)[0] + "…" if len(text) > 170 else text
-    desc = text[:700].rsplit(" ", 1)[0] + "…" if len(text) > 700 else text      # longer excerpt, used in the emails
+    desc = _role_summary(text)                                                    # what the emails show about the job
     jid = 100000 + int(hashlib.sha1(("%s:%s" % (kind, raw["id"])).encode()).hexdigest()[:6], 16)
     src = name if kind in ("remotive", "jobicy", "muse") else "%s's careers page" % raw["company"]
     # contact is deliberately empty and apply is "link": a third-party feed never gets an application emailed to anyone
@@ -348,6 +366,12 @@ def _normalize(raw, kind, name):
 
 
 _refreshing = set()
+
+
+def known_webhook(job_id):
+    """(url, secret) the employer registered for this job, or None. Only partner employers have one."""
+    partner_jobs()
+    return _hooks.get(job_id)
 
 
 def job_info(job_id):
@@ -453,6 +477,7 @@ def feeds_allowed():
 
 # ---- partner employers: postings an employer gave us and who agreed to receive applications ----
 _partners = {"path": None, "mtime": None, "jobs": []}
+_hooks = {}          # job id -> (webhook url, secret). Kept apart from the job dicts: those go to browsers, the secret must not
 
 
 def _clean(v, n):
@@ -478,12 +503,17 @@ def partner_jobs():
     except Exception:
         return _partners["jobs"]
     out = []
+    new_hooks = {}
     for e in data.get("employers", []) if isinstance(data, dict) else []:
         name, consent = _clean(e.get("name"), 100), _clean(e.get("consent"), 300)
         if not name or not consent or consent.lower().startswith("placeholder"):
             continue                                   # no recorded consent (or the example text still in place), no listing
         contact = _clean(e.get("contact"), 120)
         contact = contact if re.match(r"^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$", contact) else ""
+        # Indeed-style delivery: an HTTPS address the employer registered; each application is POSTed there as signed JSON
+        hook_url = _clean(e.get("webhook"), 400)
+        local_ok = os.environ.get("UAPLY_ALLOW_LOCAL_WEBHOOK") == "1" and re.match(r"^http://(127\.0\.0\.1|localhost)[:/]", hook_url)
+        hook = (hook_url, _clean(e.get("webhook_secret"), 200)) if (hook_url.startswith("https://") or local_ok) and " " not in hook_url else None
         for j in e.get("jobs", []):
             role, skills = _clean(j.get("role"), 120), [_clean(s, 40) for s in (j.get("skills") or [])[:6] if _clean(s, 40)]
             if not role or not skills:
@@ -494,8 +524,11 @@ def partner_jobs():
                 sal = [max(0, int(sal[0])), max(0, int(sal[1]))]
             except (TypeError, ValueError):
                 sal = [0, 0]
+            jid = 200000 + int(hashlib.sha1(("partner:%s:%s" % (name, role)).encode()).hexdigest()[:6], 16)
+            if hook:
+                new_hooks[jid] = hook
             out.append(dict(
-                id=200000 + int(hashlib.sha1(("partner:%s:%s" % (name, role)).encode()).hexdigest()[:6], 16),
+                id=jid,
                 co=name, role=role, loc=_clean(j.get("loc"), 80) or "Not listed",
                 mode=j.get("mode") if j.get("mode") in ("remote", "hybrid", "onsite") else "remote", sal=sal,
                 yrs=min(15, max(0, int(j.get("yrs") or 0))) if str(j.get("yrs") or 0).isdigit() else 0,
@@ -503,12 +536,14 @@ def partner_jobs():
                 skills=skills, blurb=_clean(j.get("blurb"), 220),
                 type=j.get("type") if j.get("type") in ("job", "parttime", "internship", "coop") else "job",
                 url=url if url.startswith("https://") else "", source="Direct from %s (partner employer)" % name,
-                contact=contact, apply="direct" if contact else "link", partner=True, live=True,
+                contact=contact, apply="direct" if (contact or hook) else "link", webhook=bool(hook), partner=True, live=True,
                 # optional filter data the employer can give: "posted" (a date), "perks" (keys from PERK_RES), "commission_only"
                 posted=_ts(j.get("posted")),
                 perks=sorted(set([p for p in (j.get("perks") or []) if p in PERK_KEYS] + _perks(j.get("blurb") or ""))),
                 comm=j.get("commission_only") is True or bool(COMM_RE.search(j.get("blurb") or ""))))
     _partners.update(path=path, mtime=mtime, jobs=out)
+    _hooks.clear()
+    _hooks.update(new_hooks)
     return out
 
 

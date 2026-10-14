@@ -15,7 +15,7 @@ module.exports = async ({ ev, sleep, nav, shot, logs }) => {
   await setVal("pName", "Audit Tester"); await setVal("pEmail", "audit.tester@example.com");
   await ev(F + ".getElementById('saveBtn').click()"); await sleep(800);
   await ev(F + ".getElementById('nb-svc').click()"); await sleep(500);
-  for (const tab of ["Full-time", "Part-time", "Internships", "Co-ops"]) {
+  for (const tab of ["Full-time", "Part-time", "Internships", "Coop"]) {
     await clickSub(tab); await sleep(700);
     const info = JSON.parse(await ev("JSON.stringify({count:(" + F + ".getElementById('fCount')||{}).innerText||'',cards:(" + F + ").querySelectorAll('.card').length,top:((" + F + ").querySelector('.card')||{}).innerText?(" + F + ").querySelector('.card').innerText.split(String.fromCharCode(10)).slice(0,4).join(' / '):'(no card)'})"));
     console.log("[" + tab + "] " + info.count);

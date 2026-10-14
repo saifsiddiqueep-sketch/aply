@@ -36,10 +36,14 @@ for _ in $(seq 1 120); do n=$(curl -s http://127.0.0.1:18767/api/jobs | python -
 echo "  real postings on dev: ${n:-0}"
 
 step "Job feed rules (US-only, no foreign roles, classification)"
-run "location and classification rules (23)" python tools/test-jobs.py
+run "job rules and descriptions (28)" python tools/test-jobs.py
+
+step "Delivery to employers (email with resume, signed webhook, retries, opt-in only) and the Connect Gmail form"
+run "delivery channels (32)" python tools/test-delivery.py
+run "Connect Gmail form (17)" python tools/test-setup.py
 
 step "Swipe-right emails (content, test label, safety, real send)"
-run "receipt and owner copy emails (41)" python tools/test-emails.py
+run "receipt and owner copy emails (42)" python tools/test-emails.py
 
 step "Accounts, applying, reset and setup (back end)"
 run "sandbox reset/setup/accounts (24)" python tools/test-reset.py 18766
@@ -51,6 +55,7 @@ run "dev: every screen and button" env REL=1 PORT=18767 node tools/cdp.js tools/
 run "dev: forgot password, emailed link, new password, change password" env PORT=18767 node tools/cdp.js tools/ui-reset.js
 run "nothing is cut off at 320 to 430 px" env PORT=18767 node tools/ui-widths.js
 run "sandbox: every screen and button" env PORT=18766 node tools/cdp.js tools/ui-sweep.js
+run "dev: every way of swiping, and what each sends (LinkedIn, resume, one email)" env W=390 H=844 PORT=18767 node tools/cdp.js tools/ui-swipes.js
 
 step "Google sign-in (against a stand-in Google)"
 PIDS="$PIDS $(start python tools/mock-google.py 8790)"
@@ -61,7 +66,7 @@ run "Google sign-in, attacks and failures (24)" python tools/test-google.py 1876
 step "Public server behind HTTPS (how a real host runs it)"
 PIDS="$PIDS $(UAPLY_DATA_DIR="$TMP/pub" HOST=0.0.0.0 OWNER_PASSWORD=ownerpw UAPLY_CONFIG_JSON='{}' start python serve.py 18772 dev --api)"
 wait_port 18772
-run "cookies, headers, owner pages, path traversal, limits (33)" python tools/test-public.py 18772
+run "cookies, headers, owner pages, path traversal, limits" python tools/test-public.py 18772
 
 step "Real email sending (against a stand-in mail server)"
 PIDS="$PIDS $(start python tools/fake-smtp.py 12525 "$TMP/smtp/mail.jsonl")"

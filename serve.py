@@ -16,6 +16,7 @@ Serves ROOT; each urlpath=file alias maps one URL to a file outside ROOT (e.g. /
   POST /api/auth/change-password   signed in: change the password (needs the current one)
   GET  /setup             owner checklist: Google keys, email login, test email (setup_api.py)
   POST /api/setup/test-mail   send the owner one test email
+  POST /api/setup/save-mail   the Connect Gmail form (this computer only): save the Gmail address and App Password, then send a test
   GET  /api/auth/providers      which sign-in methods are on (google_auth.py)
   GET  /api/auth/google/start   "Continue with Google": send the browser to Google
   GET  /api/auth/google/callback  Google returns here; signs the person in and goes back to the app
@@ -60,6 +61,7 @@ if api:
     threading.Thread(target=jobs_api.get_jobs, daemon=True).start()   # warm the job cache so the first visitor does not wait
 
 MAX_BODY = 40000
+MAX_APPLY_BODY = 1500000
 
 class H(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **k):
@@ -193,7 +195,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         p = self.path.split("?", 1)[0]
         if not api or p not in ("/api/apply", "/api/decision", "/api/auth/signup", "/api/auth/login", "/api/auth/logout",
                                 "/api/auth/delete", "/api/auth/forgot", "/api/auth/reset", "/api/auth/change-password",
-                                "/api/setup/test-mail", "/api/chat", "/api/feedback"):
+                                "/api/setup/test-mail", "/api/setup/save-mail", "/api/chat", "/api/feedback"):
             return self._send(404, {"error": "not found"})
         # Only accept requests made by this site's own pages (blocks cross-site forms and scripts).
         origin = self.headers.get("Origin")
@@ -203,7 +205,7 @@ class H(http.server.SimpleHTTPRequestHandler):
             return self._send(403, {"error": "cross-site request refused"})
         try:
             n = int(self.headers.get("Content-Length") or 0)
-            if n <= 0 or n > MAX_BODY:
+            if n <= 0 or n > (MAX_APPLY_BODY if p == "/api/apply" else MAX_BODY):         # an application may carry a resume file (up to 1 MB, sent as text)
                 return self._send(413, {"error": "bad size"})
             payload = json.loads(self.rfile.read(n).decode("utf-8"))
             if not isinstance(payload, dict):
@@ -220,6 +222,13 @@ class H(http.server.SimpleHTTPRequestHandler):
             if p == "/api/auth/login":
                 code, out, token = auth_api.login(payload.get("email"), payload.get("password"), ip)
                 return self._send(code, out, headers=self._cookie(token) if token else ())
+            if p == "/api/setup/save-mail":
+                if not self._owner_ok():
+                    return self._send(403, {"error": "Owner pages are off or need the owner password."})
+                if PUBLIC:                                      # a hosted server keeps its secrets in its dashboard, not in a file the page can write
+                    return self._send(403, {"ok": False, "message": "On a hosted server, add the email settings in the host's dashboard (UAPLY_CONFIG_JSON), not here."})
+                code, out = setup_api.save_mail(payload)
+                return self._send(code, out)
             if p == "/api/setup/test-mail":
                 if not self._owner_ok():
                     return self._send(403, {"error": "Owner pages are off or need the owner password."})

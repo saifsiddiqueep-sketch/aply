@@ -28,7 +28,7 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   await scan("the first screen");
   console.log("   first card:", (await ev("(" + F + ").body.innerText.split(" + nl + ").filter(x=>x.trim()).slice(3,12).join(' | ')")).slice(0, 180));
 
-  for (const tab of ["Full-time", "Part-time", "Internships", "Co-ops"]) {
+  for (const tab of ["Full-time", "Part-time", "Internships", "Coop"]) {
     await ev(F + ".getElementById('nb-svc').click()"); await sleep(300);
     await sub(tab); await sleep(600);
     await scan("Services > " + tab);
@@ -75,7 +75,7 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
     await ev(F + ".getElementById('" + nb + "').click()"); await sleep(450);
     return ev("(()=>{const e=[...(" + F + ").querySelectorAll('.nitem')].find(b=>b.innerText.trim().startsWith(" + JSON.stringify(label) + "));if(!e)return false;e.click();return true})()");
   };
-  const kinds = { "Full-time": "job", "Part-time": "parttime", "Internships": "internship", "Co-ops": "coop" };
+  const kinds = { "Full-time": "job", "Part-time": "parttime", "Internships": "internship", "Coop": "coop" };
   for (const [tab, want] of Object.entries(kinds)) {
     check("choosing " + tab + " works", await pick("nb-svc", tab)); await sleep(800);
     const r = JSON.parse(await topJob());
@@ -89,7 +89,7 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   await ev(F + ".getElementById('btnYes').click()"); await sleep(1200);
   await ev("(()=>{const m=" + F + ".getElementById('kcYes');if(m)m.click()})()"); await sleep(2200);
   const after = await pageText();
-  check("swiping right on a real job explains where to finish (employer's own site)", /takes applications on its own site|Apply there|Open the application|Application sent to/i.test(after), after.slice(-160));
+  check("swiping right on a real job says plainly what happened (applied, or finish at the employer)", /Saved\. Finish applying at|Applied to/i.test(after), after.slice(-160));
   await ev(F + ".getElementById('nb-dash').click()"); await sleep(400);
   await sub("Applied"); await sleep(600);
   check("the swiped job appears under Dashboard > Applied", (await ev(F + ".querySelectorAll('.app,.appitem,[data-app],article,.row').length")) > 0 || /intern/i.test(await pageText()));

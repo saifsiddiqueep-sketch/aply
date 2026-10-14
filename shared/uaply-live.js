@@ -169,7 +169,8 @@ function kitApply(w,host){
       setStatus("Sending…");
       post("/api/apply",{consent:true,confirm_real:live,match:m.pct,note:ta.value,
         job:{id:job.id,co:job.co,role:job.role,url:job.url,source:job.source,loc:job.loc,contact:contact,mode:job.mode,type:job.type||"job",sal:job.sal,blurb:job.blurb},
-        profile:{name:p.name,email:p.email,title:p.title,years:p.years,skills:p.skills,loc:p.loc,edu:p.edu,ext:p.ext||{}}
+        profile:{name:p.name,email:p.email,title:p.title,years:p.years,skills:p.skills,loc:p.loc,edu:p.edu,ext:(w.__uaplyApplyExt?w.__uaplyApplyExt():(p.ext||{}))},
+        resume:(w.__uaplyResume?w.__uaplyResume():null)
       }).then(function(r){
         var j=r.j||{};
         if(!r.ok){setStatus(j.error||"Could not send.",true);if(sendBtn&&live)sendBtn.disabled=false;return}
@@ -182,8 +183,8 @@ function kitApply(w,host){
         else if(j.status==="failed"){setStatus(j.error||"The email could not be sent.",true);if(sendBtn)sendBtn.disabled=false;return}
         else setStatus("Done.");
         var rc=j.receipt,au=w.__uaplyAuth?w.__uaplyAuth():null;
-        if(rc)statusEl.textContent+=" "+({sent:"A receipt was emailed to "+rc.to+".",delivered_test:"Your receipt for "+rc.to+" is in the test inbox.",not_configured:"No receipt was emailed: email sending is not set up yet.",failed:"The receipt email to "+rc.to+" could not be sent."}[rc.status]||"");
-        else if(au&&au.up&&!au.user)statusEl.textContent+=" Sign in (top right) to get an email receipt.";
+        if(rc)statusEl.textContent+=" "+({sent:"Confirmation emailed to "+rc.to+".",delivered_test:"Confirmation is in the test inbox.",not_configured:(isRelease?"":"No confirmation email: email sending is not set up yet."),failed:"The confirmation email to "+rc.to+" could not be sent."}[rc.status]||"");
+        else if(au&&au.up&&!au.user)statusEl.textContent+=" Sign in to get a confirmation email.";
         if(j.status!=="handoff")undoBtn.hidden=true;
         if(sendBtn&&(j.status==="sent"||j.status==="delivered_test"||j.status==="duplicate"))sendBtn.hidden=true;
       }).catch(function(){setStatus("Could not reach the server.",true);if(sendBtn)sendBtn.disabled=false});
@@ -223,6 +224,7 @@ function kitApply(w,host){
   }
 
   /* ---- quiet apply: a swipe right is the whole action, like pressing Submit application ---- */
+  var isRelease=!!((host&&host.defaultView&&host.defaultView.UAplyOpts)||{}).release;
   var showSheet=!!((host&&host.defaultView&&host.defaultView.UAplyOpts)||{}).showSheet;   /* opt back in to the full sheet */
   function toast(msg,action,fn,ms){
     var old=d.getElementById("kitToast");if(old)old.remove();
@@ -266,8 +268,8 @@ function kitApply(w,host){
     /* what happened to the applicant's own email receipt (signed-in accounts only) */
     function receiptNote(j){
       var rc=j.receipt,au=w.__uaplyAuth?w.__uaplyAuth():null;
-      if(rc)return " "+({sent:"A receipt was emailed to "+rc.to+".",delivered_test:"Your receipt for "+rc.to+" is in the test inbox.",not_configured:"No receipt was emailed: email sending is not set up yet.",failed:"The receipt email could not be sent."}[rc.status]||"");
-      return au&&au.up&&!au.user?" Sign in (top right) to get an email receipt.":"";
+      if(rc)return " "+({sent:"Confirmation emailed to "+rc.to+".",delivered_test:"Confirmation is in the test inbox.",not_configured:(isRelease?"":"No confirmation email: email sending is not set up yet."),failed:"The confirmation email could not be sent."}[rc.status]||"");
+      return au&&au.up&&!au.user?" Sign in to get a confirmation email.":"";
     }
     function deliver(){
       /* the application is the profile itself: no cover note or message is written for the recruiter, unless the person
@@ -275,17 +277,18 @@ function kitApply(w,host){
       var msgOn=!!(w.__uaplyAutoMsg&&w.__uaplyAutoMsg()&&w.__uaplyMessage);
       post("/api/apply",{consent:true,confirm_real:live,match:m.pct,note:msgOn?w.__uaplyMessage(job,m,p):"",
         job:{id:job.id,co:job.co,role:job.role,url:job.url||"https://example.com/example-listing",source:job.source,loc:job.loc,contact:job.contact||"",mode:job.mode,type:job.type||"job",sal:job.sal,blurb:job.blurb},
-        profile:{name:p.name,email:p.email,title:p.title,years:p.years,skills:p.skills,loc:p.loc,edu:p.edu,ext:p.ext||{}}
+        profile:{name:p.name,email:p.email,title:p.title,years:p.years,skills:p.skills,loc:p.loc,edu:p.edu,ext:(w.__uaplyApplyExt?w.__uaplyApplyExt():(p.ext||{}))},
+        resume:(w.__uaplyResume?w.__uaplyResume():null)
       }).then(function(r){
         var j=r.j||{};
         if(!r.ok){toast(j.error||"Could not send your application.","Try again",deliver,9000);return}
         var dec=S&&S.decisions&&S.decisions[job.id];
         if(dec&&j.status!=="duplicate"){dec.sent={at:Date.now(),to:j.to||"",status:j.status};if(save)save()}
-        var cp=(j.copied?" A copy was emailed to you.":"")+receiptNote(j);
-        if(j.status==="delivered_test")toast("Application sent to "+job.co+" (test inbox)."+cp,"","",9000);
-        else if(j.status==="sent")toast("Application sent to "+job.co+". Replies go to "+p.email+"."+cp,"","",9000);
-        else if(j.status==="duplicate")toast("You already applied to "+job.co+".");
-        else if(j.status==="handoff")toast(job.co+" takes applications on its own site."+receiptNote(j),job.url?"Apply there":"",function(){if(w.__uaplyOpen)w.__uaplyOpen(job.url)},12000);
+        var cp=receiptNote(j);
+        if(j.status==="delivered_test")toast("Applied to "+job.co+" (test)."+cp,"","",9000);
+        else if(j.status==="sent")toast("Applied to "+job.co+"."+cp,"","",9000);
+        else if(j.status==="duplicate")toast("Already applied to "+job.co+".");
+        else if(j.status==="handoff")toast("Saved. Finish applying at "+job.co+"."+cp,job.url?"Open":"",function(){if(w.__uaplyOpen)w.__uaplyOpen(job.url)},12000);
         else if(j.status==="failed")toast(j.error||"The email could not be sent.","Try again",deliver,9000);
         else toast("Done.");
       }).catch(function(){toast("Could not reach the server.","Try again",deliver,9000)});
