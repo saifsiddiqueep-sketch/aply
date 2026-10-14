@@ -13,7 +13,10 @@ trap 'for p in $PIDS; do kill "$p" 2>/dev/null; done; rm -rf "$TMP"' EXIT
 step() { printf "\n== %s\n" "$1"; }
 run() {   # run <label> <command...>: pass if exit 0
   local label="$1"; shift
-  if out=$("$@" 2>&1); then printf "  PASS  %s\n" "$label"; else printf "  FAIL  %s\n" "$label"; echo "$out" | tail -15 | sed 's/^/        /'; FAILS=$((FAILS+1)); fi
+  if out=$("$@" 2>&1); then
+    n=$(echo "$out" | grep -Eo '^[0-9]+ / [0-9]+$' | tail -1)          # the test's own "passed / total" line, so the count here is never stale
+    printf "  PASS  %s%s\n" "$label" "${n:+ ($n)}"
+  else printf "  FAIL  %s\n" "$label"; echo "$out" | tail -15 | sed 's/^/        /'; FAILS=$((FAILS+1)); fi
 }
 start() { ( "$@" >/dev/null 2>&1 & echo $! ) ; }
 wait_port() { for _ in $(seq 1 60); do curl -s -o /dev/null "http://127.0.0.1:$1/healthz" 2>/dev/null && return 0; curl -s -o /dev/null "http://127.0.0.1:$1/" 2>/dev/null && return 0; sleep 0.5; done; return 1; }
@@ -36,21 +39,21 @@ for _ in $(seq 1 120); do n=$(curl -s http://127.0.0.1:18767/api/jobs | python -
 echo "  real postings on dev: ${n:-0}"
 
 step "Job feed rules (US-only, no foreign roles, classification)"
-run "job rules and descriptions (28)" python tools/test-jobs.py
+run "job rules and descriptions" python tools/test-jobs.py
 
 step "Email codes that prove an email is real"
 run "verification codes: expiry, tries, resends, gates" python tools/test-verify.py
 
 step "Delivery to employers (email with resume, signed webhook, retries, opt-in only) and the Connect Gmail form"
-run "delivery channels (32)" python tools/test-delivery.py
-run "Connect Gmail form (17)" python tools/test-setup.py
+run "delivery channels" python tools/test-delivery.py
+run "Connect Gmail form" python tools/test-setup.py
 
 step "Swipe-right emails (content, test label, safety, real send)"
-run "receipt and owner copy emails (42)" python tools/test-emails.py
+run "receipt and owner copy emails" python tools/test-emails.py
 
 step "Accounts, applying, reset and setup (back end)"
-run "sandbox reset/setup/accounts (24)" python tools/test-reset.py 18766
-run "dev reset/setup/accounts (24)" python tools/test-reset.py 18767
+run "sandbox reset/setup/accounts" python tools/test-reset.py 18766
+run "dev reset/setup/accounts" python tools/test-reset.py 18767
 
 step "Screens in a real browser (iPhone size)"
 run "dev: release checks, no test or developer content anywhere" env W=390 H=844 PORT=18767 node tools/cdp.js tools/ui-release.js
@@ -64,7 +67,7 @@ step "Google sign-in (against a stand-in Google)"
 PIDS="$PIDS $(start python tools/mock-google.py 8790)"
 PIDS="$PIDS $(UAPLY_DATA_DIR="$TMP/g" UAPLY_CONFIG_JSON='{"google":{"client_id":"test.apps.googleusercontent.com","client_secret":"test-secret","auth_url":"http://127.0.0.1:8790/auth","token_url":"http://127.0.0.1:8790/token","certs_url":"http://127.0.0.1:8790/certs"}}' start python serve.py 18768 dev --api)"
 wait_port 18768
-run "Google sign-in, attacks and failures (24)" python tools/test-google.py 18768
+run "Google sign-in, attacks and failures" python tools/test-google.py 18768
 run "Continue with Google button: tokens, forged tokens, linking, cookies" python tools/test-google-token.py 18768
 run "sign-up and email-code screens in a browser, Google button area" env W=390 H=844 PORT=18768 node tools/cdp.js tools/ui-verify.js
 
@@ -77,7 +80,7 @@ step "Real email sending (against a stand-in mail server)"
 PIDS="$PIDS $(start python tools/fake-smtp.py 12525 "$TMP/smtp/mail.jsonl")"
 PIDS="$PIDS $(UAPLY_DATA_DIR="$TMP/smtp" HOST=0.0.0.0 OWNER_PASSWORD=ownerpw UAPLY_CONFIG_JSON='{"smtp":{"host":"127.0.0.1","port":12525,"starttls":false,"from_addr":"uaply@example.com"},"owner_copy":"owner@example.com"}' start python serve.py 18773 dev --api)"
 wait_port 18773
-run "password reset email, link, single use, no stored link (12)" python tools/test-smtp.py 18773 "$TMP/smtp/mail.jsonl"
+run "password reset email, link, single use, no stored link" python tools/test-smtp.py 18773 "$TMP/smtp/mail.jsonl"
 
 printf "\n"
 if [ "$FAILS" -eq 0 ]; then echo "ALL TESTS PASSED"; else echo "$FAILS test group(s) FAILED"; fi

@@ -51,6 +51,24 @@ n = j._normalize(raw("Hardware Engineer (Winter Co-op)", "Austin, TX"), "greenho
 t("a co-op title is classified as a co-op", n and n["type"], "coop")
 n = j._normalize(raw("Engineer", "Austin, TX"), "greenhouse", "Acme")
 t("a feed job is link-out only and never has a recruiter address", (n["apply"], n["contact"]), ("link", ""))
+# "recruiting" in a company's boilerplate must not become a skill on an engineering job (it did: a firmware co-op listed "Hiring")
+boiler = dict(raw("Firmware Engineer Co-Op", "Austin, TX"), text="Python and SQL. Samsara is an equal opportunity employer. Our recruiting process and recruiting privacy notice apply to all applicants. " * 3)
+n = j._normalize(boiler, "greenhouse", "Acme")
+t("boilerplate 'recruiting' does not add a Hiring skill to an engineering job", n and "Hiring" in n["skills"], False)
+n = j._normalize(dict(boiler, title="Technical Recruiter"), "greenhouse", "Acme")
+t("a recruiter role does get the Hiring skill", n and "Hiring" in n["skills"], True)
+
+# a remote job's place must not repeat the word "Remote" the work-style tag already shows ("Remote - USA  Remote" on the card)
+for loc, want in [("Remote - USA", "USA"), ("Remote (US)", "US"), ("Remote, US", "US"), ("Remote", "United States"), ("remote", "United States"),
+                  ("Remote - United States", "United States"), ("Remote / Austin, TX", "Austin, TX"), ("Remotely hosted office, Austin, TX", "Remotely hosted office, Austin, TX"),
+                  # real places from the live feeds: anything that does not start with the word is left exactly as listed, brackets included
+                  ("San Francisco Bay Area (or Remote U.S.)", "San Francisco Bay Area (or Remote U.S.)"), ("CA Remote (BC & ON only); U.S. Remote", "CA Remote (BC & ON only); U.S. Remote"),
+                  ("US: Select locations", "US: Select locations"), ("U.S.", "U.S."), ("Remote (US) - Austin, TX", "US - Austin, TX")]:
+    t("remote place %r is shown as %r" % (loc, want), j._place(loc, "remote"), want)
+t("an on-site place is left exactly as listed", j._place("Remote Control Way, Austin, TX", "onsite"), "Remote Control Way, Austin, TX")
+t("an empty place reads Not listed", j._place("", "onsite"), "Not listed")
+n = j._normalize(raw("Backend Engineer", "Remote - USA", True), "greenhouse", "Acme")
+t("a remote feed job no longer repeats Remote in its place", (n["loc"], n["mode"]), ("USA", "remote"))
 t("the documentation example employer is never served as jobs", [e for e in j.partner_jobs() if e["co"] == "Example Partner Co"], [])
 
 # the job description shown in emails: the role, not the company's introduction, and always ending on a whole sentence

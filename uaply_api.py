@@ -418,11 +418,12 @@ def _send_receipt(cfg, to, subject, body, page=None):
         srv.send_message(msg)
 
 
-def send_system_mail(user_id, to, subject, body, secret=False):
-    """Mail UAply itself sends to a person (password reset links). Real email when SMTP is set up (whatever the delivery mode,
-    since that setting is about recruiters), otherwise it lands in the simulated test inbox. `secret` keeps the body out of
-    the stored copy once it was really emailed, so a reset link is never kept after it leaves. Never raises.
-    Returns "sent", "failed" or "delivered_test"."""
+def send_system_mail(user_id, to, subject, body, secret=False, stored_subject=None, redacted="(the link was emailed and is not kept here)"):
+    """Mail UAply itself sends to a person (password reset links, verification codes). Real email when SMTP is set up (whatever the
+    delivery mode, since that setting is about recruiters), otherwise it lands in the simulated test inbox. `secret` keeps the secret
+    out of the stored copy whenever a real email was attempted: the body is replaced by `redacted` and the subject by `stored_subject`,
+    so a reset link or a code is never kept after it leaves. Only the test inbox (no real email connected) keeps it, because showing it
+    there is its whole purpose. Never raises. Returns "sent", "failed" or "delivered_test"."""
     cfg = config()
     status = "delivered_test"
     if _smtp_ready(cfg):
@@ -431,11 +432,22 @@ def send_system_mail(user_id, to, subject, body, secret=False):
             status = "sent"
         except Exception:
             status = "failed"
+    keep_secret = secret and status != "delivered_test"
     try:
-        auth_api.add_mail(user_id, to, subject, "(the link was emailed and is not kept here)" if secret and status == "sent" else body, status)
+        auth_api.add_mail(user_id, to, (stored_subject or subject) if keep_secret else subject, redacted if keep_secret else body, status)
     except Exception:
         pass
     return status
+
+
+VERIFY_MAIL = ("Your UAply verification code is:\n\n    %s\n\nEnter it in UAply to confirm this email address. It works for 10 minutes and for one account. "
+               "If you did not create a UAply account, ignore this email.\n\n--\nUAply")
+
+
+def send_verification_mail(user_id, to, digits):
+    """Email the 6-digit code that proves an email address is the person's own. The code is never kept in the stored copy once emailed."""
+    return send_system_mail(user_id, to, "%s is your UAply verification code" % digits, VERIFY_MAIL % digits, secret=True,
+                            stored_subject="Your UAply verification code", redacted="(the code was emailed and is not kept here)")
 
 
 def mail_ready():

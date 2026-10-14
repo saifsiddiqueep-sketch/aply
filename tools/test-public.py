@@ -4,6 +4,7 @@
 import base64
 import http.client
 import json
+import socket
 import sys
 
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8772
@@ -65,6 +66,26 @@ for p in ("/../serve.py", "/..%2fserve.py", "/%2e%2e/serve.py", "/legal/../serve
 t("a made-up path is a plain 404", req("GET", "/nope.html")[0], 404)
 t("POST to an unknown path is refused", req("POST", "/api/secret", {})[0], 404)
 t("oversized body is refused", req("POST", "/api/auth/login", {"email": "a@b.co", "password": "x" * 50000})[0], 413)
+t("an empty POST is a plain 400, not a size error", req("POST", "/api/auth/login")[0], 400)
+t("a JSON list instead of an object is a 400", req("POST", "/api/auth/login", [1, 2, 3])[0], 400)
+
+# odd addresses must get a clean answer, never a dropped connection, and never the source code
+def raw_status(request_bytes):
+    s = socket.create_connection(("127.0.0.1", PORT), timeout=10)
+    s.sendall(request_bytes)
+    first = s.recv(200).split(b"\r\n")[0]
+    s.close()
+    return first.split(b" ")[1].decode() if first.startswith(b"HTTP/") else "no reply"
+
+
+for label, line in (("%00 in the address", b"GET /%00 HTTP/1.1"), ("%00 in the middle of a name", b"GET /index.html%00.py HTTP/1.1"),
+                    ("a raw null byte", b"GET /\x00 HTTP/1.1"), ("a raw null byte in a legal page", b"GET /legal/\x00terms.html HTTP/1.1")):
+    t("%s gets a clean 400" % label, raw_status(line + b"\r\nHost: " + HOST.encode() + b"\r\nConnection: close\r\n\r\n"), "400")
+t("the server still answers after those", req("GET", "/healthz")[0], 200)
+home = req("GET", "/")[2]
+for p in ("/..%5Cserve.py", "/..%5C..%5Cserve.py/", "/%5C..%5Cuaply-config.json"):
+    s, _, body = req("GET", p)
+    t("backslash path %s serves no source or settings" % p, s in (301, 404) or (s == 200 and body == home), True)
 
 # a public server with no email login must say so, not promise a link it cannot send (tools/test-smtp.py covers real sending)
 s, h, body = req("POST", "/api/auth/forgot", {"email": "pub1@example.com"})
