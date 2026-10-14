@@ -90,6 +90,18 @@ FakeSMTP.mode = "drop"
 s, out = setup_api.save_mail({"email": "uaply.sender@gmail.com", "password": PW})
 t("a dropped connection is explained, not shown as an error code", (out["ok"], "closed the connection" in out["message"]), (False, True))
 
+# the Connect Google box: only the public client ID, only a real-looking one
+uaply_api.CONFIG_PATH = os.path.join(TMP, "uaply-config2.json")
+s, out = setup_api.save_google({"client_id": "not a client id"})
+t("a made-up client ID is refused and nothing is saved", (s, out["ok"], os.path.exists(uaply_api.CONFIG_PATH)), (400, False, False))
+with open(uaply_api.CONFIG_PATH, "w", encoding="utf-8") as f:
+    json.dump({"feeds": ["greenhouse"], "smtp": {"host": "smtp.gmail.com", "password": "keep-me"}}, f)
+s, out = setup_api.save_google({"client_id": " 123456789012-abcdefg1234567.apps.googleusercontent.com "})
+cfg2 = json.load(open(uaply_api.CONFIG_PATH, encoding="utf-8"))
+t("a real-looking client ID is saved (trimmed) and other settings are kept", (s, out["saved"], cfg2["google"]["client_id"], cfg2["feeds"], cfg2["smtp"]["password"]),
+  (200, True, "123456789012-abcdefg1234567.apps.googleusercontent.com", ["greenhouse"], "keep-me"))
+uaply_api.CONFIG_PATH = os.path.join(TMP, "uaply-config.json")
+
 # without a password the test button says why
 os.remove(uaply_api.CONFIG_PATH)
 uaply_api.config = lambda: {"smtp": {"host": "smtp.gmail.com", "from_addr": "a@gmail.com", "user": "a@gmail.com", "password": ""}, "delivery": "test"}

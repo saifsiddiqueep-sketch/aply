@@ -116,13 +116,21 @@ module.exports = async ({ ev, sleep, nav, send, logs }) => {
   await sleep(3500);
   check("choices survive a reload", JSON.stringify(await decisions()) === JSON.stringify(dec), JSON.stringify(await decisions()));
   check("a passed or applied job does not come back after a reload", (await topKey()) !== k0);
-  // 9. signed in with no real email connected: the confirmation goes to the test inbox, and the message says where
+  // 9. a signed-in account must verify its email before it gets confirmation emails; then the message says where the confirmation is
   await ev("fetch('/api/auth/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'sam.swipes@example.com',password:'correct horse 99',agree:true})}).then(r=>r.status)");
   await nav("http://127.0.0.1:" + PORT + "/");
   await sleep(3500);
   await click("btnYes"); await sleep(3000);
+  const unverifiedText = await ev("(" + F + ").body.innerText.split(" + NL + ").join(' ')");
+  check("signed in but not verified: the swipe says to verify the email", unverifiedText.includes("Verify your email"), unverifiedText.slice(-150));
+  const code = await ev("fetch('/outbox').then(r=>r.text()).then(t=>{const m=t.match(/([0-9]{6}) is your UAply verification code/);return m?m[1]:''})");
+  check("the verification code is in the test inbox", /^[0-9]{6}$/.test(code), code);
+  check("the code verifies the account", (await ev("fetch('/api/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:'" + code + "'})}).then(r=>r.status)")) === 200);
+  await nav("http://127.0.0.1:" + PORT + "/");
+  await sleep(3500);
+  await click("btnYes"); await sleep(3000);
   const toastText = await ev("(" + F + ").body.innerText.split(" + NL + ").join(' ')");
-  check("signed in: the message says where the confirmation is", toastText.includes("Confirmation is in the test inbox: http://127.0.0.1:" + PORT + "/outbox"), toastText.slice(-170));
+  check("verified: the message says where the confirmation is", toastText.includes("Confirmation is in the test inbox: http://127.0.0.1:" + PORT + "/outbox"), toastText.slice(-170));
   check("the test inbox page opens and lists the confirmation", /Sam Rivera|sam.swipes@example.com/.test(await ev("fetch('/outbox').then(r=>r.text())")));
   check("no script errors during any of it", logs.length === 0, logs.join(" / ").slice(0, 160));
   console.log(bad ? "\n" + bad + " check(s) failed" : "\nAll swipe checks passed");

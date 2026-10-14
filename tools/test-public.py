@@ -56,6 +56,7 @@ t("the test-mail button needs the owner password", req("POST", "/api/setup/test-
 t("the test-mail button works for the owner", req("POST", "/api/setup/test-mail", {}, headers=auth("ownerpw"))[0], 200)
 t("the Connect Gmail form is refused on a hosted server (secrets live in the host dashboard)", req("POST", "/api/setup/save-mail", {"email": "a@gmail.com", "password": "abcdefghijklmnop"}, headers=auth("ownerpw"))[0], 403)
 t("the Connect Gmail form needs the owner password", req("POST", "/api/setup/save-mail", {})[0], 403)
+t("the Connect Google box is refused on a hosted server", req("POST", "/api/setup/save-google", {"client_id": "123456789012-abcdefg.apps.googleusercontent.com"}, headers=auth("ownerpw"))[0], 403)
 
 # nothing outside the site folder can be read
 for p in ("/../serve.py", "/..%2fserve.py", "/%2e%2e/serve.py", "/legal/../serve.py", "/legal/..%2f..%2fserve.py", "/../uaply-config.json", "/data/uaply.db"):

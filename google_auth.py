@@ -31,6 +31,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+import jwt_rs256
 import uaply_api
 
 AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -49,14 +50,21 @@ def _settings():
     cid = g.get("client_id") if isinstance(g.get("client_id"), str) else ""
     sec = g.get("client_secret") if isinstance(g.get("client_secret"), str) else ""
     ok = cid.strip().endswith(".apps.googleusercontent.com") or bool(g.get("auth_url"))      # ignore the example placeholder text
-    return {"on": ok and bool(sec.strip()), "id": cid.strip(), "secret": sec.strip(),
+    return {"on": ok and bool(sec.strip()), "gis": ok, "id": cid.strip(), "secret": sec.strip(),
+            "certs_url": g.get("certs_url") or jwt_rs256.GOOGLE_CERTS,
             "public_url": (g.get("public_url") or "").rstrip("/") if isinstance(g.get("public_url"), str) else "",
             "auth_url": g.get("auth_url") or AUTH_URL, "token_url": g.get("token_url") or TOKEN_URL,
             "issuers": tuple(g.get("issuers")) if isinstance(g.get("issuers"), list) else ISSUERS}
 
 
 def enabled():
+    """True when the redirect sign-in is fully set up (client ID and secret)."""
     return _settings()["on"]
+
+
+def button_enabled():
+    """True when Google's own button can be shown: it needs only the public client ID, no secret."""
+    return _settings()["gis"]
 
 
 def redirect_uri(host, proto="http"):
@@ -66,7 +74,9 @@ def redirect_uri(host, proto="http"):
 
 
 def public_config(host, proto="http"):
-    return {"google": enabled(), "googleRedirectUri": redirect_uri(host, proto) if enabled() else "", "canEmail": uaply_api.mail_ready()}
+    s = _settings()
+    return {"google": button_enabled(), "googleClientId": s["id"] if s["gis"] else "", "googleRedirect": enabled(),
+            "googleRedirectUri": redirect_uri(host, proto) if enabled() else "", "canEmail": uaply_api.mail_ready()}
 
 
 def _b64(data):
@@ -132,3 +142,31 @@ def finish(query, cookie_state, host, proto):
     if c.get("email_verified") not in (True, "true"):
         return "unverified", None, False
     return None, {"provider": "google", "subject": str(c["sub"])[:100], "email": c["email"].strip().lower()}, rec["agree"]
+
+
+_tries = {}        # ip -> timestamps of recent token checks
+
+
+def verify_credential(credential, ip):
+    """The token Google's button hands the page. Returns (error_code_or_None, identity_dict_or_None).
+    Checks the signature against Google's published keys, that the token was issued for our client ID, the issuer and the expiry, and
+    that Google says the email is verified. The account is keyed by Google's permanent user id (sub), not the email."""
+    s = _settings()
+    if not s["gis"]:
+        return "off", None
+    now = time.time()
+    with _lock:
+        recent = [t for t in _tries.get(ip, []) if now - t < 60]
+        if len(recent) >= 30:
+            return "limited", None
+        recent.append(now)
+        _tries[ip] = recent
+    try:
+        c = jwt_rs256.verify(credential, s["id"], s["issuers"], s["certs_url"])
+    except jwt_rs256.TokenError:
+        return "failed", None
+    if not isinstance(c.get("sub"), str) or not c["sub"] or not isinstance(c.get("email"), str):
+        return "failed", None
+    if c.get("email_verified") not in (True, "true"):
+        return "unverified", None
+    return None, {"provider": "google", "subject": c["sub"][:100], "email": c["email"].strip().lower()}

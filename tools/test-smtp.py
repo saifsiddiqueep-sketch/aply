@@ -52,9 +52,12 @@ def body_of(m):
 
 
 owner = {"Authorization": "Basic " + base64.b64encode(b"o:ownerpw").decode()}
-n0 = len(mails())
 s, out = req("POST", "/api/auth/signup", {"email": "smtp1@example.com", "password": "correct horse 99", "agree": True})
 t("sign-up works", s, 200)
+time.sleep(0.5)
+signup_mail = [m for m in mails() if m["to"] == ["smtp1@example.com"]]
+t("sign-up emails a 6-digit verification code", bool(signup_mail) and bool(re.search(r"[0-9]{6} is your UAply verification code", signup_mail[-1]["raw"])), True)
+n0 = len(mails())
 s, out = req("POST", "/api/auth/forgot", {"email": "smtp1@example.com"})
 t("forgot answers that the email was sent", (s, out.get("delivery")), (200, "sent"))
 time.sleep(0.5)

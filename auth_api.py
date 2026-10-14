@@ -6,6 +6,7 @@ Where it keeps things: a SQLite file at data/<instance>/uaply.db (git-ignored, n
   user_mail  the receipts UAply sends to applicants (simulated in test mode)
   identities "Continue with Google" logins: provider + the provider's stable user id, linked to a user
   password_resets  hashed one-time "forgot password" tokens (1 hour, single use)
+  email_codes      the 6-digit code that proves a password account owns its email (10 minutes, 5 tries, single use, stored hashed)
 
 How it keeps them safe:
   * Passwords are never stored. Only a per-user random salt and a PBKDF2-HMAC-SHA256 hash (600,000 rounds).
@@ -96,11 +97,18 @@ def init(instance):
             token_hash TEXT PRIMARY KEY,
             user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             expires_at INTEGER NOT NULL)""")
-        for col in ("terms_at INTEGER", "has_password INTEGER NOT NULL DEFAULT 1"):      # databases made before these columns existed
+        c.execute("""CREATE TABLE IF NOT EXISTS email_codes(
+            user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            code_hash TEXT NOT NULL,
+            salt TEXT NOT NULL,
+            expires_at INTEGER NOT NULL,
+            attempts INTEGER NOT NULL DEFAULT 0)""")
+        for col in ("terms_at INTEGER", "has_password INTEGER NOT NULL DEFAULT 1", "email_verified INTEGER NOT NULL DEFAULT 0"):      # databases made before these columns existed
             try:
                 c.execute("ALTER TABLE users ADD COLUMN " + col)
             except sqlite3.OperationalError:
                 pass
+        c.execute("UPDATE users SET email_verified=1 WHERE id IN (SELECT user_id FROM identities)")      # Google already verified those emails
 
 
 class _db:
@@ -146,7 +154,7 @@ def _new_session(c, user_id):
 
 
 def public_user(row):
-    return {"id": row["id"], "email": row["email"], "hasPassword": bool(row["has_password"])}
+    return {"id": row["id"], "email": row["email"], "hasPassword": bool(row["has_password"]), "emailVerified": bool(row["email_verified"])}
 
 
 def signup(email, password, ip, agree=False):
@@ -175,7 +183,7 @@ def signup(email, password, ip, agree=False):
                 token = _new_session(c, uid)
         except sqlite3.IntegrityError:
             return 409, {"error": "That email already has an account. Log in instead."}, None
-    return 200, {"user": {"id": uid, "email": email, "hasPassword": True}}, token
+    return 200, {"user": {"id": uid, "email": email, "hasPassword": True, "emailVerified": False}}, token
 
 
 def login(email, password, ip):
@@ -205,7 +213,7 @@ def user_for(token):
     if not isinstance(token, str) or not (20 <= len(token) <= 100):
         return None
     with _lock, _db() as c:
-        row = c.execute("SELECT u.id, u.email, u.has_password FROM sessions s JOIN users u ON u.id=s.user_id "
+        row = c.execute("SELECT u.id, u.email, u.has_password, u.email_verified FROM sessions s JOIN users u ON u.id=s.user_id "
                         "WHERE s.token_hash=? AND s.expires_at>?",
                         (hashlib.sha256(token.encode()).hexdigest(), int(time.time()))).fetchone()
     return public_user(row) if row else None
@@ -275,11 +283,13 @@ def oauth_login(provider, subject, email, agree=False):
                 if not row:
                     if agree is not True:
                         return "agree", None, None
-                    cur = c.execute("INSERT INTO users(email, salt, hash, created_at, last_login, terms_at, has_password) VALUES(?,?,?,?,?,?,0)",
+                    cur = c.execute("INSERT INTO users(email, salt, hash, created_at, last_login, terms_at, has_password, email_verified) VALUES(?,?,?,?,?,?,0,1)",
                                     (email, secrets.token_bytes(16), secrets.token_bytes(32), now, now, now))
                     row = c.execute("SELECT * FROM users WHERE id=?", (cur.lastrowid,)).fetchone()
                 c.execute("INSERT OR IGNORE INTO identities(provider, subject, user_id, email, created_at) VALUES(?,?,?,?,?)",
                           (provider, subject, row["id"], email, now))
+                c.execute("UPDATE users SET email_verified=1 WHERE id=?", (row["id"],))      # the provider vouched that this person owns the email
+                row = c.execute("SELECT * FROM users WHERE id=?", (row["id"],)).fetchone()
             c.execute("UPDATE users SET last_login=? WHERE id=?", (now, row["id"]))
             token = _new_session(c, row["id"])
     return None, public_user(row), token
@@ -340,7 +350,7 @@ def reset_password(token, new_password, ip):
         salt = secrets.token_bytes(16)
         pw_hash = _hash(new_password, salt)
         with _db() as c:
-            c.execute("UPDATE users SET salt=?, hash=?, has_password=1 WHERE id=?", (salt, pw_hash, row["user_id"]))
+            c.execute("UPDATE users SET salt=?, hash=?, has_password=1, email_verified=1 WHERE id=?", (salt, pw_hash, row["user_id"]))   # the link went to their inbox
             c.execute("DELETE FROM password_resets WHERE user_id=?", (row["user_id"],))
             c.execute("DELETE FROM sessions WHERE user_id=?", (row["user_id"],))
     return 200, {"ok": True, "email": row["email"]}
@@ -370,4 +380,77 @@ def change_password(token, current, new_password, ip):
         with _db() as c:
             c.execute("UPDATE users SET salt=?, hash=? WHERE id=?", (salt, _hash(new_password, salt), user["id"]))
             c.execute("DELETE FROM sessions WHERE user_id=? AND token_hash<>?", (user["id"], keep))
+    return 200, {"ok": True}
+
+
+# ---------- proving the email is theirs: a 6-digit code ----------
+CODE_SECONDS = 600
+MAX_CODE_TRIES = 5
+_code_sends = {}     # ("u", user id) or ("ip", address) -> timestamps of recent code emails
+
+
+def _new_code(c, user_id):
+    """Make a fresh code (replacing any older one), store only its hash, and return the digits."""
+    digits = "%06d" % secrets.randbelow(1000000)
+    salt = secrets.token_hex(8)
+    c.execute("INSERT OR REPLACE INTO email_codes(user_id, code_hash, salt, expires_at, attempts) VALUES(?,?,?,?,0)",
+              (user_id, hashlib.sha256((salt + digits).encode()).hexdigest(), salt, int(time.time()) + CODE_SECONDS))
+    return digits
+
+
+def issue_code_for_token(token):
+    """The first code, right after sign-up. Returns (user_id, email, digits)."""
+    user = user_for(token)
+    with _lock, _db() as c:
+        return user["id"], user["email"], _new_code(c, user["id"])
+
+
+def resend_code(token, ip):
+    """Send a new code. Returns (status, body, mail) where mail is (user_id, email, digits) when an email should go out."""
+    user = user_for(token)
+    if not user:
+        return 401, {"error": "You are not signed in."}, None
+    if user["emailVerified"]:
+        return 200, {"ok": True, "already": True}, None
+    with _lock:
+        if len(_recent(_code_sends, ("u", user["id"]), 3600)) >= 3 or len(_recent(_code_sends, ("ip", ip), 3600)) >= 12:
+            return 429, {"error": "Too many codes requested. Check your inbox and spam folder, or try again in an hour."}, None
+        _code_sends[("u", user["id"])].append(time.time())
+        _code_sends[("ip", ip)].append(time.time())
+        with _db() as c:
+            digits = _new_code(c, user["id"])
+    return 200, {"ok": True, "message": "A new code is on its way. The old one no longer works."}, (user["id"], user["email"], digits)
+
+
+def verify_code(token, code, ip):
+    """Check the code the person typed. Returns (status, body). Five wrong tries end that code; a new one must be requested."""
+    user = user_for(token)
+    if not user:
+        return 401, {"error": "You are not signed in."}
+    if user["emailVerified"]:
+        return 200, {"ok": True, "already": True}
+    digits = "".join(ch for ch in (code if isinstance(code, str) else "") if ch.isdigit())
+    if len(digits) != 6:
+        return 400, {"error": "Enter the 6-digit code from your email."}
+    with _lock:
+        key = (ip, "verify")
+        if len(_recent(_fails, key, FAIL_WINDOW)) >= 20:
+            return 429, {"error": "Too many tries. Wait a few minutes and try again."}
+        with _db() as c:
+            row = c.execute("SELECT * FROM email_codes WHERE user_id=?", (user["id"],)).fetchone()
+            if not row or row["expires_at"] < int(time.time()):
+                return 400, {"error": "That code has expired. Send a new one.", "expired": True}
+            if row["attempts"] >= MAX_CODE_TRIES:
+                c.execute("DELETE FROM email_codes WHERE user_id=?", (user["id"],))
+                return 429, {"error": "Too many wrong tries. Send a new code.", "expired": True}
+            if not hmac.compare_digest(hashlib.sha256((row["salt"] + digits).encode()).hexdigest(), row["code_hash"]):
+                left = MAX_CODE_TRIES - row["attempts"] - 1
+                _fails[key].append(time.time())
+                if left <= 0:
+                    c.execute("DELETE FROM email_codes WHERE user_id=?", (user["id"],))
+                    return 400, {"error": "That code is not right, and there are no tries left. Send a new code.", "expired": True}
+                c.execute("UPDATE email_codes SET attempts=attempts+1 WHERE user_id=?", (user["id"],))
+                return 400, {"error": "That code is not right. %d %s left." % (left, "try" if left == 1 else "tries"), "triesLeft": left}
+            c.execute("UPDATE users SET email_verified=1 WHERE id=?", (user["id"],))
+            c.execute("DELETE FROM email_codes WHERE user_id=?", (user["id"],))
     return 200, {"ok": True}

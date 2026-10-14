@@ -4,6 +4,27 @@ How versions move: work happens in `sandbox`, is tested there, and goes to `dev`
 build: it is what the hosted site and the phone apps run. Each version is tagged on GitHub (Releases). `main` is the original
 production page and only changes when the owner decides.
 
+## 1.0.0-rc.5 (release candidate)
+
+Sign-in the way the big job sites do it: Google's own button, and an email code that proves an email is real.
+
+- **Continue with Google** now uses Google's own button (Google Identity Services, as on LinkedIn and Indeed). It shows the Google accounts already
+  signed in on the person's browser; one tap signs them in. UAply never sees their Google password. It needs only the **public client ID**, no secret.
+  The server checks Google's signed token itself (`jwt_rs256.py`, standard library only): the signature against Google's published keys, that it was
+  issued for UAply's own client ID, the issuer, the expiry, that Google says the email is verified, and it only accepts the RS256 algorithm (forged,
+  expired, wrong-app, tampered, "none" and shared-secret tokens are all refused). People are identified by Google's permanent id, not their email.
+  The older redirect sign-in is kept as a fallback.
+- **Email verification code for password accounts:** sign-up emails a 6-digit code (10 minutes, 5 tries, one use, stored only as a hash, at most 3
+  new codes an hour). Until verified, a person can still swipe but gets no confirmation emails and cannot apply directly to an employer. Accounts made
+  with Google, or confirmed through an emailed reset link, are verified automatically.
+- **Direct applications to employers need a verified account** whose email is the one on the application, so replies go to an address proven theirs.
+- **Bug fixed:** Google's button sets its own cookie (`g_state`), and the server's cookie parser threw away the whole header, signing people out. The
+  server now reads cookies tolerantly. Found by running the real browser flow; covered by a test.
+- **Setup page:** a "Connect Google sign-in" box (paste the public client ID) next to Connect Gmail. Both only work on the owner's own computer.
+- **iPhone note:** Google blocks its sign-in inside an app's built-in browser, so the iPhone app keeps the Google button hidden until a native Google
+  sign-in plugin (and Sign in with Apple) is added. Email and password sign-up works there.
+- New tests: `tools/test-google-token.py` (27), `tools/test-verify.py` (24), `tools/ui-verify.js`, more in the delivery, setup and public suites.
+
 ## 1.0.0-rc.4 (release candidate)
 
 - **The swipe message now says where the test confirmation is.** With no real email connected, a signed-in swipe saves the confirmation in the test

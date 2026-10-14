@@ -523,6 +523,11 @@ def submit(p, user=None):
             APPS.append(rec)
             _append("applications.jsonl", rec)
         else:
+            # an application sent straight to an employer carries the person's email as the reply address, so that address must be proven theirs
+            if not user or not user.get("emailVerified"):
+                return 403, {"error": "Verify your email first (Profile, Account) so the employer can trust your address.", "code": "verify"}
+            if cand["email"] != user["email"].lower():
+                return 400, {"error": "Use your account email in Profile, Settings, so the employer replies to an address you verified."}
             if p.get("confirm_real") is not True:
                 return 400, {"error": "Live sending needs the user to review and press Send."}
             target = _redirect(cfg) or contact
@@ -550,7 +555,8 @@ def submit(p, user=None):
     if rec.get("error"):
         out["error"] = "The email could not be sent: " + rec["error"]
     if user and rec["status"] in ("delivered_test", "sent", "handoff"):
-        out["receipt"] = _receipt(cfg, user, cand, job, note, rec)
+        # a confirmation goes only to an address the person has proven is theirs (otherwise anyone could make UAply email a stranger)
+        out["receipt"] = _receipt(cfg, user, cand, job, note, rec) if user.get("emailVerified") else {"to": user["email"], "status": "unverified"}
     # the owner's copy: skipped when the person who swiped already got their own confirmation at that same address (one swipe, one email)
     already = out.get("receipt", {}).get("status") == "sent" and user and user["email"].lower() == _owner_copy(cfg).lower()
     if rec["status"] != "failed" and not already:

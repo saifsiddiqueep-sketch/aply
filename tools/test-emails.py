@@ -111,6 +111,8 @@ try:
     uaply_api.init("emailtest")
     auth_api.init("emailtest")
     s, out, tok = auth_api.signup("sam@example.com", "correct horse 99", "127.0.0.1", True)
+    uid, addr, digits = auth_api.issue_code_for_token(tok)                     # a real person verifies their email with the emailed code
+    auth_api.verify_code(tok, digits, "127.0.0.1")
     user = auth_api.user_for(tok)
     payload = {"consent": True, "job": {"id": 424242, "co": "Acme Robotics", "role": "Software Engineering Intern", "url": "https://acme.example/jobs/42",
                                          "source": "Acme careers", "loc": "Philadelphia, PA", "type": "internship", "mode": "hybrid", "sal": [30000, 38000],
@@ -134,6 +136,8 @@ try:
     # when the person who swipes IS the owner address, one swipe sends one email (not a confirmation plus a copy)
     n_before = len([1 for x in open(mail_file, encoding="utf-8") if x.strip()])
     s2, out2, tok2 = auth_api.signup("owner@example.com", "correct horse 99", "127.0.0.2", True)
+    uid2, addr2, digits2 = auth_api.issue_code_for_token(tok2)
+    auth_api.verify_code(tok2, digits2, "127.0.0.2")
     user2 = auth_api.user_for(tok2)
     payload2 = dict(payload, job=dict(payload["job"], id=424243), profile={"name": "Owner Person", "email": "owner@example.com"})
     code2, res2 = uaply_api.submit(payload2, user2)
