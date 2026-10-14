@@ -170,6 +170,20 @@
    "tags": "feedback suggestion idea bug problem broken report issue complaint",
    "body": "Tap Give feedback or Report a problem in this chat. It takes about 30 seconds, and a person on the UAply team reads every message.",
    "go": ""
+  },
+  {
+   "id": "verify-email",
+   "title": "Why do I need to verify my email?",
+   "tags": "verify verification code email confirm 6 digit code not received spam resend identity",
+   "body": "When you make an account with an email and password, UAply emails you a 6-digit code. Enter it under Profile, Account to prove the email is really yours. The code works for 10 minutes and 5 tries; tap Send a new code if it expires or you cannot find it (check spam). Until you verify, you can still swipe, but you will not get confirmation emails and cannot apply directly to employers. If you sign in with Google, your email is already verified.",
+   "go": "prof:account"
+  },
+  {
+   "id": "google-sign-in",
+   "title": "Signing in with Google",
+   "tags": "google gmail sign in continue with google account password saved browser login",
+   "body": "Tap Continue with Google under Profile, Account. Google shows the accounts already signed in on your browser, and you pick one. UAply never sees your Google password, only your name and verified email. If you already made a UAply account with the same email and a password, Google signs you into that same account. Use the same way to sign in each time. You can also sign in with any email and a password; UAply then checks the email with a 6-digit code.",
+   "go": "prof:account"
   }
  ]
 }

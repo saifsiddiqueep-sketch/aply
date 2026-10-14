@@ -30,20 +30,19 @@ def checks(host, proto):
     g = cfg.get("google") if isinstance(cfg.get("google"), dict) else {}
     s = cfg.get("smtp") if isinstance(cfg.get("smtp"), dict) else {}
     owner = uaply_api._owner_copy(cfg)
-    redirect = google_auth.redirect_uri(host, proto)
     g_id = g.get("client_id") if isinstance(g.get("client_id"), str) else ""
-    g_ok = google_auth.enabled()
+    g_ok = google_auth.button_enabled()
     smtp_ok = bool(s.get("host") and s.get("from_addr") and _real(s.get("password"), ("a gmail app password", "the-sending")))
     return [
         {"name": "Sign in with Google", "ok": g_ok,
-         "detail": ("On. Users see a Continue with Google button." if g_ok else
+         "detail": ("On. Google's own button shows on the sign-in screen, including accounts already signed in on that browser." if g_ok else
                     ("The client ID does not look right (it should end in .apps.googleusercontent.com)." if g_id and not CLIENT_RE.match(g_id) and not g.get("auth_url") else
-                     "Off. Add your Google client ID and secret.")),
+                     "Off. Add your Google client ID (the public one; no secret is needed).")),
          "todo": ["Open https://console.cloud.google.com/apis/credentials and create a project if you have none.",
-                  "Configure the OAuth consent screen: External, app name UAply, your Gmail as the support email, then Publish app so anyone can sign in (scopes openid and email need no review).",
+                  "Configure the OAuth consent screen: External, app name UAply, your Gmail as the support email, then Publish app so anyone can sign in (scopes openid, email and profile need no review).",
                   "Create credentials, OAuth client ID, type Web application.",
-                  "Add this Authorized redirect URI exactly: " + redirect,
-                  "Run: python tools/setup-config.py (it asks for the client ID and secret and saves them in uaply-config.json), then restart the server."] if not g_ok else []},
+                  "Under Authorized JavaScript origins add this address exactly: " + proto + "://" + host + " (and your real website address when you have one).",
+                  "Paste the Client ID in the Connect Google box below (or run python tools/setup-config.py)."] if not g_ok else []},
         {"name": "Email sending (password resets, receipts, copies)", "ok": smtp_ok,
          "detail": ("An email login is set. Use the button below to send yourself a test." if smtp_ok else
                     "Off. Until this is set, emails go only to the simulated test inbox (/outbox) and password reset links cannot reach real people."),
@@ -56,6 +55,26 @@ def checks(host, proto):
         {"name": "AI answers in UAply Assistant (optional)", "ok": _real(cfg.get("anthropic_api_key"), ("optional", "sk-ant-...")) and str(cfg.get("anthropic_api_key")).startswith("sk-ant-"),
          "detail": "Without a key the assistant answers with the best matching help article.", "todo": []},
     ]
+
+
+def save_google(payload):
+    """The "Connect Google" box: save the public Google client ID into the git-ignored uaply-config.json on this computer. Returns (status, body)."""
+    cid = (payload.get("client_id") if isinstance(payload.get("client_id"), str) else "").strip()
+    if not CLIENT_RE.match(cid):
+        return 400, {"ok": False, "message": "That does not look like a Google client ID. It ends in .apps.googleusercontent.com and starts with numbers and a dash."}
+    try:
+        with open(uaply_api.CONFIG_PATH, encoding="utf-8") as f:
+            cfg = json.load(f)
+    except (OSError, ValueError):
+        cfg = {}
+    g = cfg.get("google") if isinstance(cfg.get("google"), dict) else {}
+    g["client_id"] = cid
+    cfg["google"] = g
+    tmp = uaply_api.CONFIG_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline=chr(10)) as f:
+        json.dump(cfg, f, indent=2)
+    os.replace(tmp, uaply_api.CONFIG_PATH)
+    return 200, {"ok": True, "saved": True, "message": "Saved. Reload the sign-in screen: Google's button should now appear."}
 
 
 def save_mail(payload):
@@ -145,6 +164,9 @@ button{font:inherit;padding:8px 14px;border-radius:10px;border:1px solid var(--l
 code{background:var(--bg);padding:1px 5px;border-radius:5px}
 </style></head><body><main><h1>UAply setup</h1><p class="m">What is switched on, and what still needs a key. Secrets are never shown here.</p>
 %s
+<article><b>Connect Google sign-in</b><p class="m">Paste the Client ID from Google Cloud Console (the long address ending in .apps.googleusercontent.com). It is public, so it is safe to paste here. It is saved only on this computer.</p>
+<p><input id="gi" type="text" placeholder="123456789-abc.apps.googleusercontent.com" style="width:340px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p><button id="gs" type="button">Save Google client ID</button> <span id="gr" class="m" role="status"></span></p></article>
 <article><b>Connect Gmail</b><p class="m">Paste the Gmail address that will send UAply's email and its App Password (a 16-letter code from myaccount.google.com/apppasswords, not your normal password). It is saved only in uaply-config.json on this computer, which is never uploaded, and a test email is sent right away.</p>
 <p><input id="ge" type="email" placeholder="Sending Gmail address" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><input id="gp" type="password" placeholder="App Password" autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
@@ -155,6 +177,8 @@ code{background:var(--bg);padding:1px 5px;border-radius:5px}
 <p class="m">%d accounts and %d emails recorded on this server. <a href="/outbox">Test inbox</a></p></main>
 <script>document.getElementById('t').onclick=function(){var r=document.getElementById('r');r.textContent='Sending...';
 fetch('/api/setup/test-mail',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(function(x){return x.json()}).then(function(j){r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
+document.getElementById('gs').onclick=function(){var r=document.getElementById('gr');r.textContent='Saving...';
+fetch('/api/setup/save-google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({client_id:document.getElementById('gi').value})}).then(function(x){return x.json()}).then(function(j){r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
 document.getElementById('sv').onclick=function(){var r=document.getElementById('sr'),g=function(i){return document.getElementById(i).value};r.textContent='Saving...';
 fetch('/api/setup/save-mail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:g('ge'),password:g('gp'),copy_to:g('gc')})}).then(function(x){return x.json()}).then(function(j){if(j.saved)document.getElementById('gp').value='';r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}</script>
 </body></html>""" % ("".join(rows), n["users"], n["mail"])).encode("utf-8")

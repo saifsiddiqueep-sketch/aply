@@ -1,19 +1,27 @@
-"""A stand-in for Google's sign-in, for testing UAply's "Continue with Google" without a Google account.
+"""A stand-in for Google's sign-in, for testing UAply's "Continue with Google" without a Google account. Nothing here talks to Google.
 
   python tools/mock-google.py [port]        (default 8790)
+
+Redirect flow (the older "Continue with Google" link):
   GET  /mock/next?email=a@b.com&sub=123&verified=1   choose who "signs in" next
   GET  /auth?...                                      like accounts.google.com: immediately "approves" and redirects back
   POST /token                                         like oauth2.googleapis.com/token: checks code, secret and PKCE verifier
 
+Google's button flow (the page gets a signed token and posts it to UAply):
+  GET  /certs                                         like googleapis.com/oauth2/v3/certs: the public key list
+  GET  /mock/idtoken?email=&sub=&verified=1           a correctly signed ID token {"credential": "..."}; add &bad=aud|iss|expired|tamper|none|hs256|kid|future
+                                                      to get a token that must be refused
+
 Point UAply at it with this in uaply-config.json:
   "google": {"client_id": "test.apps.googleusercontent.com", "client_secret": "test-secret",
-             "auth_url": "http://127.0.0.1:8790/auth", "token_url": "http://127.0.0.1:8790/token"}
-It is for local tests only and never talks to Google.
+             "auth_url": "http://127.0.0.1:8790/auth", "token_url": "http://127.0.0.1:8790/token", "certs_url": "http://127.0.0.1:8790/certs"}
 """
 import base64
 import hashlib
+import hmac
 import http.server
 import json
+import random
 import secrets
 import sys
 import time
@@ -24,18 +32,103 @@ SECRET = "test-secret"
 CLIENT = "test.apps.googleusercontent.com"
 NEXT = {"email": "google.user@example.com", "sub": "1001", "verified": True}
 CODES = {}
+PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
 
 
 def b64(d):
     return base64.urlsafe_b64encode(d).rstrip(b"=").decode()
 
 
+def _is_prime(n):
+    if n < 2:
+        return False
+    for p in (2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37):
+        if n % p == 0:
+            return n == p
+    d, r = n - 1, 0
+    while d % 2 == 0:
+        d //= 2
+        r += 1
+    for _ in range(24):
+        a = random.randrange(2, n - 1)
+        x = pow(a, d, n)
+        if x in (1, n - 1):
+            continue
+        for _ in range(r - 1):
+            x = pow(x, 2, n)
+            if x == n - 1:
+                break
+        else:
+            return False
+    return True
+
+
+def _prime(bits):
+    while True:
+        c = secrets.randbits(bits) | (1 << (bits - 1)) | 1
+        if _is_prime(c):
+            return c
+
+
+def _make_key():
+    e = 65537
+    while True:
+        p, q = _prime(512), _prime(512)
+        phi = (p - 1) * (q - 1)
+        if p != q and phi % e:
+            return p * q, e, pow(e, -1, phi)
+
+
+N, E, D = _make_key()
+
+
+def sign(signing_input):
+    k = (N.bit_length() + 7) // 8
+    digest = hashlib.sha256(signing_input).digest()
+    block = b"\x00\x01" + b"\xff" * (k - len(PREFIX) - len(digest) - 3) + b"\x00" + PREFIX + digest
+    return pow(int.from_bytes(block, "big"), D, N).to_bytes(k, "big")
+
+
+def id_token(email, sub, verified=True, bad=""):
+    now = int(time.time())
+    claims = {"iss": "https://accounts.google.com", "aud": CLIENT, "sub": sub, "email": email, "email_verified": verified,
+              "name": "Test User", "iat": now, "exp": now + 3600}
+    header = {"alg": "RS256", "kid": "mock-key-1", "typ": "JWT"}
+    if bad == "aud":
+        claims["aud"] = "someone-elses-app.apps.googleusercontent.com"
+    elif bad == "iss":
+        claims["iss"] = "https://evil.example"
+    elif bad == "expired":
+        claims["exp"] = now - 10
+    elif bad == "future":
+        claims["iat"] = now + 7200
+        claims["exp"] = now + 10800
+    elif bad == "kid":
+        header["kid"] = "no-such-key"
+    elif bad == "none":
+        header["alg"] = "none"
+    elif bad == "hs256":
+        header["alg"] = "HS256"
+    h, c = b64(json.dumps(header).encode()), b64(json.dumps(claims).encode())
+    if bad == "none":
+        return h + "." + c + "."
+    if bad == "hs256":                                   # signed with a shared secret, the way an attacker would try
+        return h + "." + c + "." + b64(hmac.new(b"anything", (h + "." + c).encode(), hashlib.sha256).digest())
+    token = h + "." + c + "." + b64(sign((h + "." + c).encode()))
+    if bad == "tamper":                                  # change the email after signing
+        forged = dict(claims, email="attacker@example.com")
+        token = h + "." + b64(json.dumps(forged).encode()) + "." + token.split(".")[2]
+    return token
+
+
 class H(http.server.BaseHTTPRequestHandler):
-    def _json(self, code, obj):
+    def _json(self, code, obj, extra=()):
         body = json.dumps(obj).encode()
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
+        for k, v in extra:
+            self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
 
@@ -45,6 +138,11 @@ class H(http.server.BaseHTTPRequestHandler):
         if u.path == "/mock/next":
             NEXT.update({"email": q.get("email", NEXT["email"]), "sub": q.get("sub", NEXT["sub"]), "verified": q.get("verified", "1") == "1"})
             return self._json(200, NEXT)
+        if u.path == "/certs":
+            key = {"kty": "RSA", "kid": "mock-key-1", "use": "sig", "alg": "RS256", "n": b64(N.to_bytes((N.bit_length() + 7) // 8, "big")), "e": b64(E.to_bytes(3, "big"))}
+            return self._json(200, {"keys": [key]}, [("Cache-Control", "public, max-age=3600")])
+        if u.path == "/mock/idtoken":
+            return self._json(200, {"credential": id_token(q.get("email", NEXT["email"]), q.get("sub", NEXT["sub"]), q.get("verified", "1") == "1", q.get("bad", ""))})
         if u.path == "/auth":
             if q.get("client_id") != CLIENT or q.get("code_challenge_method") != "S256" or not q.get("redirect_uri"):
                 return self._json(400, {"error": "bad request"})

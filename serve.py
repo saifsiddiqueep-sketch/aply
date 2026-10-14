@@ -26,7 +26,7 @@ Serves ROOT; each urlpath=file alias maps one URL to a file outside ROOT (e.g. /
   GET  /feedback          the feedback summary page (this server only listens on this computer)
   GET  /help/articles.json  the help articles the assistant answers from
 Accounts use an HttpOnly session cookie. When a signed-in user swipes right, a receipt goes to their email."""
-import sys, os, json, http.server, http.cookies, base64, hmac
+import sys, os, json, http.server, base64, hmac
 
 port = int(sys.argv[1])
 # Locally the server only listens on this computer. A host sets HOST=0.0.0.0 so the public can reach it (always behind HTTPS).
@@ -60,6 +60,8 @@ if api:
     import threading
     threading.Thread(target=jobs_api.get_jobs, daemon=True).start()   # warm the job cache so the first visitor does not wait
 
+VERIFY_MAIL = ("Your UAply verification code is:\n\n    %s\n\nEnter it in UAply to confirm this email address. It works for 10 minutes and for one account. "
+               "If you did not create a UAply account, ignore this email.\n\n--\nUAply")
 MAX_BODY = 40000
 MAX_APPLY_BODY = 1500000
 
@@ -84,13 +86,18 @@ class H(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _cookie_value(self, name):
+        """One cookie's value from the request ('' if absent). Parsed by hand on purpose: other sites' tools set cookies with quotes and commas in
+        them (Google's sign-in button sets g_state={"i_l":0}), and Python's strict parser then throws away the WHOLE header, signing people out."""
+        for part in (self.headers.get("Cookie") or "").split(";"):
+            key, sep, val = part.strip().partition("=")
+            if sep and key == name:
+                return val.strip().strip('"')
+        return ""
+
     def _token(self):
         """The session token from this instance's cookie ('' if there is none)."""
-        try:
-            jar = http.cookies.SimpleCookie(self.headers.get("Cookie") or "")
-            return jar[auth_api.cookie_name()].value if auth_api.cookie_name() in jar else ""
-        except Exception:
-            return ""
+        return self._cookie_value(auth_api.cookie_name())
 
     def _cookie(self, token):
         secure = "; Secure" if (self.headers.get("X-Forwarded-Proto") == "https") else ""
@@ -134,9 +141,7 @@ class H(http.server.SimpleHTTPRequestHandler):
             if not url:
                 return self._redirect("/?auth_error=off")
             return self._redirect(url, [self._oauth_cookie(state)])
-        jar = http.cookies.SimpleCookie(self.headers.get("Cookie") or "")
-        cname = auth_api.cookie_name() + "_oauth"
-        err, ident, agreed = google_auth.finish(q, jar[cname].value if cname in jar else "", host, proto)
+        err, ident, agreed = google_auth.finish(q, self._cookie_value(auth_api.cookie_name() + "_oauth"), host, proto)
         if err:
             return self._redirect("/?auth_error=" + err, [self._oauth_cookie("")])
         err, user, token = auth_api.oauth_login(ident["provider"], ident["subject"], ident["email"], agreed)
@@ -198,7 +203,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         p = self.path.split("?", 1)[0]
         if not api or p not in ("/api/apply", "/api/decision", "/api/auth/signup", "/api/auth/login", "/api/auth/logout",
                                 "/api/auth/delete", "/api/auth/forgot", "/api/auth/reset", "/api/auth/change-password",
-                                "/api/setup/test-mail", "/api/setup/save-mail", "/api/chat", "/api/feedback"):
+                                "/api/setup/test-mail", "/api/setup/save-mail", "/api/setup/save-google", "/api/auth/google/token", "/api/auth/verify", "/api/auth/resend", "/api/chat", "/api/feedback"):
             return self._send(404, {"error": "not found"})
         # Only accept requests made by this site's own pages (blocks cross-site forms and scripts).
         origin = self.headers.get("Origin")
@@ -221,10 +226,20 @@ class H(http.server.SimpleHTTPRequestHandler):
         try:
             if p == "/api/auth/signup":
                 code, out, token = auth_api.signup(payload.get("email"), payload.get("password"), ip, payload.get("agree"))
+                if token:                                        # a new password account must prove it owns the email: send the first code
+                    uid, addr, digits = auth_api.issue_code_for_token(token)
+                    out = dict(out, delivery=uaply_api.send_system_mail(uid, addr, "%s is your UAply verification code" % digits, VERIFY_MAIL % digits))
                 return self._send(code, out, headers=self._cookie(token) if token else ())
             if p == "/api/auth/login":
                 code, out, token = auth_api.login(payload.get("email"), payload.get("password"), ip)
                 return self._send(code, out, headers=self._cookie(token) if token else ())
+            if p == "/api/setup/save-google":
+                if not self._owner_ok():
+                    return self._send(403, {"error": "Owner pages are off or need the owner password."})
+                if PUBLIC:
+                    return self._send(403, {"ok": False, "message": "On a hosted server, add the Google client ID in the host's dashboard (UAPLY_CONFIG_JSON), not here."})
+                code, out = setup_api.save_google(payload)
+                return self._send(code, out)
             if p == "/api/setup/save-mail":
                 if not self._owner_ok():
                     return self._send(403, {"error": "Owner pages are off or need the owner password."})
@@ -236,6 +251,26 @@ class H(http.server.SimpleHTTPRequestHandler):
                 if not self._owner_ok():
                     return self._send(403, {"error": "Owner pages are off or need the owner password."})
                 code, out = setup_api.test_mail()
+                return self._send(code, out)
+            if p == "/api/auth/google/token":                    # "Continue with Google": the page sends the signed token Google's button gave it
+                msg = {"agree": "Tick the box to confirm you are 18 or older and agree to the Terms and Privacy Policy, then choose Google again.",
+                       "failed": "Google sign-in could not be checked. Try again.", "unverified": "Google says that email address is not verified, so UAply cannot use it.",
+                       "off": "Google sign-in is not switched on.", "limited": "Too many tries. Wait a minute and try again."}
+                err, ident = google_auth.verify_credential(payload.get("credential"), ip)
+                if not err:
+                    err, user, token = auth_api.oauth_login(ident["provider"], ident["subject"], ident["email"], payload.get("agree") is True)
+                if err:
+                    return self._send(429 if err == "limited" else 400, {"error": msg.get(err, msg["failed"]), "code": err})
+                return self._send(200, {"user": user}, headers=self._cookie(token))
+            if p == "/api/auth/verify":
+                code, out = auth_api.verify_code(self._token(), payload.get("code"), ip)
+                return self._send(code, out)
+            if p == "/api/auth/resend":
+                code, out, mail = auth_api.resend_code(self._token(), ip)
+                if mail:
+                    uid, addr, digits = mail
+                    mail_status = uaply_api.send_system_mail(uid, addr, "%s is your UAply verification code" % digits, VERIFY_MAIL % digits, secret=False)
+                    out = dict(out, delivery=mail_status)
                 return self._send(code, out)
             if p == "/api/auth/forgot":
                 if PUBLIC and not uaply_api.mail_ready():       # a real server that cannot send email must not pretend to

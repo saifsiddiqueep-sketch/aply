@@ -100,7 +100,7 @@ def apply(co, email_addr="sam@example.com", resume=RESUME, **cfg_over):
                                    "linkedin": "https://linkedin.com/in/sam"}}}
     if resume:
         payload["resume"] = resume
-    return uaply_api.submit(payload, None)
+    return uaply_api.submit(payload, {"id": 1, "email": email_addr, "emailVerified": True})
 
 
 def reset():
@@ -137,10 +137,13 @@ reset()
 open(mail_file, "w").close()
 code, out = apply("Both Co")
 time.sleep(1)
-sent = [json.loads(x) for x in open(mail_file, encoding="utf-8") if x.strip()]
+everything = [json.loads(x) for x in open(mail_file, encoding="utf-8") if x.strip()]
+sent = [m for m in everything if m["to"] == ["jobs@both.example"]]               # what the employer received
+confirmations = [m for m in everything if m["to"] == ["sam@example.com"]]       # what the applicant received
 msg = email.message_from_string(sent[0]["raw"], policy=email.policy.default) if sent else None
 t("both channels: sent", (code, out["status"], uaply_api.APPS[-1]["channels"]), (200, "sent", ["email", "webhook"]))
 t("both channels: the employer got the email and the webhook call", (len(sent), len(Employer.calls)), (1, 1))
+t("the verified applicant also got a confirmation email", len(confirmations), 1)
 atts = [p for p in msg.iter_attachments()] if msg else []
 t("the email carries the resume as a real attachment", (len(atts), atts[0].get_filename() if atts else None), (1, "Sam Rivera Resume.pdf"))
 t("the attachment is the same file", atts[0].get_content() == PDF if atts else False, True)
@@ -208,6 +211,20 @@ for label, bad in [("wrong content for a PDF", {"name": "x.pdf", "data": "data:a
                    ("not base64", {"name": "x.pdf", "data": "data:application/pdf;base64,@@@@"})]:
     code, out = apply("Hook Only Co", email_addr="bad-%s@example.com" % label.split()[0], resume=bad)
     t("a resume that is %s is refused" % label, (code, len(Employer.calls)), (400, 0))
+
+# 9b. a direct send needs a verified account whose email is the one on the application
+reset()
+jh = jobs["Hook Only Co"]
+base_payload = {"consent": True, "confirm_real": True, "job": {"id": jh["id"], "co": jh["co"], "role": jh["role"], "url": "https://hook.example/careers", "loc": "", "contact": ""},
+                "profile": {"name": "Pat Doe", "email": "pat@example.com"}}
+code, out = uaply_api.submit(base_payload, {"id": 7, "email": "pat@example.com", "emailVerified": False})
+t("an unverified account cannot send directly to an employer", (code, out.get("code"), len(Employer.calls)), (403, "verify", 0))
+code, out = uaply_api.submit(base_payload, None)
+t("no account at all cannot send directly either", (code, out.get("code"), len(Employer.calls)), (403, "verify", 0))
+code, out = uaply_api.submit(base_payload, {"id": 7, "email": "someone.else@example.com", "emailVerified": True})
+t("a verified account must use its own email on the application", (code, len(Employer.calls)), (400, 0))
+code, out = uaply_api.submit(base_payload, {"id": 7, "email": "Pat@Example.com", "emailVerified": True})
+t("a verified account with the matching email sends (case does not matter)", (code, out["status"], len(Employer.calls)), (200, "sent", 1))
 
 # 10. an employer who did not opt in can never be sent anything
 reset()

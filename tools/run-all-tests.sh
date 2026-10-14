@@ -38,6 +38,9 @@ echo "  real postings on dev: ${n:-0}"
 step "Job feed rules (US-only, no foreign roles, classification)"
 run "job rules and descriptions (28)" python tools/test-jobs.py
 
+step "Email codes that prove an email is real"
+run "verification codes: expiry, tries, resends, gates" python tools/test-verify.py
+
 step "Delivery to employers (email with resume, signed webhook, retries, opt-in only) and the Connect Gmail form"
 run "delivery channels (32)" python tools/test-delivery.py
 run "Connect Gmail form (17)" python tools/test-setup.py
@@ -59,9 +62,11 @@ run "dev: every way of swiping, and what each sends (LinkedIn, resume, one email
 
 step "Google sign-in (against a stand-in Google)"
 PIDS="$PIDS $(start python tools/mock-google.py 8790)"
-PIDS="$PIDS $(UAPLY_DATA_DIR="$TMP/g" UAPLY_CONFIG_JSON='{"google":{"client_id":"test.apps.googleusercontent.com","client_secret":"test-secret","auth_url":"http://127.0.0.1:8790/auth","token_url":"http://127.0.0.1:8790/token"}}' start python serve.py 18768 dev --api)"
+PIDS="$PIDS $(UAPLY_DATA_DIR="$TMP/g" UAPLY_CONFIG_JSON='{"google":{"client_id":"test.apps.googleusercontent.com","client_secret":"test-secret","auth_url":"http://127.0.0.1:8790/auth","token_url":"http://127.0.0.1:8790/token","certs_url":"http://127.0.0.1:8790/certs"}}' start python serve.py 18768 dev --api)"
 wait_port 18768
 run "Google sign-in, attacks and failures (24)" python tools/test-google.py 18768
+run "Continue with Google button: tokens, forged tokens, linking, cookies" python tools/test-google-token.py 18768
+run "sign-up and email-code screens in a browser, Google button area" env W=390 H=844 PORT=18768 node tools/cdp.js tools/ui-verify.js
 
 step "Public server behind HTTPS (how a real host runs it)"
 PIDS="$PIDS $(UAPLY_DATA_DIR="$TMP/pub" HOST=0.0.0.0 OWNER_PASSWORD=ownerpw UAPLY_CONFIG_JSON='{}' start python serve.py 18772 dev --api)"

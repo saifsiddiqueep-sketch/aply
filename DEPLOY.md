@@ -5,10 +5,12 @@ plans, and it starts every new profile blank. `sandbox` is the test bench and ke
 
 ## Before real users: your checklist
 1. **Host the server** (section 1 below). Until then nothing is online: the phone app's address returns 404.
-2. **Google sign-in (free):** create an OAuth client at console.cloud.google.com/apis/credentials (Web application, consent screen
-   External, then Publish app), add the redirect URI shown at `/setup`, then run `python tools/setup-config.py` (or put the values
-   in `UAPLY_CONFIG_JSON` on Render). If you switch Google on you must also build Sign in with Apple before the iPhone app ships
-   (App Store guideline 4.8). Until then the app hides the Google button on iPhone by itself.
+2. **Google sign-in (free):** UAply uses Google's own "Continue with Google" button (the same system LinkedIn, Indeed and others use), so people can pick
+   the Google account already signed in on their browser. It needs only the public **client ID**: in console.cloud.google.com/apis/credentials create an
+   OAuth client ID (Web application), set the consent screen to External and **Publish app**, add your website address under *Authorized JavaScript
+   origins* (for testing `http://localhost:8767`), then paste the client ID into the "Connect Google sign-in" box at `/setup` (or `UAPLY_CONFIG_JSON` on a
+   host). No secret is needed. Google blocks its sign-in inside an iPhone app's built-in browser, so the iPhone app hides the Google button until a native
+   Google sign-in plugin (and Sign in with Apple, which Apple then requires) is added. Password sign-up works everywhere.
 3. **Email** (password resets, receipts): create a Gmail App Password (needs 2-Step Verification) or use a transactional email
    service, then run `python tools/setup-config.py`. `/setup` has a "Send test email" button. Without it, reset links only reach
    the test inbox, so a real person cannot reset a password.

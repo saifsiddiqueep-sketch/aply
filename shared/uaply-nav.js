@@ -1035,7 +1035,7 @@ function apply(w,host){
   function opts(list,cur){return '<option value="">Choose</option>'+list.map(function(x){return '<option'+(cur===x?" selected":"")+'>'+E(x)+'</option>'}).join("")}
   function renderAcct(v){
     var h='<h3>'+label("prof",v)+'</h3><p class="lead">'+LEADS[v]+'</p>';
-    if(v==="account"){acctSec.innerHTML=h+accountHTML()+'<p class="note" id="aMsg" role="status"></p>';paintHeader();return}
+    if(v==="account"){acctSec.innerHTML=h+accountHTML()+'<p class="note" id="aMsg" role="status"></p>';paintHeader();setTimeout(mountGoogle,0);return}
     if(v==="resume"){
       var a=acct;
       h+='<div class="grid">'+(PX()
@@ -1220,9 +1220,9 @@ function apply(w,host){
     if(!acctSec.hidden&&sub.prof==="account")renderAcct("account");
     googleReturn();
   }).catch(function(){SRV.up=false;paintHeader()});
-  w.fetch("/api/apply/config").then(function(r){return r.ok?r.json():null}).then(function(j){if(j&&j.mode)SRV.mode=j.mode}).catch(function(){});
+  w.fetch("/api/apply/config").then(function(r){return r.ok?r.json():null}).then(function(j){if(j&&j.mode)SRV.mode=j.mode;if(j)SRV.testInbox=j.testInbox||""}).catch(function(){});
   w.fetch("/api/auth/providers").then(function(r){return r.ok?r.json():null}).then(function(j){
-    SRV.google=!!(j&&j.google);SRV.canEmail=!!(j&&j.canEmail);
+    SRV.google=!!(j&&j.google);SRV.googleClientId=(j&&j.googleClientId)||"";SRV.googleRedirect=!!(j&&j.googleRedirect);SRV.canEmail=!!(j&&j.canEmail);
     if(SRV.google&&!acctSec.hidden&&sub.prof==="account")renderAcct("account");
   }).catch(function(){});
   var GERR={agree:"Tick the box to confirm you are 18 or older and agree to the Terms and Privacy Policy, then try Google again.",cancelled:"Google sign-in was cancelled.",expired:"That Google sign-in expired or could not be checked. Try again.",failed:"Google sign-in did not work. Try again, or use your email and password.",unverified:"Google says that email address is not verified, so UAply cannot use it.",off:"Google sign-in is not switched on."};
@@ -1245,6 +1245,41 @@ function apply(w,host){
   w.__uaplyAuth=function(){return {up:SRV.up,user:SRV.user}};
   /* Apple (App Store guideline 4.8) requires Sign in with Apple wherever an iPhone app offers Google, so inside the iPhone app Google stays hidden until Apple sign-in exists */
   function iosShell(){try{var c=w.top.Capacitor;return !!(c&&c.getPlatform&&c.getPlatform()==="ios"&&!SRV.apple)}catch(e){return false}}
+  /* proving the email is theirs: a 6-digit code (shown to anyone signed in with a password who has not entered it yet) */
+  function verifyHTML(){
+    if(!SRV.user||SRV.user.emailVerified!==false)return "";
+    var where=SRV.canEmail?"We emailed a 6-digit code to "+E(SRV.user.email)+".":(SRV.testInbox?"No real email is connected on this computer, so the code is in the <a href='/outbox' target='_blank' rel='noopener noreferrer'>test inbox</a>.":"");
+    if(!where)return '<div class="plan" style="display:flex;flex-direction:column;gap:6px;border:1px solid var(--line)"><b>Verify your email</b><small>This server cannot send email yet, so there is no code to enter. You can still swipe. Confirmation emails and direct applications to employers need a verified email.</small></div>';
+    return '<div class="plan" style="display:flex;flex-direction:column;gap:8px;border:1px solid var(--accent)"><b>Verify your email</b><small>'+where+' It works for 10 minutes. Until you verify, you will not get confirmation emails and cannot apply directly to employers.</small>'+
+      '<div class="field"><label for="sCode">6-digit code</label><input type="text" id="sCode" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123456"></div>'+
+      '<div class="acts"><button type="button" class="btn" data-auth="sverify">Verify</button><button type="button" class="btn ghost" data-auth="sresend">Send a new code</button></div></div>';
+  }
+  /* Continue with Google: Google draws the button (and offers accounts already signed in on this browser) and hands back a signed token */
+  var gInit=false;
+  function onGoogle(resp){
+    var ga=(d.getElementById("gAgree")||{}).checked;
+    msg("Signing in with Google…");
+    apiPost("/api/auth/google/token",{credential:resp&&resp.credential,agree:!!ga}).then(function(r){
+      if(!r.ok||!r.j.user){msg((r.j&&r.j.error)||"Google sign-in did not work. Try again.");return}
+      SRV.user=r.j.user;afterServerSignIn();renderAcct("account");msg("Signed in with Google.");
+    });
+  }
+  function mountGoogle(){
+    var box=d.getElementById("gBtn");
+    if(!box||!SRV.google||!SRV.googleClientId)return;
+    function fallback(){
+      box.innerHTML=SRV.googleRedirect?'<button type="button" class="btn" data-auth="gsign" style="width:100%">Continue with Google</button>':'<small>Google sign-in could not load. Use your email and password.</small>';
+    }
+    function draw(){
+      try{
+        var g=w.google.accounts.id;
+        if(!gInit){g.initialize({client_id:SRV.googleClientId,callback:onGoogle,auto_select:false,cancel_on_tap_outside:true});gInit=true}
+        g.renderButton(box,{type:"standard",theme:"outline",size:"large",text:"continue_with",shape:"pill",width:Math.min(320,box.offsetWidth||320)});
+      }catch(e){fallback()}
+    }
+    if(w.google&&w.google.accounts&&w.google.accounts.id){draw();return}
+    var sc=d.createElement("script");sc.src="https://accounts.google.com/gsi/client";sc.async=true;sc.onload=draw;sc.onerror=fallback;d.head.appendChild(sc);
+  }
   function forgotHTML(){
     var box='<div class="plan" style="display:flex;flex-direction:column;gap:10px">';
     if(AUI.forgotSent)return box+'<b>Check your email</b><p class="note" style="margin:0">If that email has an account, a reset link is on its way. It works for one hour.</p>'+
@@ -1270,8 +1305,8 @@ function apply(w,host){
   function serverHTML(){
     if(!SRV.user&&AUI.reset)return resetHTML();
     if(!SRV.user&&AUI.forgot&&AUI.sMode==="in")return forgotHTML();
-    if(SRV.user)return '<div class="plan" style="display:flex;flex-direction:column;gap:8px"><span class="tag" style="background:var(--accent);color:var(--accent-ink)">ACCOUNT</span><b>You are signed in</b><small>'+E(SRV.user.email)+' · saved on UAply\'s server</small>'+
-      '<p class="note" style="margin:0">Every time you swipe right, a receipt goes to this email'+(SRV.mode==="live"?'':' (test mode: it lands in the <a href="/outbox" target="_blank" rel="noopener noreferrer">test inbox</a> instead)')+'.</p>'+
+    if(SRV.user)return '<div class="plan" style="display:flex;flex-direction:column;gap:8px"><span class="tag" style="background:var(--accent);color:var(--accent-ink)">ACCOUNT</span><b>You are signed in</b><small>'+E(SRV.user.email)+(SRV.user.emailVerified===false?' · email not verified yet':' · email verified')+'</small>'+verifyHTML()+
+      '<p class="note" style="margin:0">'+(SRV.user.emailVerified===false?'Once your email is verified, each swipe right sends a confirmation to it':'Every time you swipe right, a confirmation goes to this email')+(SRV.canEmail?'':' (no real email is connected here yet, so it is saved in the <a href="/outbox" target="_blank" rel="noopener noreferrer">test inbox</a>)')+'.</p>'+
       '<div class="acts"><button type="button" class="btn ghost" data-auth="sout">Sign out</button><button type="button" class="btn ghost" data-auth="sdel">Delete account</button></div>'+changeHTML()+
       (AUI.delOpen?'<div class="field"><label for="sDelPw">'+(SRV.user.hasPassword===false?'Type DELETE to delete your account':'Enter your password to delete your account')+'</label><input type="'+(SRV.user.hasPassword===false?'text':'password')+'" id="sDelPw" autocomplete="'+(SRV.user.hasPassword===false?'off':'current-password')+'" maxlength="128"><small>This removes your account, your receipts and your application records on UAply\'s server. It cannot be undone. Your profile on this device stays until you delete it in Data and privacy.</small></div>'+
         '<div class="acts"><button type="button" class="btn" data-auth="sdelgo">Delete my account</button><button type="button" class="btn ghost" data-auth="sdelno">Keep my account</button></div>':'')+
@@ -1284,7 +1319,7 @@ function apply(w,host){
         '<div class="checks"><label><input type="checkbox" id="sAgree"> I am 18 or older and agree to the <a href="'+LB+'terms.html" target="_blank" rel="noopener noreferrer">Terms</a> and <a href="'+LB+'privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a></label></div>':'')+
       '<div class="acts"><button type="button" class="btn" data-auth="ssubmit">'+(up?"Create account":"Log in")+'</button><button type="button" class="btn ghost" data-auth="smode">'+(up?"I already have an account":"Create an account")+'</button>'+(up?'':'<button type="button" class="btn ghost" data-auth="sforgot">Forgot password?</button>')+'</div>'+
       '<small>Your account is stored on UAply\'s server. Passwords are scrambled (hashed) and never stored as typed. Once you are signed in, each swipe right emails you a receipt.</small>'+
-      (SRV.google&&!iosShell()?'<p class="note" style="text-align:center;margin:0">or</p><div class="checks"><label><input type="checkbox" id="gAgree"> I am 18 or older and agree to the <a href="'+LB+'terms.html" target="_blank" rel="noopener noreferrer">Terms</a> and <a href="'+LB+'privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a> (needed the first time)</label></div><div class="acts"><button type="button" class="btn" data-auth="gsign" style="width:100%">Continue with Google</button></div><small>You sign in on Google\'s own page. UAply never sees your Google password, only your verified email.</small>':'')+'</div>';
+      (SRV.google&&!iosShell()?'<p class="note" style="text-align:center;margin:0">or</p><div class="checks"><label><input type="checkbox" id="gAgree"> I am 18 or older and agree to the <a href="'+LB+'terms.html" target="_blank" rel="noopener noreferrer">Terms</a> and <a href="'+LB+'privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a> (needed the first time)</label></div><div id="gBtn" style="min-height:44px"></div><small>Google handles the sign-in. UAply never sees your Google password, only your verified email.</small>':'')+'</div>';
   }
   function accountHTML(){
     var u=session(),h="";
@@ -1339,7 +1374,7 @@ function apply(w,host){
         b.disabled=false;
         if(!r.ok||!r.j.user){msg((r.j&&r.j.error)||"Something went wrong. Try again.");return}
         SRV.user=r.j.user;afterServerSignIn();renderAcct("account");
-        msg(sup?"Account created. You are signed in.":"You are logged in.");
+        msg(sup?"Account created. "+(SRV.canEmail?"We emailed you a 6-digit code: enter it below to verify your email.":(SRV.testInbox?"The 6-digit code is in the test inbox.":"")):"You are logged in.");
       });
       return;
     }
@@ -1356,6 +1391,25 @@ function apply(w,host){
         if(!r.ok){msg((r.j&&r.j.error)||"Could not delete the account. Try again.");return}
         SRV.user=null;AUI.delOpen=false;paintHeader();renderAcct("account");
         msg("Your account was deleted"+(r.j.applicationsRemoved?", along with "+r.j.applicationsRemoved+" application record"+(r.j.applicationsRemoved===1?"":"s")+" on the server":"")+".");
+      });
+      return;
+    }
+    if(a==="sverify"){
+      var vc=val("sCode");
+      if(!/^[0-9 ]{6,7}$/.test(vc)){msg("Enter the 6-digit code from your email.");return}
+      b.disabled=true;msg("Checking…");
+      apiPost("/api/auth/verify",{code:vc}).then(function(r){
+        b.disabled=false;
+        if(!r.ok){msg((r.j&&r.j.error)||"That code did not work.");return}
+        SRV.user.emailVerified=true;renderAcct("account");msg("Email verified. Confirmation emails are on.");
+      });
+      return;
+    }
+    if(a==="sresend"){
+      b.disabled=true;msg("Sending…");
+      apiPost("/api/auth/resend",{}).then(function(r){
+        b.disabled=false;
+        msg(r.ok?((r.j&&r.j.message)||"A new code is on its way."):((r.j&&r.j.error)||"Could not send a code."));
       });
       return;
     }
