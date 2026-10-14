@@ -116,6 +116,14 @@ module.exports = async ({ ev, sleep, nav, send, logs }) => {
   await sleep(3500);
   check("choices survive a reload", JSON.stringify(await decisions()) === JSON.stringify(dec), JSON.stringify(await decisions()));
   check("a passed or applied job does not come back after a reload", (await topKey()) !== k0);
+  // 9. signed in with no real email connected: the confirmation goes to the test inbox, and the message says where
+  await ev("fetch('/api/auth/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'sam.swipes@example.com',password:'correct horse 99',agree:true})}).then(r=>r.status)");
+  await nav("http://127.0.0.1:" + PORT + "/");
+  await sleep(3500);
+  await click("btnYes"); await sleep(3000);
+  const toastText = await ev("(" + F + ").body.innerText.split(" + NL + ").join(' ')");
+  check("signed in: the message says where the confirmation is", toastText.includes("Confirmation is in the test inbox: http://127.0.0.1:" + PORT + "/outbox"), toastText.slice(-170));
+  check("the test inbox page opens and lists the confirmation", /Sam Rivera|sam.swipes@example.com/.test(await ev("fetch('/outbox').then(r=>r.text())")));
   check("no script errors during any of it", logs.length === 0, logs.join(" / ").slice(0, 160));
   console.log(bad ? "\n" + bad + " check(s) failed" : "\nAll swipe checks passed");
 };
