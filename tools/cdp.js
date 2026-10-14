@@ -22,8 +22,11 @@ const CHROME = path.join(process.env.LOCALAPPDATA || "", "Google", "Chrome", "Ap
   let id = 0;
   const pending = {};
   const logs = [];
+  const listeners = {};
+  const on = (method, fn) => { listeners[method] = fn; };          // a test can react to browser events, for example to fail a request on purpose
   ws.onmessage = (m) => {
     const d = JSON.parse(m.data);
+    if (d.method && listeners[d.method]) { try { listeners[d.method](d.params); } catch (e) { logs.push("LISTENER " + e.message); } }
     if (d.id && pending[d.id]) { pending[d.id](d); delete pending[d.id]; }
     else if (d.method === "Runtime.exceptionThrown") {
       const x = d.params.exceptionDetails;
@@ -47,7 +50,7 @@ const CHROME = path.join(process.env.LOCALAPPDATA || "", "Google", "Chrome", "Ap
   };
   const nav = async (u) => { await send("Page.navigate", { url: u }); await sleep(2500); };
   const shot = async (f) => { const r = await send("Page.captureScreenshot", { format: "png" }); fs.writeFileSync(f, Buffer.from(r.result.data, "base64")); };
-  try { await require(path.resolve(process.argv[2]))({ ev, sleep, nav, shot, logs, send }); }
+  try { await require(path.resolve(process.argv[2]))({ ev, sleep, nav, shot, logs, send, on }); }
   catch (e) { console.log("TEST SCRIPT FAILED:", e.message); }
   console.log("CONSOLE ISSUES:", logs.length ? "\n" + logs.join("\n") : "none");
   ws.close(); proc.kill();

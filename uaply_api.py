@@ -122,6 +122,9 @@ def _load():
             pass
 
 
+hide_errors = False        # serve.py sets this on a hosted server: visitors then see a plain sentence, never a mail server's or an employer's raw error text
+
+
 def init(instance):
     """Each instance (sandbox, dev) keeps its own records in data/<instance>/."""
     global DATA
@@ -401,12 +404,14 @@ def _send_owner_copy(cfg, rec):
         return False
 
 
-def _send_receipt(cfg, to, subject, body, page=None):
+def _send_receipt(cfg, to, subject, body, page=None, reply_to=None):
     s = cfg["smtp"]
     msg = EmailMessage()
     msg["From"] = s["from_addr"]
     msg["To"] = to
     msg["Subject"] = subject
+    if reply_to and EMAIL_RE.match(reply_to):             # pressing Reply answers this address (only a plain, valid address is ever used)
+        msg["Reply-To"] = reply_to
     msg.set_content(body)
     if page:
         msg.add_alternative(page, subtype="html")
@@ -418,7 +423,7 @@ def _send_receipt(cfg, to, subject, body, page=None):
         srv.send_message(msg)
 
 
-def send_system_mail(user_id, to, subject, body, secret=False, stored_subject=None, redacted="(the link was emailed and is not kept here)"):
+def send_system_mail(user_id, to, subject, body, secret=False, stored_subject=None, redacted="(the link was emailed and is not kept here)", page=None):
     """Mail UAply itself sends to a person (password reset links, verification codes). Real email when SMTP is set up (whatever the
     delivery mode, since that setting is about recruiters), otherwise it lands in the simulated test inbox. `secret` keeps the secret
     out of the stored copy whenever a real email was attempted: the body is replaced by `redacted` and the subject by `stored_subject`,
@@ -428,10 +433,11 @@ def send_system_mail(user_id, to, subject, body, secret=False, stored_subject=No
     status = "delivered_test"
     if _smtp_ready(cfg):
         try:
-            _send_receipt(cfg, to, subject, body)
+            _send_receipt(cfg, to, subject, body, page)
             status = "sent"
-        except Exception:
+        except Exception as e:
             status = "failed"
+            sys.stderr.write("[uaply] sending mail failed: %s: %s\n" % (type(e).__name__, str(e)[:200]))      # the reason for the owner; the person only sees "could not send"
     keep_secret = secret and status != "delivered_test"
     try:
         auth_api.add_mail(user_id, to, (stored_subject or subject) if keep_secret else subject, redacted if keep_secret else body, status)
@@ -440,13 +446,53 @@ def send_system_mail(user_id, to, subject, body, secret=False, stored_subject=No
     return status
 
 
-VERIFY_MAIL = ("Your UAply verification code is:\n\n    %s\n\nEnter it in UAply to confirm this email address. It works for 10 minutes and for one account. "
-               "If you did not create a UAply account, ignore this email.\n\n--\nUAply")
+SUPPORT_PER_HOUR = 60            # at most this many help emails an hour reach the team; the rest are still saved on the Feedback page
+_support_times = []
+
+
+def support_address(cfg):
+    """Where help requests go: 'support_email' in the config, else the owner's own address. '' when neither is set."""
+    v = cfg.get("support_email")
+    if isinstance(v, str) and EMAIL_RE.match(v.strip()):
+        return v.strip()
+    return _owner_copy(cfg)
+
+
+def send_support_ticket(rec, user=None):
+    """Email a help request from the assistant to the team, with the person's email as the reply address so pressing Reply answers them.
+    Returns "emailed" (the team got it by email), "failed" (the mail server refused it) or "saved" (no real email is connected, or the hourly
+    limit was reached: the request is still on the Feedback page). A short acknowledgement goes to the person only when UAply has already
+    proven the address is theirs (a verified account), so nobody can use this to make UAply email a stranger."""
+    cfg = config()
+    to = support_address(cfg)
+    if not to or not _smtp_ready(cfg):
+        return "saved"
+    now = time.time()
+    with _lock:
+        _support_times[:] = [t for t in _support_times if now - t < 3600]
+        if len(_support_times) >= SUPPORT_PER_HOUR:
+            return "saved"
+        _support_times.append(now)
+    subject, body = emails.support_ticket(rec, user["email"] if user else "")
+    try:
+        _send_receipt(cfg, to, subject, body, reply_to=rec.get("email") or None)
+    except Exception as e:
+        sys.stderr.write("[uaply] sending the help request to the team failed: %s: %s\n" % (type(e).__name__, str(e)[:200]))
+        return "failed"
+    if user and user.get("emailVerified") and rec.get("email") and user["email"].lower() == rec["email"].lower():
+        try:
+            ack_subject, ack_body = emails.support_ack(rec)
+            _send_receipt(cfg, user["email"], ack_subject, ack_body, reply_to=to)
+        except Exception as e:
+            sys.stderr.write("[uaply] sending the acknowledgement failed: %s: %s\n" % (type(e).__name__, str(e)[:200]))
+    return "emailed"
 
 
 def send_verification_mail(user_id, to, digits):
-    """Email the 6-digit code that proves an email address is the person's own. The code is never kept in the stored copy once emailed."""
-    return send_system_mail(user_id, to, "%s is your UAply verification code" % digits, VERIFY_MAIL % digits, secret=True,
+    """Email the 6-digit code that proves an email address is the person's own (plain text and a branded HTML version). The code is never
+    kept in the stored copy once emailed."""
+    subject, text, page = emails.verification_email(digits)
+    return send_system_mail(user_id, to, subject, text, secret=True, page=page,
                             stored_subject="Your UAply verification code", redacted="(the code was emailed and is not kept here)")
 
 
@@ -498,7 +544,8 @@ def submit(p, user=None):
         cand["years"] = max(0, min(60, int(prof.get("years") or 0)))
     except (TypeError, ValueError):
         cand["years"] = 0
-    cand["skills"] = [_s(x, 40) for x in (prof.get("skills") or [])[:30] if isinstance(x, str)]
+    skills = prof.get("skills")                                    # a client can send anything here; only a list is used
+    cand["skills"] = [_s(x, 40) for x in (skills if isinstance(skills, list) else [])[:30] if isinstance(x, str)]
     cand["ext"] = _ext(prof.get("ext"))
     try:
         resume_meta, resume_bytes = _resume(p.get("resume"))
@@ -565,10 +612,14 @@ def submit(p, user=None):
             _append("applications.jsonl", rec)
     out = {"status": rec["status"], "id": rec["id"], "to": rec["to"], "mode": mode, "simulated": rec["simulated"], "copied": False}
     if rec.get("error"):
-        out["error"] = "The email could not be sent: " + rec["error"]
+        sys.stderr.write("[uaply] delivery of application %s failed: %s\n" % (rec["id"], rec["error"]))      # the real reason stays in the server's own log and applications.jsonl
+        out["error"] = ("The email could not be sent right now. Try again in a moment." if hide_errors
+                        else "The email could not be sent: " + rec["error"])
     if user and rec["status"] in ("delivered_test", "sent", "handoff"):
-        # a confirmation goes only to an address the person has proven is theirs (otherwise anyone could make UAply email a stranger)
-        out["receipt"] = _receipt(cfg, user, cand, job, note, rec) if user.get("emailVerified") else {"to": user["email"], "status": "unverified"}
+        # A real confirmation goes only to an address the person has proven is theirs (otherwise anyone could make UAply email a stranger).
+        # With no real email connected nothing leaves this server: the confirmation is only saved in the test inbox, so it is made for any account.
+        out["receipt"] = (_receipt(cfg, user, cand, job, note, rec) if user.get("emailVerified") or not _smtp_ready(cfg)
+                          else {"to": user["email"], "status": "unverified"})
     # the owner's copy: skipped when the person who swiped already got their own confirmation at that same address (one swipe, one email)
     already = out.get("receipt", {}).get("status") == "sent" and user and user["email"].lower() == _owner_copy(cfg).lower()
     if rec["status"] != "failed" and not already:

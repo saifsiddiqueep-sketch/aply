@@ -9,7 +9,7 @@ Redirect flow (the older "Continue with Google" link):
 
 Google's button flow (the page gets a signed token and posts it to UAply):
   GET  /certs                                         like googleapis.com/oauth2/v3/certs: the public key list
-  GET  /mock/idtoken?email=&sub=&verified=1           a correctly signed ID token {"credential": "..."}; add &bad=aud|iss|expired|tamper|none|hs256|kid|future
+  GET  /mock/idtoken?email=&sub=&verified=1           a correctly signed ID token {"credential": "..."}; add &bad=aud|iss|expired|tamper|none|hs256|kid|future, and &hd=example.com for a Workspace account
                                                       to get a token that must be refused
 
 Point UAply at it with this in uaply-config.json:
@@ -89,10 +89,12 @@ def sign(signing_input):
     return pow(int.from_bytes(block, "big"), D, N).to_bytes(k, "big")
 
 
-def id_token(email, sub, verified=True, bad=""):
+def id_token(email, sub, verified=True, bad="", hd=""):
     now = int(time.time())
     claims = {"iss": "https://accounts.google.com", "aud": CLIENT, "sub": sub, "email": email, "email_verified": verified,
               "name": "Test User", "iat": now, "exp": now + 3600}
+    if hd:
+        claims["hd"] = hd                                  # a Google Workspace account: Google is the authority on this address
     header = {"alg": "RS256", "kid": "mock-key-1", "typ": "JWT"}
     if bad == "aud":
         claims["aud"] = "someone-elses-app.apps.googleusercontent.com"
@@ -142,7 +144,7 @@ class H(http.server.BaseHTTPRequestHandler):
             key = {"kty": "RSA", "kid": "mock-key-1", "use": "sig", "alg": "RS256", "n": b64(N.to_bytes((N.bit_length() + 7) // 8, "big")), "e": b64(E.to_bytes(3, "big"))}
             return self._json(200, {"keys": [key]}, [("Cache-Control", "public, max-age=3600")])
         if u.path == "/mock/idtoken":
-            return self._json(200, {"credential": id_token(q.get("email", NEXT["email"]), q.get("sub", NEXT["sub"]), q.get("verified", "1") == "1", q.get("bad", ""))})
+            return self._json(200, {"credential": id_token(q.get("email", NEXT["email"]), q.get("sub", NEXT["sub"]), q.get("verified", "1") == "1", q.get("bad", ""), q.get("hd", ""))})
         if u.path == "/auth":
             if q.get("client_id") != CLIENT or q.get("code_challenge_method") != "S256" or not q.get("redirect_uri"):
                 return self._json(400, {"error": "bad request"})

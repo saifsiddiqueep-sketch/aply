@@ -1,4 +1,5 @@
 # Keep the same line endings on every computer (the workflow files and scripts need LF).
 * text=auto eol=lf
+*.bat text eol=crlf
 
 # UAply: LF line endings keep the workflow files and scripts working on every computer.

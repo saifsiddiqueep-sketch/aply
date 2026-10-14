@@ -4,6 +4,39 @@ How versions move: work happens in `sandbox`, is tested there, and goes to `dev`
 build: it is what the hosted site and the phone apps run. Each version is tagged on GitHub (Releases). `main` is the original
 production page and only changes when the owner decides.
 
+## 1.0.0-rc.7 (release candidate)
+
+Sign-in and email that behave like the real thing, and a help chat whose requests go somewhere. Found by using the app the way a new user does.
+
+- **No more accidental test accounts.** On the sandbox Account screen, below the real sign-up form, a "Preview of other ways to sign in" block had a
+  simulated "Continue with Google" button that signed the browser into a fake account. It is gone whenever a real server is running; the simulated
+  sign-ins remain only on the hosted preview, which has no server.
+- **"Continue with Google" is always visible on your own computer.** When no Google client ID is set yet, the button opens the setup page instead of
+  vanishing (visitors of a live site never see it). The setup page is now a guide: clickable steps to Google's own pages, the exact addresses to give
+  Google with Copy buttons (Google needs both `http://localhost:8767` and `http://localhost`), and an explanation of why a test inbox is still showing.
+- **Google sign-in follows Google's own guidance on email trust.** Google is the authority on an address only for Gmail and Workspace accounts. Any
+  other "verified" address can still sign in by its Google account number, but it can no longer be merged into an existing UAply account with that
+  address (that was a takeover risk) and a new account made with it must pass the emailed code check.
+- **The verification code email is now a proper email** (a big readable code, how long it works, "ignore this if it was not you"), and the screen says
+  what really happened: emailed to the address, could not be sent, or (this computer, no Gmail connected) in the test inbox. The Connect Gmail link
+  sits right there.
+- **Your swipe now produces a confirmation even for an unverified account when no real email is connected** (it is saved in the test inbox).
+  Before, an unverified account got nothing at all, and nothing said why. With a real mail login the verified-only rule still applies.
+- **Help requests are emailed to the team.** "Talk to a person" and problem reports from the assistant are emailed to `support_email` (or the owner
+  address) with the person's own address as the Reply-To, so answering is pressing Reply. A short acknowledgement goes to the person only if that
+  address is a verified account address (nobody can make UAply email a stranger). The chat now says what happened: "Sent to the UAply team",
+  "saved, but the email did not go through", or on your own computer "saved, not emailed" with buttons for the Feedback inbox and Connect Gmail. The
+  Feedback page marks each request emailed or not. At most 60 help emails an hour reach the inbox; the rest are still saved.
+- **Visitors never see raw error text on a hosted server.** Server errors, job-feed network errors and mail-server errors now show a plain sentence;
+  the real reason goes to the server log. Your own computer still shows details where useful.
+- **Crashes fixed** found by a new fuzz test (4,525 odd requests): an application whose `skills`, or feedback whose `articles`, arrived as a number,
+  a boolean or a dictionary caused a server error.
+- **`start-uaply.bat`**: double-click to start prod, sandbox and dev after the computer restarts (a restart stops them, and the app then says
+  "Could not reach the server").
+- **Privacy Policy** now covers help requests being emailed to the support inbox.
+- New tests: `test-support.py` (31), `fuzz-api.py`, `ui-errors.js` (the app when the server fails), `ui-inject.js` (hostile text in every form,
+  and the owner's inbox), `ui-effects.js`, `ui-checklist.js`; setup 27, Google 26 and 33, verification 36, delivery 43, jobs 48.
+
 ## 1.0.0-rc.6 (release candidate)
 
 A sweep of the whole site and app (every file, every screen at iPhone size, the server with bad input), and what it found.

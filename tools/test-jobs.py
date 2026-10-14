@@ -69,6 +69,22 @@ t("an on-site place is left exactly as listed", j._place("Remote Control Way, Au
 t("an empty place reads Not listed", j._place("", "onsite"), "Not listed")
 n = j._normalize(raw("Backend Engineer", "Remote - USA", True), "greenhouse", "Acme")
 t("a remote feed job no longer repeats Remote in its place", (n["loc"], n["mode"]), ("USA", "remote"))
+
+# the public job list must not show a visitor a raw network error from a feed (it names hosts and addresses); the owner's own computer still sees it
+real_load, real_feeds, real_sources = j._load_source, j.feeds_allowed, j.SOURCES
+j.SOURCES = [("greenhouse", "acme", "Acme")]
+j.feeds_allowed = lambda: {"greenhouse"}
+j._load_source = lambda src: ([], "error: <urlopen error [Errno 11001] getaddrinfo failed for boards.internal.example>")
+try:
+    j.hide_errors = False
+    owner_view = j.get_jobs()["sources"]["Acme"]
+    j.hide_errors = True
+    public_view = j.get_jobs()["sources"]["Acme"]
+finally:
+    j.hide_errors = False
+    j._load_source, j.feeds_allowed, j.SOURCES = real_load, real_feeds, real_sources
+t("on the owner's computer a failing feed shows its reason", "getaddrinfo" in owner_view, True)
+t("on a hosted server the public list says only 'unavailable right now'", public_view, "unavailable right now")
 t("the documentation example employer is never served as jobs", [e for e in j.partner_jobs() if e["co"] == "Example Partner Co"], [])
 
 # the job description shown in emails: the role, not the company's introduction, and always ending on a whole sentence

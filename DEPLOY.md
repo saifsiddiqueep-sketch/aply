@@ -34,8 +34,11 @@ plans, and it starts every new profile blank. `sandbox` is the test bench and ke
 3. When Render asks for the secret values, enter:
    - `ANTHROPIC_API_KEY`: your key from console.anthropic.com (turns on AI answers in the assistant).
    - `OWNER_PASSWORD`: a long password of your choice for `/outbox` and `/feedback`.
-   - `SUPPORT_EMAIL`: the address for "Talk to a person".
-   - `UAPLY_CONFIG_JSON`: optional; leave empty to stay in test mode (nothing is emailed to employers).
+   - `SUPPORT_EMAIL`: the address for "Talk to a person", for example `uaplytechnologies@gmail.com`. Every help request and problem report from the
+     assistant is emailed there with the person's own email as the reply address, so you answer by pressing Reply. It needs the email login in
+     `UAPLY_CONFIG_JSON` (the `smtp` part, see below); without it requests are only saved on the owner's Feedback page and the chat says so.
+   - `UAPLY_CONFIG_JSON`: the email login and Google client ID as one line of JSON (see the sections below). Leave it empty to stay in test mode:
+     nothing is emailed to employers, sign-up codes and receipts only appear in the test inbox.
 4. Your sites: `https://uaply-dev.onrender.com` and `https://uaply-sandbox.onrender.com` (Render shows the exact names).
 
 Changing the API key later (for example to a business key) is only an edit of `ANTHROPIC_API_KEY` in Render's

@@ -23,6 +23,9 @@ python serve.py 8766 sandbox --api
 python serve.py 8767 dev --api
 ```
 
+On Windows, double-click `start-uaply.bat` to start all three. Do this after every restart of the computer: a restart stops the servers, and
+the app then says "Could not reach the server".
+
 `--api` turns on the back end: real job postings from public employer feeds (`jobs_api.py`) and application delivery
 (`uaply_api.py`). By default applications go to a simulated inbox at `/outbox` and nothing leaves your computer.
 

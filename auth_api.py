@@ -265,11 +265,15 @@ def counts():
                 "mail": c.execute("SELECT COUNT(*) FROM user_mail").fetchone()[0]}
 
 
-def oauth_login(provider, subject, email, agree=False):
+def oauth_login(provider, subject, email, agree=False, trusted=True):
     """Sign in (or sign up) with an identity a provider has already proven. Returns (error_code_or_None, user_or_None, token).
 
-    Known identity: sign in. Verified email that already has an account: link the identity to it and sign in. Otherwise
-    create an account with no password (has_password=0); that needs `agree` (18 or older, Terms and Privacy Policy)."""
+    Known identity: sign in. Trusted email that already has an account: link the identity to it and sign in. Otherwise create an
+    account with no password (has_password=0); that needs `agree` (18 or older, Terms and Privacy Policy).
+
+    `trusted` says the provider is the authority on this email address (for Google: a Gmail address or a Workspace account). An
+    untrusted email can still sign in by the provider's account number, but it never proves ownership: it cannot be merged into an
+    existing account ("email_in_use") and a new account made with it starts unverified, so the emailed code check applies."""
     email = _clean_email(email)
     if not email or not isinstance(subject, str) or not subject:
         return "failed", None, None
@@ -280,15 +284,18 @@ def oauth_login(provider, subject, email, agree=False):
             now = int(time.time())
             if not row:
                 row = c.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+                if row and not trusted:
+                    return "email_in_use", None, None
                 if not row:
                     if agree is not True:
                         return "agree", None, None
-                    cur = c.execute("INSERT INTO users(email, salt, hash, created_at, last_login, terms_at, has_password, email_verified) VALUES(?,?,?,?,?,?,0,1)",
-                                    (email, secrets.token_bytes(16), secrets.token_bytes(32), now, now, now))
+                    cur = c.execute("INSERT INTO users(email, salt, hash, created_at, last_login, terms_at, has_password, email_verified) VALUES(?,?,?,?,?,?,0,?)",
+                                    (email, secrets.token_bytes(16), secrets.token_bytes(32), now, now, now, 1 if trusted else 0))
                     row = c.execute("SELECT * FROM users WHERE id=?", (cur.lastrowid,)).fetchone()
                 c.execute("INSERT OR IGNORE INTO identities(provider, subject, user_id, email, created_at) VALUES(?,?,?,?,?)",
                           (provider, subject, row["id"], email, now))
-                c.execute("UPDATE users SET email_verified=1 WHERE id=?", (row["id"],))      # the provider vouched that this person owns the email
+                if trusted:
+                    c.execute("UPDATE users SET email_verified=1 WHERE id=?", (row["id"],))      # the provider is the authority on this address: it vouched that this person owns it
                 row = c.execute("SELECT * FROM users WHERE id=?", (row["id"],)).fetchone()
             c.execute("UPDATE users SET last_login=? WHERE id=?", (now, row["id"]))
             token = _new_session(c, row["id"])

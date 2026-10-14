@@ -53,13 +53,25 @@ s, prov = call(a, "/api/auth/providers")
 t("the page is told Google's button is available and which client ID to use", (prov["google"], prov["googleClientId"]), (True, "test.apps.googleusercontent.com"))
 
 # a good token
-s, out = call(a, "/api/auth/google/token", {"credential": token(email="new.google@example.com", sub="9001"), "agree": True})
-t("a valid token signs a new person in", (s, out["user"]["email"]), (200, "new.google@example.com"))
-t("that account has no password and its email counts as verified", (out["user"]["hasPassword"], out["user"]["emailVerified"]), (False, True))
-t("the session cookie works afterwards", (me(a) or {}).get("email"), "new.google@example.com")
+s, out = call(a, "/api/auth/google/token", {"credential": token(email="new.google@gmail.com", sub="9001"), "agree": True})
+t("a valid token signs a new person in", (s, out["user"]["email"]), (200, "new.google@gmail.com"))
+t("that account has no password and its Gmail address counts as verified", (out["user"]["hasPassword"], out["user"]["emailVerified"]), (False, True))
+t("the session cookie works afterwards", (me(a) or {}).get("email"), "new.google@gmail.com")
 call(a, "/api/auth/logout", {})
-t("the same Google account signs in again without agreeing twice", call(a, "/api/auth/google/token", {"credential": token(email="new.google@example.com", sub="9001")})[0], 200)
+t("the same Google account signs in again without agreeing twice", call(a, "/api/auth/google/token", {"credential": token(email="new.google@gmail.com", sub="9001")})[0], 200)
 call(a, "/api/auth/logout", {})
+
+# Google is the authority on an email only for Gmail and Workspace accounts (the hd claim); any other "verified" address is not trusted to prove ownership
+w = client()
+s, out = call(w, "/api/auth/google/token", {"credential": token(email="staff@corp.example", sub="9030", hd="corp.example"), "agree": True})
+t("a Google Workspace account (hd) counts as verified", (s, out["user"]["emailVerified"]), (200, True))
+call(w, "/api/auth/logout", {})
+u = client()
+s, out = call(u, "/api/auth/google/token", {"credential": token(email="fresh@example.com", sub="9020"), "agree": True})
+t("a Google account with some other email signs in but is NOT treated as having proven that email", (s, out["user"]["emailVerified"]), (200, False))
+call(u, "/api/auth/logout", {})
+t("...and signs in again by its Google account number", call(u, "/api/auth/google/token", {"credential": token(email="fresh@example.com", sub="9020")})[0], 200)
+call(u, "/api/auth/logout", {})
 
 # consent for new accounts
 b = client()
@@ -79,18 +91,33 @@ t("a Google email that Google says is not verified is refused", (s, out["code"])
 
 # linking to an existing password account proves ownership of that email
 pw = client()
-call(pw, "/api/auth/signup", {"email": "linked@example.com", "password": "correct horse 99", "agree": True})
+call(pw, "/api/auth/signup", {"email": "linked@gmail.com", "password": "correct horse 99", "agree": True})
 t("a new password account starts unverified", me(pw)["emailVerified"], False)
 call(pw, "/api/auth/logout", {})
 g = client()
-s, out = call(g, "/api/auth/google/token", {"credential": token(email="linked@example.com", sub="9004")})
-t("Google with the same verified email signs into that same account", (s, out["user"]["email"], out["user"]["hasPassword"]), (200, "linked@example.com", True))
+s, out = call(g, "/api/auth/google/token", {"credential": token(email="linked@gmail.com", sub="9004")})
+t("Google with the same Gmail address signs into that same account", (s, out["user"]["email"], out["user"]["hasPassword"]), (200, "linked@gmail.com", True))
 t("...and that proves the email is theirs", me(g)["emailVerified"], True)
 
 # the Google account id, not the email, identifies the person
 call(g, "/api/auth/logout", {})
 s, out = call(g, "/api/auth/google/token", {"credential": token(email="changed.address@example.com", sub="9004")})
-t("the same Google id with a changed email is still the same account", out["user"]["email"], "linked@example.com")
+t("the same Google id with a changed email is still the same account", out["user"]["email"], "linked@gmail.com")
+
+# a Workspace account links to an existing account on its own domain...
+call(pw, "/api/auth/signup", {"email": "boss@corp.example", "password": "correct horse 99", "agree": True})
+call(pw, "/api/auth/logout", {})
+s, out = call(client(), "/api/auth/google/token", {"credential": token(email="boss@corp.example", sub="9031", hd="corp.example")})
+t("a Workspace account links to the existing account with its address", (s, out["user"]["email"], out["user"]["hasPassword"]), (200, "boss@corp.example", True))
+# ...but a plain "verified" address on any other domain can NOT take over an existing account (the address may have changed hands)
+call(pw, "/api/auth/signup", {"email": "victim@example.com", "password": "correct horse 99", "agree": True})
+call(pw, "/api/auth/logout", {})
+thief = client()
+s, out = call(thief, "/api/auth/google/token", {"credential": token(email="victim@example.com", sub="9040"), "agree": True})
+t("another Google account claiming that address cannot take over the existing account", (s, out["code"], me(thief)), (400, "email_in_use", None))
+login = client()
+s, out = call(login, "/api/auth/login", {"email": "victim@example.com", "password": "correct horse 99"})
+t("the real owner still logs in, and the account is still unverified (nothing was linked)", (s, out["user"]["emailVerified"]), (200, False))
 
 # Google's button sets its own cookie (g_state) with quotes and commas in it; that must never sign anyone out
 sess = client()

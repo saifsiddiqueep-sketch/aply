@@ -141,7 +141,18 @@ def finish(query, cookie_state, host, proto):
         return "failed", None, False
     if c.get("email_verified") not in (True, "true"):
         return "unverified", None, False
-    return None, {"provider": "google", "subject": str(c["sub"])[:100], "email": c["email"].strip().lower()}, rec["agree"]
+    return None, _identity(c), rec["agree"]
+
+
+def _identity(c):
+    """What a verified Google token tells us. Google is the authority on an email address only for Gmail addresses and Google Workspace
+    accounts (the hd claim). For any other address "verified" can be out of date (the address may have changed hands), so such an email
+    is not trusted: it can sign someone in by their Google account number, but it cannot prove ownership of the address or be merged
+    into an existing UAply account with that address."""
+    email = c["email"].strip().lower()
+    hd = c.get("hd") if isinstance(c.get("hd"), str) else ""
+    return {"provider": "google", "subject": str(c["sub"])[:100], "email": email,
+            "trusted": email.endswith(("@gmail.com", "@googlemail.com")) or bool(hd)}
 
 
 _tries = {}        # ip -> timestamps of recent token checks
@@ -169,4 +180,4 @@ def verify_credential(credential, ip):
         return "failed", None
     if c.get("email_verified") not in (True, "true"):
         return "unverified", None
-    return None, {"provider": "google", "subject": c["sub"][:100], "email": c["email"].strip().lower()}
+    return None, _identity(c)

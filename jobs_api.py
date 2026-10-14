@@ -29,6 +29,7 @@ import html
 import json
 import os
 import re
+import sys
 import threading
 import time
 import urllib.parse
@@ -138,6 +139,7 @@ NOT_CONTACT_RE = re.compile(r"scam|fraud|phish|abuse|security|privacy|legal|comp
 _cache = {}
 _lock = threading.Lock()
 _disk = {"loaded": False, "dirty": False}
+hide_errors = False                # serve.py sets this on a hosted server: the public job list then says "unavailable right now" instead of a raw network error
 DISK_MAX_AGE = 24 * 3600          # never trust a saved copy older than a day
 CACHE_VERSION = 5                  # raise this whenever the rules for keeping or classifying postings change: older saved copies are then ignored
 
@@ -458,6 +460,7 @@ def _fetch_source(src):
         c = _cache.get(src)
         jobs = c["jobs"] if c else []
         status = "error: %s" % str(e)[:80]
+        sys.stderr.write("[uaply] job feed %s failed: %s\n" % ("/".join(src), str(e)[:200]))      # the reason is kept in the server's own log
         with _lock:
             if c:
                 c["at"] = time.time() - ttl + 120   # retry in two minutes
@@ -533,7 +536,8 @@ def partner_jobs():
         local_ok = os.environ.get("UAPLY_ALLOW_LOCAL_WEBHOOK") == "1" and re.match(r"^http://(127\.0\.0\.1|localhost)[:/]", hook_url)
         hook = (hook_url, _clean(e.get("webhook_secret"), 200)) if (hook_url.startswith("https://") or local_ok) and " " not in hook_url else None
         for j in e.get("jobs", []):
-            role, skills = _clean(j.get("role"), 120), [_clean(s, 40) for s in (j.get("skills") or [])[:6] if _clean(s, 40)]
+            raw_skills = j.get("skills")
+            role, skills = _clean(j.get("role"), 120), [_clean(s, 40) for s in (raw_skills if isinstance(raw_skills, list) else [])[:6] if _clean(s, 40)]
             if not role or not skills:
                 continue
             url = _clean(j.get("url") or e.get("url"), 400)
@@ -590,7 +594,7 @@ def get_jobs():
         jobs.append(pj)
     summary["Partner employers"] = "%d jobs" % len(jobs)
     for src, (js, status) in zip(sources, results):
-        summary[src[2] + ("/" + src[1] if src[0] in MULTI else "")] = status
+        summary[src[2] + ("/" + src[1] if src[0] in MULTI else "")] = "unavailable right now" if hide_errors and status.startswith("error") else status
         for j in js:
             if j["id"] not in seen:
                 seen.add(j["id"])
