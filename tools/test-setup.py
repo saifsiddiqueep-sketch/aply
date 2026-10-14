@@ -108,6 +108,23 @@ uaply_api.config = lambda: {"smtp": {"host": "smtp.gmail.com", "from_addr": "a@g
 s, out = setup_api.test_mail()
 t("the test button says the App Password is missing", (out["ok"], "no App Password" in out["message"]), (False, True))
 
+# the Connect an employer's hiring system box
+import jobs_api  # noqa: E402
+os.environ["UAPLY_DATA_DIR"] = TMP
+s, out = setup_api.save_ats({"kind": "workday", "board": "acme", "api_key": "abcdefgh1234"})
+t("an unknown hiring system is refused", (s, out["ok"]), (400, False))
+s, out = setup_api.save_ats({"kind": "greenhouse", "board": "ac/me", "api_key": "abcdefgh1234"})
+t("a board name with a slash is refused", s, 400)
+s, out = setup_api.save_ats({"kind": "Greenhouse", "board": "acme", "api_key": " gh-test-key-1234 "})
+t("a good connection is saved (kind lower-cased, key trimmed)", (s, out["saved"], jobs_api.ats_connections().get(("greenhouse", "acme"))), (200, True, "gh-test-key-1234"))
+t("the key is never in the answer or on the setup page", ("gh-test-key" in json.dumps(out), "gh-test-key" in setup_api.page("localhost:8767", "http").decode()), (False, False))
+t("the page lists the connection by name only", "Greenhouse / acme" in setup_api.page("localhost:8767", "http").decode(), True)
+setup_api.save_ats({"kind": "lever", "board": "acme", "api_key": "lever-test-key-1"})
+setup_api.save_ats({"kind": "greenhouse", "board": "acme", "api_key": "gh-test-key-5678"})
+t("saving the same board again replaces its key, other connections stay", (jobs_api.ats_connections().get(("greenhouse", "acme")), sorted(jobs_api.ats_connections())), ("gh-test-key-5678", [("greenhouse", "acme"), ("lever", "acme")]))
+setup_api.remove_ats({"kind": "lever", "board": "acme"})
+t("a connection can be removed", sorted(jobs_api.ats_connections()), [("greenhouse", "acme")])
+
 # the setup page is the owner's guide to switching test mode off: clickable steps, the exact addresses to give Google, and anchors the sign-in screen links to
 page = setup_api.page("localhost:8767", "http").decode("utf-8")
 t("the page tells Google both local addresses (Google needs the bare localhost one too)", all(("<code>%s</code>" % o) in page for o in ("http://localhost:8767", "http://localhost")), True)

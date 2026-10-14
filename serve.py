@@ -221,7 +221,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         p = self.path.split("?", 1)[0]
         if not api or p not in ("/api/apply", "/api/decision", "/api/auth/signup", "/api/auth/login", "/api/auth/logout",
                                 "/api/auth/delete", "/api/auth/forgot", "/api/auth/reset", "/api/auth/change-password",
-                                "/api/setup/test-mail", "/api/setup/save-mail", "/api/setup/save-google", "/api/auth/google/token", "/api/auth/verify", "/api/auth/resend", "/api/chat", "/api/feedback"):
+                                "/api/setup/test-mail", "/api/setup/save-mail", "/api/setup/save-google", "/api/setup/save-ats", "/api/setup/remove-ats", "/api/auth/google/token", "/api/auth/verify", "/api/auth/resend", "/api/chat", "/api/feedback"):
             return self._send(404, {"error": "not found"})
         # Only accept requests made by this site's own pages (blocks cross-site forms and scripts).
         origin = self.headers.get("Origin")
@@ -259,6 +259,13 @@ class H(http.server.SimpleHTTPRequestHandler):
                 if PUBLIC:
                     return self._send(403, {"ok": False, "message": "On a hosted server, add the Google client ID in the host's dashboard (UAPLY_CONFIG_JSON), not here."})
                 code, out = setup_api.save_google(payload)
+                return self._send(code, out)
+            if p in ("/api/setup/save-ats", "/api/setup/remove-ats"):
+                if not self._owner_ok():
+                    return self._send(403, {"error": "Owner pages are off or need the owner password."})
+                if PUBLIC:                                      # a host keeps keys in its dashboard (UAPLY_ATS_JSON), not in a file a page can write
+                    return self._send(403, {"ok": False, "message": "On a hosted server, add employers' keys in the host's dashboard (UAPLY_ATS_JSON), not here."})
+                code, out = (setup_api.save_ats if p.endswith("save-ats") else setup_api.remove_ats)(payload)
                 return self._send(code, out)
             if p == "/api/setup/save-mail":
                 if not self._owner_ok():

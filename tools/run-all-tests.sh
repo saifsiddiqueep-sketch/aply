@@ -51,6 +51,8 @@ run "Connect Gmail form" python tools/test-setup.py
 step "Swipe-right emails (content, test label, safety, real send)"
 run "receipt and owner copy emails" python tools/test-emails.py
 run "help requests from the assistant reach the support inbox" python tools/test-support.py
+run "applications go straight into employers' hiring systems (Greenhouse, Lever)" python tools/test-ats.py
+run "swipe right to apply instantly, end to end" python tools/test-ats-flow.py
 
 step "Accounts, applying, reset and setup (back end)"
 run "sandbox reset/setup/accounts" python tools/test-reset.py 18766

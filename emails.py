@@ -69,7 +69,7 @@ def _headline(status, job, test):
                 "could not send it for you. Use the button below; your details are listed further down, ready to copy." % (role, co, co))
     if status == "sent":
         return ("Your application was sent to %s" % co,
-                "You swiped right on %s at %s, and UAply emailed your application to the employer." % (role, co))
+                "You swiped right on %s at %s, and UAply sent your application to the employer." % (role, co))
     return ("You applied to %s at %s" % (role, co),
             "You swiped right on %s at %s. This is a test: UAply recorded the application in its test inbox and sent nothing to %s." % (role, co, co))
 
@@ -227,7 +227,7 @@ def owner_copy(ctx):
     """The owner's copy of an application. ctx keys: status, cand, job, at, match, to, rows, note, base_url. Returns (subject, text, html)."""
     status, job, cand = ctx["status"], ctx["job"], ctx["cand"]
     where = {"delivered_test": "the simulated test inbox (nothing was sent to %s)" % job.get("co", "the employer"),
-             "sent": "%s, by email" % (ctx.get("to") or "the employer"),
+             "sent": ("%s's own hiring system" % job.get("co", "the employer")) if any(str(c).startswith("hiring system") for c in ctx.get("channels") or []) and not ctx.get("to") else "%s, by email" % (ctx.get("to") or "the employer"),
              "handoff": "no one: %s takes applications on its own site, so the applicant was pointed there" % job.get("co", "the employer")}.get(status, status)
     subject = "[UAply copy] %s at %s: %s" % (job.get("role", ""), job.get("co", ""), {"delivered_test": "test application", "sent": "sent",
                                                                                       "handoff": "applicant sent to the employer's site"}.get(status, status))

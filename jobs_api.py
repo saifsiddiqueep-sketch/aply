@@ -36,6 +36,8 @@ import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
+import ats_api
+
 ROOT = os.path.dirname(os.path.abspath(__file__))
 UA = "UAplyDev/0.1 (local prototype)"
 DEFAULT_TTL = 30 * 60
@@ -141,7 +143,7 @@ _lock = threading.Lock()
 _disk = {"loaded": False, "dirty": False}
 hide_errors = False                # serve.py sets this on a hosted server: the public job list then says "unavailable right now" instead of a raw network error
 DISK_MAX_AGE = 24 * 3600          # never trust a saved copy older than a day
-CACHE_VERSION = 5                  # raise this whenever the rules for keeping or classifying postings change: older saved copies are then ignored
+CACHE_VERSION = 6                  # raise this whenever the rules for keeping or classifying postings change: older saved copies are then ignored
 
 
 def _cache_file():
@@ -344,7 +346,7 @@ def _fetch_raw(kind, token, name):
     return out
 
 
-def _normalize(raw, kind, name):
+def _normalize(raw, kind, name, board=None):
     title, loc, text = raw["title"], raw["loc"], raw["text"]
     remote = raw["remote"] if raw["remote"] is not None else bool(re.search(r"\bremote\b", loc, re.I))
     if not _us_ok(loc, remote):
@@ -378,10 +380,14 @@ def _normalize(raw, kind, name):
     desc = _role_summary(text)                                                    # what the emails show about the job
     jid = 100000 + int(hashlib.sha1(("%s:%s" % (kind, raw["id"])).encode()).hexdigest()[:6], 16)
     src = name if kind in ("remotive", "jobicy", "muse") else "%s's careers page" % raw["company"]
+    # Where this posting lives in the employer's own hiring system. It is only an address (not a credential): it is used when, and only when, the
+    # employer has connected with their own key (see ats_connections); otherwise it is never used and apply stays "link".
+    pid = str(raw["id"])
+    ats = {"kind": kind, "board": board, "id": pid} if (kind in ats_api.KINDS and board and ats_api.TOKEN_RE.match(board) and ats_api.ID_RE.match(pid)) else None
     # contact is deliberately empty and apply is "link": a third-party feed never gets an application emailed to anyone
     return dict(id=jid, co=raw["company"], role=title, loc=_place(loc, mode), mode=mode,
                 sal=raw.get("sal") or _salary(raw["salary_text"], text), yrs=yrs, edu=edu, skills=skills, blurb=blurb, desc=desc,
-                type=typ, url=raw["url"], source=src, contact="", apply="link", live=True,
+                type=typ, url=raw["url"], source=src, contact="", apply="link", live=True, ats=ats,
                 posted=raw.get("posted", 0), perks=_perks(text), comm=bool(COMM_RE.search(text)))
 
 
@@ -450,7 +456,7 @@ def _fetch_source(src):
     try:
         student, other = [], []
         for raw in _fetch_raw(kind, token, name):
-            j = _normalize(raw, kind, name)
+            j = _normalize(raw, kind, name, token)
             if j:
                 (student if j["type"] in ("internship", "coop", "parttime") else other).append(j)
         # keep the student-type roles first (a board can list hundreds of senior roles ahead of its internships)
@@ -499,10 +505,53 @@ def feeds_allowed():
 # ---- partner employers: postings an employer gave us and who agreed to receive applications ----
 _partners = {"path": None, "mtime": None, "jobs": []}
 _hooks = {}          # job id -> (webhook url, secret). Kept apart from the job dicts: those go to browsers, the secret must not
+_ats_jobs = {}       # partner job id -> {kind, board, id, key}: the employer's own hiring system. Same rule: the key never goes to a browser
+_ats_conn = {"stamp": None, "map": {}}
 
 
 def _clean(v, n):
     return re.sub(r"\s+", " ", v).strip()[:n] if isinstance(v, str) else ""
+
+
+def partners_file(for_writing=False):
+    """Where the employer list is kept: on a host on the persistent disk (UAPLY_DATA_DIR), else next to the code. With for_writing, the path to create."""
+    places = [os.path.join(os.environ["UAPLY_DATA_DIR"], "uaply-partners.json")] if os.environ.get("UAPLY_DATA_DIR") else []
+    places += [os.path.join(ROOT, "uaply-partners.json")]
+    found = next((p for p in places if os.path.exists(p)), None)
+    return found or (places[-1] if for_writing else None)
+
+
+def ats_connections():
+    """{(kind, board): api_key} for employers who connected their own hiring system (Greenhouse or Lever) with a key they created. Read from the
+    UAPLY_ATS_JSON setting (a host's dashboard) and from 'ats_connections' in the employer list. Anything malformed is skipped."""
+    env, path = os.environ.get("UAPLY_ATS_JSON") or "", partners_file()
+    try:
+        stamp = (env, path, os.path.getmtime(path) if path else None)
+    except OSError:
+        stamp = (env, path, None)
+    if _ats_conn["stamp"] == stamp:
+        return _ats_conn["map"]
+    lists = []
+    if env:
+        try:
+            lists.append(json.loads(env))
+        except ValueError:
+            pass
+    if path:
+        try:
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                lists.append(data.get("ats_connections"))
+        except Exception:
+            pass
+    out = {}
+    for lst in lists:
+        for c in (lst if isinstance(lst, list) else []):
+            if isinstance(c, dict) and ats_api.valid_connection(c.get("kind"), c.get("board"), c.get("api_key")):
+                out[(c["kind"], c["board"])] = c["api_key"]
+    _ats_conn.update(stamp=stamp, map=out)
+    return out
 
 
 def partner_jobs():
@@ -510,9 +559,7 @@ def partner_jobs():
     receives applications directly; without one it is link-out only. partners.example.json is documentation only and is
     never served as jobs."""
     # on a host, keep the real list on the persistent disk (UAPLY_DATA_DIR) so it is never in the repository
-    places = [os.path.join(os.environ["UAPLY_DATA_DIR"], "uaply-partners.json")] if os.environ.get("UAPLY_DATA_DIR") else []
-    places += [os.path.join(ROOT, "uaply-partners.json")]
-    path = next((p for p in places if os.path.exists(p)), None)
+    path = partners_file()
     if not path:
         return []
     try:
@@ -524,11 +571,14 @@ def partner_jobs():
     except Exception:
         return _partners["jobs"]
     out = []
-    new_hooks = {}
+    new_hooks, new_ats = {}, {}
     for e in data.get("employers", []) if isinstance(data, dict) else []:
         name, consent = _clean(e.get("name"), 100), _clean(e.get("consent"), 300)
         if not name or not consent or consent.lower().startswith("placeholder"):
             continue                                   # no recorded consent (or the example text still in place), no listing
+        # the employer's own hiring system (Greenhouse or Lever) and the key they created for it: applications to their jobs go straight in
+        a = e.get("ats") if isinstance(e.get("ats"), dict) else {}
+        ats_cfg = a if ats_api.valid_connection(a.get("kind"), a.get("board"), a.get("api_key")) else None
         contact = _clean(e.get("contact"), 120)
         contact = contact if re.match(r"^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$", contact) else ""
         # Indeed-style delivery: an HTTPS address the employer registered; each application is POSTed there as signed JSON
@@ -549,6 +599,10 @@ def partner_jobs():
             jid = 200000 + int(hashlib.sha1(("partner:%s:%s" % (name, role)).encode()).hexdigest()[:6], 16)
             if hook:
                 new_hooks[jid] = hook
+            ats_id = _clean(j.get("ats_job_id"), 80)
+            ats = {"kind": ats_cfg["kind"], "board": ats_cfg["board"], "id": ats_id, "key": ats_cfg["api_key"]} if (ats_cfg and ats_api.ID_RE.match(ats_id)) else None
+            if ats:
+                new_ats[jid] = ats
             out.append(dict(
                 id=jid,
                 co=name, role=role, loc=_clean(j.get("loc"), 80) or "Not listed",
@@ -558,7 +612,8 @@ def partner_jobs():
                 skills=skills, blurb=_clean(j.get("blurb"), 220),
                 type=j.get("type") if j.get("type") in ("job", "parttime", "internship", "coop") else "job",
                 url=url if url.startswith("https://") else "", source="Direct from %s (partner employer)" % name,
-                contact=contact, apply="direct" if (contact or hook) else "link", webhook=bool(hook), partner=True, live=True,
+                contact=contact, apply="direct" if (contact or hook or ats) else "link", webhook=bool(hook), partner=True, live=True,
+                instant=bool(contact or hook or ats),       # the card says "Apply instantly": swipe right really sends the application
                 # optional filter data the employer can give: "posted" (a date), "perks" (keys from PERK_RES), "commission_only"
                 posted=_ts(j.get("posted")),
                 perks=sorted(set([p for p in (j.get("perks") or []) if p in PERK_KEYS] + _perks(j.get("blurb") or ""))),
@@ -566,6 +621,8 @@ def partner_jobs():
     _partners.update(path=path, mtime=mtime, jobs=out)
     _hooks.clear()
     _hooks.update(new_hooks)
+    _ats_jobs.clear()
+    _ats_jobs.update(new_ats)
     return out
 
 
@@ -575,11 +632,36 @@ def job_policy(job_id):
     for j in partner_jobs():
         if j["id"] == job_id:
             return j["apply"]
+    conns = ats_connections()
     with _lock:
         for c in _cache.values():
-            if any(j["id"] == job_id for j in c["jobs"]):
-                return "link"
+            for j in c["jobs"]:
+                if j["id"] == job_id:
+                    # a real posting whose employer connected their hiring system with their own key can be applied to instantly
+                    return "direct" if _connected(j, conns) else "link"
     return "unknown"
+
+
+def _connected(job, conns):
+    """True when this feed posting's employer connected their hiring system (so a swipe right can send the application into it)."""
+    a = job.get("ats") if isinstance(job, dict) else None
+    return bool(a and (a.get("kind"), a.get("board")) in conns)
+
+
+def known_ats(job_id):
+    """{kind, board, id, key} for the hiring system this server may send an application to for this job, or None. Either a partner employer that gave
+    its key with its jobs, or a real posting whose employer connected. Only this server ever holds the key; browsers get only a yes in 'instant'."""
+    partner_jobs()
+    a = _ats_jobs.get(job_id)
+    if a:
+        return dict(a)
+    conns = ats_connections()
+    with _lock:
+        for c in _cache.values():
+            for j in c["jobs"]:
+                if j["id"] == job_id and _connected(j, conns):
+                    return {"kind": j["ats"]["kind"], "board": j["ats"]["board"], "id": j["ats"]["id"], "key": conns[(j["ats"]["kind"], j["ats"]["board"])]}
+    return None
 
 
 def get_jobs():
@@ -601,6 +683,9 @@ def get_jobs():
                 jobs.append(j)
     if not sources:
         summary["Third-party feeds"] = "off (not verified as permitted)"
+    conns = ats_connections()
+    if conns:           # a posting whose employer connected is marked here, on a copy, so the shared cache stays as fetched
+        jobs = [dict(j, apply="direct", instant=True) if _connected(j, conns) else j for j in jobs]
     _save_disk()
     return {"fetched_at": int(time.time()), "sources": summary, "jobs": jobs}
 

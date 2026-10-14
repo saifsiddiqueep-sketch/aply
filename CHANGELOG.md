@@ -4,6 +4,23 @@ How versions move: work happens in `sandbox`, is tested there, and goes to `dev`
 build: it is what the hosted site and the phone apps run. Each version is tagged on GitHub (Releases). `main` is the original
 production page and only changes when the owner decides.
 
+## 1.0.0-rc.8 (release candidate)
+
+Swipe right can now apply by itself: straight into the employer's own hiring system, for employers who connect.
+
+- **Researched first.** Greenhouse and Lever each document a call that submits an application, but both need a key created by the employer's own
+  administrator (Lever's API also cannot carry a posting's custom questions). None of Greenhouse, Lever or Ashby documents opening an application page
+  pre-filled from a link. So no site can apply for a person on an employer that never agreed; Indeed and LinkedIn work the same way, through employers'
+  connected systems. See EMPLOYERS.md.
+- **Greenhouse and Lever delivery** (`ats_api.py`): name, email, phone, links, the resume file, and answers to the posting's own questions where the
+  profile has them (LinkedIn, website, current employer, work authorization, sponsorship, how they heard). A required question the profile cannot
+  answer means nothing is sent and the person finishes on the employer's page; it never guesses. Keys are never shown, logged or put in a message.
+- **Apply instantly badge.** Cards for connected employers say "Apply instantly"; every other real job says "Opens employer site", so people know
+  before they swipe. Instant jobs get the same 5-second Undo window.
+- **Connecting an employer**: the new box on `/setup` (this computer), `UAPLY_ATS_JSON` (a host), or `ats` and `ats_job_id` in the employer list.
+- Ashby is not built: its request format could not be verified from public documentation.
+- New tests: `test-ats.py` (24, against `tools/mock-ats.py`), `test-ats-flow.py` (19, end to end), more in setup (34) and the public server.
+
 ## 1.0.0-rc.7 (release candidate)
 
 Sign-in and email that behave like the real thing, and a help chat whose requests go somewhere. Found by using the app the way a new user does.
