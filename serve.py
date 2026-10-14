@@ -57,8 +57,18 @@ if api:
     uaply_api.init(os.path.basename(root))
     auth_api.init(os.path.basename(root))
     chat_api.init(os.path.basename(root))
+    uaply_api.hide_errors = jobs_api.hide_errors = PUBLIC       # a hosted server never shows visitors raw error text; the owner's own computer still does
     import threading
     threading.Thread(target=jobs_api.get_jobs, daemon=True).start()   # warm the job cache so the first visitor does not wait
+
+OOPS = "Something went wrong on our side. Try again in a moment."
+
+
+def log_oops(where, e):
+    """The real reason goes to the server's own log (the owner can read it there); a visitor only ever sees the plain sentence above."""
+    sys.stderr.write("[uaply] %s failed: %s: %s\n" % (where, type(e).__name__, str(e)[:300]))
+    sys.stderr.flush()
+
 
 MAX_BODY = 40000
 MAX_APPLY_BODY = 1500000
@@ -151,7 +161,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         err, ident, agreed = google_auth.finish(q, self._cookie_value(auth_api.cookie_name() + "_oauth"), host, proto)
         if err:
             return self._redirect("/?auth_error=" + err, [self._oauth_cookie("")])
-        err, user, token = auth_api.oauth_login(ident["provider"], ident["subject"], ident["email"], agreed)
+        err, user, token = auth_api.oauth_login(ident["provider"], ident["subject"], ident["email"], agreed, ident.get("trusted", True))
         if err:
             return self._redirect("/?auth_error=" + err, [self._oauth_cookie("")])
         return self._redirect("/?signed_in=google", self._cookie(token) + [self._oauth_cookie("")])
@@ -197,13 +207,14 @@ class H(http.server.SimpleHTTPRequestHandler):
                 if p in ("/api/auth/google/start", "/api/auth/google/callback"):
                     return self._google(p)
                 if p == "/api/chat/config":
-                    return self._send(200, chat_api.public_config())
+                    return self._send(200, dict(chat_api.public_config(), owner=not PUBLIC))      # "owner": this server runs on the owner's own computer, so owner-only hints may be shown
                 if p == "/feedback":
                     return self._send(200, chat_api.feedback_html(), "text/html; charset=utf-8")
                 if p == "/setup":
                     return self._send(200, setup_api.page(*self._origin_parts()), "text/html; charset=utf-8")
             except Exception as e:
-                return self._send(502, {"error": str(e)[:100]})
+                log_oops(p, e)
+                return self._send(502, {"error": OOPS})
         super().do_GET()
 
     def do_POST(self):
@@ -264,10 +275,11 @@ class H(http.server.SimpleHTTPRequestHandler):
             if p == "/api/auth/google/token":                    # "Continue with Google": the page sends the signed token Google's button gave it
                 msg = {"agree": "Tick the box to confirm you are 18 or older and agree to the Terms and Privacy Policy, then choose Google again.",
                        "failed": "Google sign-in could not be checked. Try again.", "unverified": "Google says that email address is not verified, so UAply cannot use it.",
-                       "off": "Google sign-in is not switched on.", "limited": "Too many tries. Wait a minute and try again."}
+                       "off": "Google sign-in is not switched on.", "limited": "Too many tries. Wait a minute and try again.",
+                       "email_in_use": "That email already has a UAply account. Log in with your email and password instead."}
                 err, ident = google_auth.verify_credential(payload.get("credential"), ip)
                 if not err:
-                    err, user, token = auth_api.oauth_login(ident["provider"], ident["subject"], ident["email"], payload.get("agree") is True)
+                    err, user, token = auth_api.oauth_login(ident["provider"], ident["subject"], ident["email"], payload.get("agree") is True, ident.get("trusted", True))
                 if err:
                     return self._send(429 if err == "limited" else 400, {"error": msg.get(err, msg["failed"]), "code": err})
                 return self._send(200, {"user": user}, headers=self._cookie(token))
@@ -315,13 +327,14 @@ class H(http.server.SimpleHTTPRequestHandler):
             if p == "/api/chat":
                 code, out = chat_api.chat(payload, ip)
             elif p == "/api/feedback":
-                code, out = chat_api.feedback(payload, ip, auth_api.user_for(self._token()))
+                code, out = chat_api.feedback(payload, ip, auth_api.user_for(self._token()), notify=uaply_api.send_support_ticket)
             elif p == "/api/apply":
                 code, out = uaply_api.submit(payload, auth_api.user_for(self._token()))
             else:
                 code, out = uaply_api.record_decision(payload)
         except Exception as e:
-            code, out = 500, {"error": "server error: " + str(e)[:100]}
+            log_oops(p, e)
+            code, out = 500, {"error": OOPS}
         self._send(code, out)
 
     def end_headers(self):

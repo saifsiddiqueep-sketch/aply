@@ -37,3 +37,4 @@ jobs:
           python tools/test-delivery.py
           python tools/test-setup.py
           python tools/test-emails.py
+          python tools/test-support.py

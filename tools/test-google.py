@@ -79,13 +79,18 @@ t("same Google login signs in again (no agree needed)", sign_in(a, False, {"emai
 t("password login for a Google-only account fails", post(client()[1], "/api/auth/login", {"email": "new1@example.com", "password": "anything goes 1"})[0], 401)
 t("email/password signup for that email says to log in", post(client()[1], "/api/auth/signup", {"email": "new1@example.com", "password": "correct horse 99", "agree": True})[0], 409)
 
-# an existing password account: Google with the same verified email links to it
+# an existing password account: Google with the same Gmail address links to it (Google is the authority on Gmail addresses)
 jar2, b = client()
-post(b, "/api/auth/signup", {"email": "pw1@example.com", "password": "correct horse 99", "agree": True})
+post(b, "/api/auth/signup", {"email": "pw1@gmail.com", "password": "correct horse 99", "agree": True})
 post(b, "/api/auth/logout", {})
-t("Google with an existing account's email links and signs in", sign_in(b, False, {"email": "pw1@example.com", "sub": "502", "verified": "1"}), "/?signed_in=google")
+t("Google with an existing account's Gmail address links and signs in", sign_in(b, False, {"email": "pw1@gmail.com", "sub": "502", "verified": "1"}), "/?signed_in=google")
 t("...into the same account, which keeps its password", (me(b) or {}).get("hasPassword"), True)
 post(b, "/api/auth/logout", {})
+# a "verified" address on any other domain is not trusted to take over an existing account
+post(b, "/api/auth/signup", {"email": "pw2@example.com", "password": "correct horse 99", "agree": True})
+post(b, "/api/auth/logout", {})
+t("Google with an existing account's non-Gmail address is refused, not linked", sign_in(b, True, {"email": "pw2@example.com", "sub": "505", "verified": "1"}), "/?auth_error=email_in_use")
+t("...and nobody is signed in", me(b), None)
 
 # attacks and failures
 jar3, c = client()

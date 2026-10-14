@@ -172,6 +172,31 @@ Employer.script = [400]
 code, out = apply("Hook Only Co", email_addr="no-retry@example.com")
 t("a 400 answer is final: one try, reported as failed", (out["status"], len(Employer.calls), "webhook: HTTP 400" in out.get("error", "")), ("failed", 1, True))
 
+# an application whose fields have the wrong type must be tolerated, never crash the handler (the fuzz test found skills sent as a number or a dictionary)
+for label, skills in (("a dictionary", {"a": 1}), ("a number", 7), ("a boolean", True), ("text", "python")):
+    shape = {"consent": True, "job": {"id": 1, "co": "Acme", "role": "Intern", "url": "https://acme.example/j"},
+             "profile": {"name": "Pat Doe", "email": "shape@example.com", "skills": skills, "ext": "zzz"}}
+    try:
+        code, out = uaply_api.submit(shape, None)
+        crashed = False
+    except Exception as e:
+        code, out, crashed = 0, {"error": repr(e)}, True
+    t("an application whose skills are %s is accepted without a crash" % label, (crashed, code), (False, 200))
+
+# on a hosted server a visitor must never be shown an employer's or a mail server's raw error text (serve.py sets hide_errors there)
+reset()
+Employer.script = [400]
+uaply_api.hide_errors = True
+try:
+    code, out = apply("Hook Only Co", email_addr="hidden-error@example.com")
+finally:
+    uaply_api.hide_errors = False
+t("on a hosted server a failed send says a plain sentence, with no employer detail", (out["status"], out.get("error"), "HTTP 400" in out.get("error", "")),
+  ("failed", "The email could not be sent right now. Try again in a moment.", False))
+with open(os.path.join(uaply_api.DATA, "applications.jsonl"), encoding="utf-8") as f:
+    last = [json.loads(x) for x in f if x.strip()][-1]
+t("the real reason is still kept in the owner's own record", "HTTP 400" in last.get("error", ""), True)
+
 reset()
 Employer.script = [302]
 code, out = apply("Hook Only Co", email_addr="redirect@example.com")

@@ -50,6 +50,7 @@ run "Connect Gmail form" python tools/test-setup.py
 
 step "Swipe-right emails (content, test label, safety, real send)"
 run "receipt and owner copy emails" python tools/test-emails.py
+run "help requests from the assistant reach the support inbox" python tools/test-support.py
 
 step "Accounts, applying, reset and setup (back end)"
 run "sandbox reset/setup/accounts" python tools/test-reset.py 18766
@@ -62,6 +63,11 @@ run "dev: forgot password, emailed link, new password, change password" env PORT
 run "nothing is cut off at 320 to 430 px" env PORT=18767 node tools/ui-widths.js
 run "sandbox: every screen and button" env PORT=18766 node tools/cdp.js tools/ui-sweep.js
 run "dev: every way of swiping, and what each sends (LinkedIn, resume, one email)" env W=390 H=844 PORT=18767 node tools/cdp.js tools/ui-swipes.js
+run "dev: the app copes when the server fails, goes offline or sends garbage" env W=390 H=844 PORT=18767 node tools/cdp.js tools/ui-errors.js
+run "dev: skill chips, the empty Add button and the file downloads" env W=390 H=844 PORT=18767 node tools/cdp.js tools/ui-effects.js
+run "sandbox: every profile checklist item lands on its field" env W=390 H=844 PORT=18766 node tools/cdp.js tools/ui-checklist.js
+run "sandbox: hostile text in every form never runs, and the owner's inbox escapes it" env W=390 H=844 PORT=18766 node tools/cdp.js tools/ui-inject.js
+run "dev: hostile text in every form never runs, and the owner's inbox escapes it" env W=390 H=844 PORT=18767 node tools/cdp.js tools/ui-inject.js
 
 step "Google sign-in (against a stand-in Google)"
 PIDS="$PIDS $(start python tools/mock-google.py 8790)"
@@ -86,6 +92,11 @@ step "A burst of visitors (300 at once, sign-ups, a password-guessing attack)"
 PIDS="$PIDS $(UAPLY_DATA_DIR="$TMP/stress" UAPLY_CONFIG_JSON='{"feeds":[],"smtp":{},"owner_copy":""}' start python serve.py 18774 dev --api)"
 wait_port 18774
 run "simultaneous reads, sign-ups and wrong passwords: no errors, lock-out holds" python tools/stress.py 18774
+
+step "Hostile input (every endpoint, wrong types, injection strings, odd headers)"
+PIDS="$PIDS $(UAPLY_DATA_DIR="$TMP/fuzz" HOST=0.0.0.0 OWNER_PASSWORD=ownerpw UAPLY_CONFIG_JSON='{"feeds":[],"smtp":{},"owner_copy":""}' start python serve.py 18775 dev --api)"
+wait_port 18775
+run "no crash, hang or leaked error text across every endpoint" python tools/fuzz-api.py 18775
 
 printf "\n"
 if [ "$FAILS" -eq 0 ]; then echo "ALL TESTS PASSED"; else echo "$FAILS test group(s) FAILED"; fi

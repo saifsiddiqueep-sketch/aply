@@ -21,8 +21,31 @@ import uaply_api
 CLIENT_RE = re.compile(r"^\d+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$")
 
 
+URL_RE = re.compile(r"https://[A-Za-z0-9./_?=&#%-]+[A-Za-z0-9/_-]")
+
+
 def _real(v, placeholder_starts=()):
     return isinstance(v, str) and bool(v.strip()) and not any(v.strip().lower().startswith(p) for p in placeholder_starts)
+
+
+def _linkify(text):
+    """Escape the text, then turn each https address in it into a link that opens in a new tab."""
+    out, last = [], 0
+    for m in URL_RE.finditer(text):
+        out.append(html.escape(text[last:m.start()]))
+        out.append('<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>' % (html.escape(m.group(0)), html.escape(m.group(0))))
+        last = m.end()
+    out.append(html.escape(text[last:]))
+    return "".join(out)
+
+
+def origins(host, proto):
+    """The addresses Google must be told about (Authorized JavaScript origins). On this computer Google wants the bare localhost one too."""
+    base = "%s://%s" % (proto, host)
+    found = [base]
+    if host.split(":")[0] in ("localhost", "127.0.0.1"):
+        found.append("%s://localhost" % proto)
+    return list(dict.fromkeys(found))
 
 
 def checks(host, proto):
@@ -38,17 +61,16 @@ def checks(host, proto):
          "detail": ("On. Google's own button shows on the sign-in screen, including accounts already signed in on that browser." if g_ok else
                     ("The client ID does not look right (it should end in .apps.googleusercontent.com)." if g_id and not CLIENT_RE.match(g_id) and not g.get("auth_url") else
                      "Off. Add your Google client ID (the public one; no secret is needed).")),
-         "todo": ["Open https://console.cloud.google.com/apis/credentials and create a project if you have none.",
-                  "Configure the OAuth consent screen: External, app name UAply, your Gmail as the support email, then Publish app so anyone can sign in (scopes openid, email and profile need no review).",
-                  "Create credentials, OAuth client ID, type Web application.",
-                  "Under Authorized JavaScript origins add this address exactly: " + proto + "://" + host + " (and your real website address when you have one).",
-                  "Paste the Client ID in the Connect Google box below (or run python tools/setup-config.py)."] if not g_ok else []},
+         "todo": ["Open https://console.cloud.google.com/apis/credentials/consent and set up the consent screen: type External, app name UAply, your Gmail as the support and developer email. Then press Publish app so anyone can sign in (the scopes openid, email and profile need no review).",
+                  "Open https://console.cloud.google.com/apis/credentials/oauthclient and create an OAuth client ID of type Web application (Google asks you to create a project first if you have none).",
+                  "Under Authorized JavaScript origins add each of these, exactly as written: " + "  and  ".join(origins(host, proto)) + ". Open this app at localhost, not 127.0.0.1, because Google treats them as different addresses. Add your real website address here too when you have one.",
+                  "Copy the Client ID Google shows (it ends in .apps.googleusercontent.com) and paste it in the Connect Google box below. No secret is needed."] if not g_ok else []},
         {"name": "Email sending (password resets, receipts, copies)", "ok": smtp_ok,
          "detail": ("An email login is set. Use the button below to send yourself a test." if smtp_ok else
                     "Off. Until this is set, emails go only to the simulated test inbox (/outbox) and password reset links cannot reach real people."),
-         "todo": ["Sign in to the Gmail account that will send UAply's email and turn on 2-Step Verification.",
-                  "Open https://myaccount.google.com/apppasswords and create an app password named UAply.",
-                  "Run: python tools/setup-config.py (it asks for the app password without showing it), then restart the server."] if not smtp_ok else []},
+         "todo": ["Open https://myaccount.google.com/signinoptions/two-step-verification and turn on 2-Step Verification for the Gmail that will send UAply's email (Google requires it for app passwords).",
+                  "Open https://myaccount.google.com/apppasswords, name it UAply and press Create. Google shows a 16-letter code once; copy it.",
+                  "Paste that Gmail address and the code in the Connect Gmail box below. A test email goes out right away."] if not smtp_ok else []},
         {"name": "Copy of every application to you", "ok": bool(owner),
          "detail": ("Every swipe right is also emailed to " + owner + (" once email sending is on." if not smtp_ok else ".")) if owner else "Off. Set owner_copy to your email.",
          "todo": [] if owner else ["Run: python tools/setup-config.py and enter your email when it asks."]},
@@ -143,10 +165,16 @@ def test_mail():
 def page(host, proto):
     e = html.escape
     rows = []
-    for c in checks(host, proto):
-        todo = "".join("<li>%s</li>" % e(t) for t in c["todo"])
+    found = checks(host, proto)
+    for c in found:
+        todo = "".join("<li>%s</li>" % _linkify(t) for t in c["todo"])
         rows.append('<article><header><span class="b %s">%s</span><b>%s</b></header><p class="m">%s</p>%s</article>' % (
             "ok" if c["ok"] else "no", "ON" if c["ok"] else "TO DO", e(c["name"]), e(c["detail"]), ("<ol>%s</ol>" % todo) if todo else ""))
+    if not (found[0]["ok"] and found[1]["ok"]):          # Google sign-in and real email are the two things that turn test mode into the real thing
+        rows.insert(0, '<article><b>Why you still see the test inbox and a test sign-in</b><p class="m">Until the first two items below are connected, this computer cannot show Google\'s real account chooser '
+                       'and cannot send real email, so sign-up codes and receipts are saved in the <a href="/outbox">test inbox</a> instead. Connect both and the app behaves like the live site: '
+                       'Google\'s own "Continue with Google" button, and real emails in real inboxes.</p></article>')
+    origin_html = "".join('<p><code>%s</code> <button type="button" class="cp" data-v="%s">Copy</button></p>' % (e(o), e(o)) for o in origins(host, proto)).replace("%", "%%")
     try:
         n = auth_api.counts()
     except Exception:
@@ -164,10 +192,11 @@ button{font:inherit;padding:8px 14px;border-radius:10px;border:1px solid var(--l
 code{background:var(--bg);padding:1px 5px;border-radius:5px}
 </style></head><body><main><h1>UAply setup</h1><p class="m">What is switched on, and what still needs a key. Secrets are never shown here.</p>
 %s
-<article><b>Connect Google sign-in</b><p class="m">Paste the Client ID from Google Cloud Console (the long address ending in .apps.googleusercontent.com). It is public, so it is safe to paste here. It is saved only on this computer.</p>
+<article id="google"><b>Connect Google sign-in</b><p class="m">Google needs to be told which addresses may show its button. Add each of these under Authorized JavaScript origins:</p>@@ORIGINS@@
+<p class="m">Then paste the Client ID from Google Cloud Console (the long address ending in .apps.googleusercontent.com). It is public, so it is safe to paste here. It is saved only on this computer.</p>
 <p><input id="gi" type="text" placeholder="123456789-abc.apps.googleusercontent.com" style="width:340px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><button id="gs" type="button">Save Google client ID</button> <span id="gr" class="m" role="status"></span></p></article>
-<article><b>Connect Gmail</b><p class="m">Paste the Gmail address that will send UAply's email and its App Password (a 16-letter code from myaccount.google.com/apppasswords, not your normal password). It is saved only in uaply-config.json on this computer, which is never uploaded, and a test email is sent right away.</p>
+<article id="gmail"><b>Connect Gmail</b><p class="m">Paste the Gmail address that will send UAply's email and its App Password (a 16-letter code from myaccount.google.com/apppasswords, not your normal password). It is saved only in uaply-config.json on this computer, which is never uploaded, and a test email is sent right away.</p>
 <p><input id="ge" type="email" placeholder="Sending Gmail address" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><input id="gp" type="password" placeholder="App Password" autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><input id="gc" type="email" placeholder="Send copies and tests to (optional)" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
@@ -180,5 +209,6 @@ fetch('/api/setup/test-mail',{method:'POST',headers:{'Content-Type':'application
 document.getElementById('gs').onclick=function(){var r=document.getElementById('gr');r.textContent='Saving...';
 fetch('/api/setup/save-google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({client_id:document.getElementById('gi').value})}).then(function(x){return x.json()}).then(function(j){r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
 document.getElementById('sv').onclick=function(){var r=document.getElementById('sr'),g=function(i){return document.getElementById(i).value};r.textContent='Saving...';
-fetch('/api/setup/save-mail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:g('ge'),password:g('gp'),copy_to:g('gc')})}).then(function(x){return x.json()}).then(function(j){if(j.saved)document.getElementById('gp').value='';r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}</script>
-</body></html>""" % ("".join(rows), n["users"], n["mail"])).encode("utf-8")
+fetch('/api/setup/save-mail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:g('ge'),password:g('gp'),copy_to:g('gc')})}).then(function(x){return x.json()}).then(function(j){if(j.saved)document.getElementById('gp').value='';r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
+document.querySelectorAll('.cp').forEach(function(b){b.onclick=function(){var v=b.getAttribute('data-v');(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(function(){b.textContent='Copied'},function(){b.textContent='Select the address and copy it'})}})</script>
+</body></html>""".replace("@@ORIGINS@@", origin_html) % ("".join(rows), n["users"], n["mail"])).encode("utf-8")

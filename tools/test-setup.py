@@ -108,5 +108,19 @@ uaply_api.config = lambda: {"smtp": {"host": "smtp.gmail.com", "from_addr": "a@g
 s, out = setup_api.test_mail()
 t("the test button says the App Password is missing", (out["ok"], "no App Password" in out["message"]), (False, True))
 
+# the setup page is the owner's guide to switching test mode off: clickable steps, the exact addresses to give Google, and anchors the sign-in screen links to
+page = setup_api.page("localhost:8767", "http").decode("utf-8")
+t("the page tells Google both local addresses (Google needs the bare localhost one too)", all(("<code>%s</code>" % o) in page for o in ("http://localhost:8767", "http://localhost")), True)
+t("each address has a Copy button", page.count('class="cp"'), 2)
+t("the Google and Gmail boxes have anchors for the sign-in screen's links", ('id="google"' in page, 'id="gmail"' in page), (True, True))
+t("the steps are clickable links to Google's own pages", all(('href="%s"' % u) in page for u in (
+    "https://console.cloud.google.com/apis/credentials/consent", "https://console.cloud.google.com/apis/credentials/oauthclient",
+    "https://myaccount.google.com/apppasswords", "https://myaccount.google.com/signinoptions/two-step-verification")), True)
+t("links open in a new tab without handing over the opener", 'target="_blank" rel="noopener noreferrer"' in page, True)
+t("the page explains why a test inbox is still showing", "Why you still see the test inbox" in page, True)
+evil = setup_api.page('"><script>alert(1)</script>', "http").decode("utf-8")
+t("a hostile Host header is escaped, never printed as markup", ("<script>alert(1)</script>" in evil, "&lt;script&gt;" in evil), (False, True))
+t("a hosted address is given as it is, without the extra localhost one", [o for o in setup_api.origins("uaply.example", "https")], ["https://uaply.example"])
+
 print(sum(R), "/", len(R))
 sys.exit(0 if all(R) else 1)

@@ -303,7 +303,10 @@ def chat(p, ip):
     return 200, _from_articles(q)
 
 
-def feedback(p, ip, user=None):
+def feedback(p, ip, user=None, notify=None):
+    """Save a message from the assistant. `notify(record, user)` (given by the server) emails it to the team and says what happened:
+    "emailed", "failed" or "saved". Help requests and problem reports, and anything where the person asked for a reply, are emailed;
+    a plain star rating is only saved."""
     if _limited("feedback", ip, 10, 600):
         return 429, {"error": "Thanks, we already have a lot from you in the last few minutes. Try again shortly."}
     topic = p.get("topic") if p.get("topic") in TOPICS else "general"
@@ -323,8 +326,16 @@ def feedback(p, ip, user=None):
         return 400, {"error": "Add a rating or a few words first."}
     rec = {"id": uuid.uuid4().hex[:10], "at": int(time.time()), "topic": topic, "rating": rating, "text": text,
            "helpful": helpful, "email": email, "page": _s(p.get("page"), 40), "source": _s(p.get("source"), 20),
-           "articles": [_s(x, 60) for x in (p.get("articles") or [])[:3] if isinstance(x, str)],
+           "articles": [_s(x, 60) for x in (p.get("articles") if isinstance(p.get("articles"), list) else [])[:3] if isinstance(x, str)],
            "user": user["id"] if user else None}
+    delivery = "saved"
+    if notify and text and (topic in ("contact", "bug") or email):
+        try:
+            delivery = notify(rec, user)               # slow network call: made outside the lock
+        except Exception as e:
+            delivery = "failed"
+            print("UAply Assistant: emailing a help request failed (%s)" % type(e).__name__, file=sys.stderr)
+    rec["delivery"] = delivery
     with _lock:
         FEEDBACK.append(rec)
         try:
@@ -333,7 +344,7 @@ def feedback(p, ip, user=None):
                 f.write(json.dumps(rec) + "\n")
         except Exception:
             pass
-    return 200, {"ok": True, "id": rec["id"]}
+    return 200, {"ok": True, "id": rec["id"], "delivery": delivery}
 
 
 def forget_user(user_id):
@@ -377,7 +388,9 @@ def feedback_html():
             ("<pre>%s</pre>" % e(r["text"])) if r.get("text") else "",
             '<p class="m">%s%s%s</p>' % (("Reply to: " + e(r["email"]) + " · ") if r.get("email") else "No reply requested · ",
                                          ("from " + e(r["source"]) + " · ") if r.get("source") else "",
-                                         ("screen: " + e(r["page"])) if r.get("page") else ""))
+                                         ("screen: " + e(r["page"]) + " · ") if r.get("page") else "") + {
+                                             "emailed": "emailed to the team", "failed": "NOT emailed (the mail server refused it)",
+                                             "saved": "not emailed (no real email connected)"}.get(r.get("delivery"), "saved"))
         for r in recs[:200]) or "<p class='m'>No feedback yet.</p>"
     return ("""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>UAply feedback</title><style>

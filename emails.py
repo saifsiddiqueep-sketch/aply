@@ -170,6 +170,59 @@ def applicant_receipt(ctx):
     return subject, text, page
 
 
+def verification_email(digits):
+    """The email that carries the 6-digit code proving an email address is the person's own. Returns (subject, text, html).
+    The code is shown large, with how long it works and what to do if the person did not ask for it (the same wording as the big job sites)."""
+    code = "".join(ch for ch in str(digits) if ch.isdigit())[:6]
+    subject = "%s is your UAply verification code" % code
+    text = ("Your UAply verification code is:\n\n    %s\n\n"
+            "Enter it in UAply to confirm this email address. It works for 10 minutes.\n\n"
+            "If you did not create a UAply account, ignore this email. Nobody can use your address without this code.\n\n--\nUAply\n") % code
+    e = html.escape
+    page = ('<!doctype html><html><body style="margin:0;padding:20px;background:#FDF0F2;font:15px/1.5 Arial,sans-serif;color:#2A1218">'
+            '<div style="max-width:480px;margin:0 auto;background:#fff;border:1px solid #F3DADF;border-radius:14px;padding:22px">'
+            '<p style="margin:0 0 14px;color:%s;font-weight:800;font-size:18px">UAply</p>'
+            '<h1 style="margin:0 0 8px;font-size:20px">Confirm your email</h1>'
+            '<p style="margin:0 0 14px">Enter this code in UAply to confirm that this email address is yours:</p>'
+            '<p style="margin:0 0 14px;padding:14px;background:#FDF0F2;border-radius:10px;text-align:center;font:800 32px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.3em">%s</p>'
+            '<p style="margin:0 0 8px;color:#7B5560;font-size:13px">The code works for 10 minutes. After 5 wrong tries you will need a new one.</p>'
+            '<p style="margin:0;color:#7B5560;font-size:13px">If you did not create a UAply account, ignore this email. Nobody can use your address without this code.</p>'
+            '</div></body></html>') % (BRAND, e(code))
+    return subject, text, page
+
+
+KIND_LABEL = {"contact": "help", "bug": "problem", "general": "feedback", "answer": "feedback", "nudge": "feedback"}
+
+
+def support_ticket(rec, account_email=""):
+    """The email the UAply team receives when someone asks for help in the assistant. Returns (subject, text).
+    The reply address of the email is the person's own (set by the sender), so pressing Reply answers them."""
+    kind = KIND_LABEL.get(rec.get("topic"), "feedback")
+    first = " ".join((rec.get("text") or "").split())[:70] or "(no message)"
+    subject = "[UAply %s] %s" % (kind, first)
+    when = time.strftime("%b %d, %Y %H:%M UTC", time.gmtime(rec.get("at") or time.time()))
+    lines = ["Someone asked for help in the UAply assistant.", "", "THEIR MESSAGE", (rec.get("text") or "(they left no message)").strip(), "", "HOW TO REPLY"]
+    if rec.get("email"):
+        lines += ["  Press Reply. The reply address of this email is theirs: %s" % rec["email"]]
+    else:
+        lines += ["  They did not leave an email, so this cannot be answered by email."]
+    lines += ["", "DETAILS", "  Ticket: %s" % rec.get("id", ""), "  Type: %s" % kind, "  Sent: %s" % when]
+    if rec.get("page"):
+        lines.append("  Screen they were on: %s" % rec["page"])
+    if account_email:
+        lines.append("  Signed in to UAply as: %s" % account_email)
+    if rec.get("articles"):
+        lines.append("  Help articles the assistant showed: %s" % ", ".join(rec["articles"]))
+    return subject, "\n".join(lines) + "\n\n--\nSent by the UAply assistant. The same message is in the Feedback page of the server.\n"
+
+
+def support_ack(rec):
+    """The acknowledgement to a person whose email UAply has already proven is theirs. Returns (subject, text)."""
+    text = ("Hi,\n\nThanks for writing to UAply. We got your message and a person on our team will reply to this address.\n\n"
+            "YOUR MESSAGE\n%s\n\nTicket: %s\n\nIf you did not send this, ignore this email.\n\n--\nUAply\n") % ((rec.get("text") or "").strip(), rec.get("id", ""))
+    return "We got your message to UAply", text
+
+
 def owner_copy(ctx):
     """The owner's copy of an application. ctx keys: status, cand, job, at, match, to, rows, note, base_url. Returns (subject, text, html)."""
     status, job, cand = ctx["status"], ctx["job"], ctx["cand"]

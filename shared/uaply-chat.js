@@ -219,9 +219,17 @@ function apply(w,host){
       if(!r.ok){botSay((r.j&&r.j.error)||"I couldn't send that just now.");chips([{label:"Try again",run:function(){finish(data)}}]);return}
       var s=load();s.given=Date.now();store(s);
       flow=null;
-      botSay(data.topic==="contact"?"Sent. Someone from the UAply team will reply by email."
-        :(data.topic==="answer"?"Thanks, that helps us improve these answers.":"Thank you! A person on the UAply team reads every message."));
-      botSay("Anything else I can help with?");starters();
+      var dv=r.j&&r.j.delivery,who=data.email||"you",ownerHint=false;
+      if(data.topic==="contact"||data.topic==="bug"){
+        /* say what really happened: only "emailed" means the team has it by email */
+        if(dv==="emailed")botSay("Sent to the UAply team"+(data.email?". They will reply to "+who+" by email.":". They read every message, but you did not leave an email, so they cannot reply."));
+        else if(dv==="failed")botSay("We saved your message, but the email to our team did not go through, so it may take a little longer."+(CFG.support?" You can also write to "+CFG.support+".":""));
+        else if(CFG.owner){botSay("Saved, but not emailed: no real email is connected on this computer yet. The message is in your Feedback inbox. Connect Gmail in setup and these arrive by email.");ownerHint=true}
+        else botSay("Got it. A person on the UAply team will read this"+(data.email?" and reply to "+who+" by email.":"."));
+      }else botSay(data.topic==="answer"?"Thanks, that helps us improve these answers.":"Thank you! A person on the UAply team reads every message.");
+      botSay("Anything else I can help with?");
+      if(ownerHint)chips([{label:"Open the Feedback inbox",run:function(){meSay("Open the Feedback inbox");try{w.open("/feedback","_blank","noopener")}catch(e){}starters()}},{label:"Connect Gmail",run:function(){meSay("Connect Gmail");try{w.open("/setup#gmail","_blank","noopener")}catch(e){}starters()}}]);
+      else starters();
     });
   }
 
@@ -279,7 +287,7 @@ function apply(w,host){
   /* mode: AI or help articles, from the server */
   paintMode();
   w.fetch("/api/chat/config").then(function(r){return r.ok?r.json():null}).then(function(c){
-    if(c){CFG.ai=!!c.ai;CFG.support=c.support||"";paintMode()}
+    if(c){CFG.ai=!!c.ai;CFG.support=c.support||"";CFG.owner=!!c.owner;paintMode()}
   }).catch(function(){});
 }
 

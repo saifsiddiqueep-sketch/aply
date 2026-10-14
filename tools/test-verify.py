@@ -145,6 +145,13 @@ try:
     t("an unverified account can still swipe, but gets no confirmation email", (code_, res["receipt"]["status"]), (200, "unverified"))
     time.sleep(0.5)
     t("no email was sent to the unverified address", last_mail("unverified@example.com"), None)
+    # with no real email connected nothing leaves the server: the confirmation is only saved in the test inbox, so an unverified account gets it too
+    saved_smtp_u = cfg["smtp"]
+    cfg["smtp"] = {}
+    code_n, res_n = uaply_api.submit({"consent": True, "job": dict(job, id=500009), "profile": {"name": "Una Verified", "email": "unverified@example.com"}}, u5)
+    cfg["smtp"] = saved_smtp_u
+    t("with no real email connected, an unverified account's swipe is saved in the test inbox", (code_n, res_n["receipt"]["status"]), (200, "delivered_test"))
+    t("and that saved copy is labelled as a test", "[TEST]" in stored_mail(u5["id"]), True)
     # the same account once verified
     auth_api.verify_code(tok5, "000000", "10.0.0.6")           # a wrong try, to show it does not matter
     uid, addr, dg = auth_api.issue_code_for_token(tok5)
