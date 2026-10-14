@@ -123,7 +123,7 @@ function kitApply(w,host){
     /* ask = show a review screen with a Send button first. Always in live mode; in test mode only where the page opts in (sandbox). */
     var auto=live&&w.__uaplyAuto!==false;     /* live + auto_send (the default): swipe right sends by itself after a short undo window */
     var ask=(live&&!auto)||!!((host&&host.defaultView&&host.defaultView.UAplyOpts)||{}).reviewBeforeSend;
-    var target=(live&&w.__uaplyRedirect)||job.contact||"";
+    var target=(live&&w.__uaplyRedirect)||job.contact||(job.instant?"hiring system":"");
     var contact=job.contact||"",profileOk=!!(p.name&&EMAIL.test(p.email||"")&&(!live||p.custom));
     var o=d.createElement("div");o.id="kitSheet";
     o.style.cssText="position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.45);overflow:auto";
@@ -266,7 +266,7 @@ function kitApply(w,host){
   function openProfile(){var b=d.getElementById("nb-prof");if(b){b.click();var it=d.querySelector('.nwrap[data-k=prof] .nitem[data-v=settings]');if(it)it.click()}}
   function quietApply(job,m,p,undo,S,save){
     var live=w.__uaplyMode==="live",auto=w.__uaplyAuto!==false;
-    var target=(live&&w.__uaplyRedirect)||job.contact||"";
+    var target=(live&&w.__uaplyRedirect)||job.contact||(job.instant?"hiring system":"");
     if(!(p.name&&EMAIL.test(p.email||"")&&(!live||p.custom))){
       toast("Add your name and email in Profile so recruiters can reply.","Open Profile",openProfile,9000);return;
     }

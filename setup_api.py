@@ -14,8 +14,10 @@ from email.message import EmailMessage
 import json
 import os
 
+import ats_api
 import auth_api
 import google_auth
+import jobs_api
 import uaply_api
 
 CLIENT_RE = re.compile(r"^\d+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$")
@@ -71,6 +73,12 @@ def checks(host, proto):
          "todo": ["Open https://myaccount.google.com/signinoptions/two-step-verification and turn on 2-Step Verification for the Gmail that will send UAply's email (Google requires it for app passwords).",
                   "Open https://myaccount.google.com/apppasswords, name it UAply and press Create. Google shows a 16-letter code once; copy it.",
                   "Paste that Gmail address and the code in the Connect Gmail box below. A test email goes out right away."] if not smtp_ok else []},
+        {"name": "Apply instantly (employers' hiring systems)", "ok": bool(connections()),
+         "detail": ("Connected: " + ", ".join("%s/%s" % c for c in connections()) + ". Their postings say Apply instantly.") if connections() else
+                   "Off. No employer has connected yet, so swipe right on a real job opens the employer's own page. See EMPLOYERS.md for how an employer connects.",
+         "todo": ["Ask the employer to create a Greenhouse Job Board API key or a Lever Postings API key (EMPLOYERS.md says where).",
+                  "Paste it in the Connect an employer's hiring system box below, with the board name from their job-board address.",
+                  "Set delivery to live in the settings (UAPLY_CONFIG_JSON on a host) so applications are really sent."] if not connections() else []},
         {"name": "Copy of every application to you", "ok": bool(owner),
          "detail": ("Every swipe right is also emailed to " + owner + (" once email sending is on." if not smtp_ok else ".")) if owner else "Off. Set owner_copy to your email.",
          "todo": [] if owner else ["Run: python tools/setup-config.py and enter your email when it asks."]},
@@ -97,6 +105,54 @@ def save_google(payload):
         json.dump(cfg, f, indent=2)
     os.replace(tmp, uaply_api.CONFIG_PATH)
     return 200, {"ok": True, "saved": True, "message": "Saved. Reload the sign-in screen: Google's button should now appear."}
+
+
+def _read_partners(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _write_partners(path, data):
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline=chr(10)) as f:
+        json.dump(data, f, indent=2)
+    os.replace(tmp, path)
+
+
+def connections():
+    """The connected hiring systems as (kind, board) pairs. Never the keys."""
+    return sorted(jobs_api.ats_connections())
+
+
+def save_ats(payload):
+    """The "Connect an employer's hiring system" box: store the key the employer gave us in the git-ignored employer list on this computer. (status, body)."""
+    kind = str(payload.get("kind") or "").strip().lower()
+    board = str(payload.get("board") or "").strip()
+    key = str(payload.get("api_key") or "").strip()
+    if not ats_api.valid_connection(kind, board, key):
+        return 400, {"ok": False, "message": "Choose Greenhouse or Lever, give the board name from the employer's job-board address (letters, numbers, - and _), and paste the key they created."}
+    path = jobs_api.partners_file(for_writing=True)
+    data = _read_partners(path)
+    keep = [c for c in (data.get("ats_connections") or []) if isinstance(c, dict) and (c.get("kind"), c.get("board")) != (kind, board)]
+    keep.append({"kind": kind, "board": board, "api_key": key})
+    data["ats_connections"] = keep
+    _write_partners(path, data)
+    return 200, {"ok": True, "saved": True, "message": "Connected. Real %s postings from %s now say Apply instantly, and a swipe right sends the application into their system." % (kind.capitalize(), board)}
+
+
+def remove_ats(payload):
+    kind, board = str(payload.get("kind") or "").strip().lower(), str(payload.get("board") or "").strip()
+    path = jobs_api.partners_file(for_writing=True)
+    data = _read_partners(path)
+    before = data.get("ats_connections") or []
+    data["ats_connections"] = [c for c in before if isinstance(c, dict) and (c.get("kind"), c.get("board")) != (kind, board)]
+    if len(data["ats_connections"]) != len(before):
+        _write_partners(path, data)
+    return 200, {"ok": True, "message": "Disconnected."}
 
 
 def save_mail(payload):
@@ -174,6 +230,7 @@ def page(host, proto):
         rows.insert(0, '<article><b>Why you still see the test inbox and a test sign-in</b><p class="m">Until the first two items below are connected, this computer cannot show Google\'s real account chooser '
                        'and cannot send real email, so sign-up codes and receipts are saved in the <a href="/outbox">test inbox</a> instead. Connect both and the app behaves like the live site: '
                        'Google\'s own "Continue with Google" button, and real emails in real inboxes.</p></article>')
+    conn_html = "".join('<p class="m">%s / %s <button type="button" class="rm" data-k="%s" data-b="%s">Disconnect</button></p>' % (e(k.capitalize()), e(b), e(k), e(b)) for k, b in connections()).replace("%", "%%")
     origin_html = "".join('<p><code>%s</code> <button type="button" class="cp" data-v="%s">Copy</button></p>' % (e(o), e(o)) for o in origins(host, proto)).replace("%", "%%")
     try:
         n = auth_api.counts()
@@ -201,6 +258,12 @@ code{background:var(--bg);padding:1px 5px;border-radius:5px}
 <p><input id="gp" type="password" placeholder="App Password" autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><input id="gc" type="email" placeholder="Send copies and tests to (optional)" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><button id="sv" type="button">Save and send a test email</button> <span id="sr" class="m" role="status"></span></p></article>
+<article id="ats"><b>Connect an employer's hiring system</b><p class="m">For an employer that uses Greenhouse or Lever and gave you the key they created. Their real postings then say <b>Apply instantly</b>. The key is saved only in uaply-partners.json on this computer and is never shown again.</p>
+<p><select id="ak" style="padding:8px;border:1px solid var(--line);border-radius:8px"><option value="greenhouse">Greenhouse</option><option value="lever">Lever</option></select>
+<input id="ab" type="text" placeholder="Board name, e.g. acme" style="width:200px;max-width:50vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p><input id="aa" type="password" placeholder="The employer's API key" autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p><button id="as" type="button">Connect</button> <span id="ar" class="m" role="status"></span></p>
+@@CONNS@@</article>
 <article><b>Send a test email</b><p class="m">Sends one message to your copy address so you can see that real email works.</p>
 <p><button id="t" type="button">Send test email</button> <span id="r" class="m" role="status"></span></p></article>
 <p class="m">%d accounts and %d emails recorded on this server. <a href="/outbox">Test inbox</a></p></main>
@@ -210,5 +273,8 @@ document.getElementById('gs').onclick=function(){var r=document.getElementById('
 fetch('/api/setup/save-google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({client_id:document.getElementById('gi').value})}).then(function(x){return x.json()}).then(function(j){r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
 document.getElementById('sv').onclick=function(){var r=document.getElementById('sr'),g=function(i){return document.getElementById(i).value};r.textContent='Saving...';
 fetch('/api/setup/save-mail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:g('ge'),password:g('gp'),copy_to:g('gc')})}).then(function(x){return x.json()}).then(function(j){if(j.saved)document.getElementById('gp').value='';r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
+document.getElementById('as').onclick=function(){var r=document.getElementById('ar'),g=function(i){return document.getElementById(i).value};r.textContent='Saving...';
+fetch('/api/setup/save-ats',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:g('ak'),board:g('ab'),api_key:g('aa')})}).then(function(x){return x.json()}).then(function(j){if(j.saved){document.getElementById('aa').value='';setTimeout(function(){location.reload()},900)}r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
+document.querySelectorAll('.rm').forEach(function(b){b.onclick=function(){fetch('/api/setup/remove-ats',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:b.getAttribute('data-k'),board:b.getAttribute('data-b')})}).then(function(){location.reload()})}})
 document.querySelectorAll('.cp').forEach(function(b){b.onclick=function(){var v=b.getAttribute('data-v');(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(function(){b.textContent='Copied'},function(){b.textContent='Select the address and copy it'})}})</script>
-</body></html>""".replace("@@ORIGINS@@", origin_html) % ("".join(rows), n["users"], n["mail"])).encode("utf-8")
+</body></html>""".replace("@@ORIGINS@@", origin_html).replace("@@CONNS@@", conn_html) % ("".join(rows), n["users"], n["mail"])).encode("utf-8")

@@ -37,7 +37,7 @@ function patch(s){
   s=once(s,'salary:num($("pSalary").value,0,10000000),loc:$("pLoc").value.trim(),','salary:num($("pSalary").value,0,10000000),loc:$("pLoc").value.trim(),email:($("pEmail")?$("pEmail").value.trim():""),');
   s=once(s,'$("pSalary").value=p.salary;$("pLoc").value=p.loc;','$("pSalary").value=p.salary;$("pLoc").value=p.loc;if($("pEmail"))$("pEmail").value=X?"":(p.email||"");if(X){$("pSkills").value="";$("pSalary").value="";$("pLoc").value=""}');
   s=once(s,'title:S.profile.title||""};','title:S.profile.title||"",st:"applied"};');
-  s=once(s,"<span>'+cap(j.mode)+'</span>","<span>'+cap(j.mode)+'</span>'+(j.type&&j.type!==\"job\"?'<span>'+({internship:\"Internship\",coop:\"Co-op\",parttime:\"Part-time\"}[j.type]||\"Job\")+'</span>':'')+'");
+  s=once(s,"<span>'+cap(j.mode)+'</span>","<span>'+cap(j.mode)+'</span>'+(j.type&&j.type!==\"job\"?'<span>'+({internship:\"Internship\",coop:\"Co-op\",parttime:\"Part-time\"}[j.type]||\"Job\")+'</span>':'')+(j.live?(j.instant?'<span class=\"inst\">Apply instantly</span>':'<span class=\"ext\">Opens employer site</span>'):'')+'");
   /* target titles count toward the match score: Title 15 points, Skills 30, Experience 15 (the total stays 100) */
   s=once(s,'{k:"Skills",w:40,','{k:"Skills",w:30,');
   s=once(s,'{k:"Experience",w:20,','{k:"Experience",w:15,');
@@ -51,6 +51,7 @@ function patch(s){
 }
 
 var CSS=`
+.facts .inst{color:var(--yes);font-weight:700}.facts .ext{color:var(--muted)}
 .tabs{display:none}
 #bnav{display:flex;gap:4px;justify-content:center;flex:none;max-width:1100px;width:100%;margin-inline:auto;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px;position:relative}
 .nwrap{position:relative;flex:1;display:flex;min-width:0}

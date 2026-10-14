@@ -64,9 +64,46 @@ To check the signature, compute HMAC-SHA256 over `timestamp + "." + body` with y
 Voluntary answers (race, gender, veteran or disability status) are never sent. The applicant agreed to what is sent before their first
 application, and every application email to the applicant lists exactly what was shared.
 
-## Not built yet (needs an employer's key, so it is built per employer)
-Direct submission into **Greenhouse**, **Lever** and **Ashby** with the employer's own API key, and a self-service page where an employer
-can register. Until then, those employers can use the email or webhook channel today.
+## Straight into the employer's hiring system (Greenhouse and Lever)
+For an employer that uses **Greenhouse** or **Lever**, an application can go straight into their own hiring system, so it appears in their
+pipeline with the resume attached and nobody retypes anything. This is the nearest thing to "swipe right and it is applied", and it works
+only for employers who connect, because both systems require a key that the employer's administrator creates:
+
+| System | What the employer creates | Where |
+|---|---|---|
+| Greenhouse | A **Job Board API** key | Configure, Dev Center, API Credential Management |
+| Lever | A **Postings API** key (a Super Admin makes it) | Settings, Integrations and API |
+
+Give UAply the key and the board name that appears in the employer's job-board address (`boards.greenhouse.io/<board>` or `jobs.lever.co/<site>`).
+On this computer use the **Connect an employer's hiring system** box on `/setup`. On a host, put the connections in the `UAPLY_ATS_JSON` setting as
+one line of JSON:
+
+    [{"kind": "greenhouse", "board": "acme", "api_key": "THE-KEY-THE-EMPLOYER-GAVE-YOU"},
+     {"kind": "lever", "board": "acme", "api_key": "THE-KEY-THE-EMPLOYER-GAVE-YOU"}]
+
+An employer who gives UAply its jobs (the partner list) can put the key in the same record instead: add `"ats": {"kind": "greenhouse", "board": "acme", "api_key": "..."}`
+to the employer and `"ats_job_id": "1001"` (the posting's number in their system) to each job. Run `python tools/mock-ats.py` to try a connection against a stand-in.
+
+What then happens, for that employer's real postings on UAply:
+
+- The job card says **Apply instantly**, so a person knows before swiping what swipe right does. Cards for other employers say **Opens employer site**.
+- Swipe right, with a short window to Undo, sends the application: name, email, phone, links, the resume file, and answers to the posting's own
+  questions where the person's profile has them (LinkedIn, website, current employer, work authorization, sponsorship, how they heard of the job).
+- **Greenhouse** postings often have required questions of their own. If one cannot be answered from the profile, UAply sends nothing and the person
+  finishes on the employer's page (the card says "Saved. Finish applying"), rather than guessing. **Lever** takes the standard fields only; its
+  API does not carry a posting's custom questions.
+- Requirements stay the same as for any direct send: a verified account whose email matches the application, `delivery` set to `live`, and the person's
+  consent. Keys are never shown, logged or put in an error message.
+- Try it first with a test posting on the employer's side. Neither system lets UAply test a key without really submitting.
+
+**Ashby** has an application endpoint too (a key with candidate-write rights), but its request format is not published in a form this project could
+verify, so it is not built yet. Until it is, those employers can use the email or webhook channel.
+
+## What no site can do
+Fill in and submit an application on an employer's website for them. Employers' pages are built to be completed by the applicant, they protect
+themselves with bot checks, and driving them by program breaks their terms. None of Greenhouse, Lever or Ashby documents a way to open an
+application page already filled in from a link, either. The honest alternative for employers who have not connected is the one UAply uses:
+save the job, show what will be asked, and open the employer's page with the person's answers ready to copy.
 
 ## Sources for this design
 Indeed Apply documentation (`indeed-apply-postUrl`, success and retry rules); Greenhouse Job Board API (applications need an API key);

@@ -39,6 +39,7 @@ from email.message import EmailMessage
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(ROOT, "data")
 CONFIG_PATH = os.path.join(ROOT, "uaply-config.json")
+import ats_api
 import jobs_api
 import auth_api
 import emails
@@ -335,7 +336,7 @@ def _send_email(cfg, to, cand, job, note, original="", resume=None):
         srv.send_message(msg)
 
 
-def _deliver(cfg, target, cand, job, note, contact, resume_meta, resume_bytes, hook, rec):
+def _deliver(cfg, target, cand, job, note, contact, resume_meta, resume_bytes, hook, rec, ats=None):
     """Send one application over every channel the employer opted into: email, a signed webhook, or both. The application counts as
     sent when at least one channel accepted it. Returns (status, error_text_or_None, channels_that_worked)."""
     done, errors = [], []
@@ -351,6 +352,18 @@ def _deliver(cfg, target, cand, job, note, contact, resume_meta, resume_bytes, h
             done.append("webhook")
         else:
             errors.append("webhook: %s" % why)
+    manual = ""
+    if ats:                                    # straight into the employer's own hiring system, with the key they gave us
+        st, why = ats_api.submit(ats["kind"], ats["board"], ats["id"], ats["key"], cand, note, resume_meta, resume_bytes)
+        if st == "sent":
+            done.append("hiring system (%s)" % ats["kind"])
+        elif st == "needs_manual":
+            manual = why
+        else:
+            errors.append("%s: %s" % (ats["kind"], why))
+    if not done and manual and not errors:     # nothing was sent because the posting asks something the profile cannot answer: finish on the employer's page
+        sys.stderr.write("[uaply] application %s needs a manual finish: %s" % (rec["id"], manual))
+        return "handoff", None, []
     return ("sent" if done else "failed"), ("; ".join(errors) if errors else None), done
 
 
@@ -373,7 +386,7 @@ def _mail_ctx(cfg, rec, note, user_email=""):
     """Everything emails.py needs to write the receipt or the owner copy of one application."""
     return {"test": rec["mode"] != "live", "status": rec["status"], "cand": rec["candidate"], "job": rec["job"], "at": rec["at"],
             "match": rec.get("match", 0), "to": rec.get("to", ""), "rows": _detail_rows(rec["candidate"], note), "note": note,
-            "user_email": user_email, "base_url": _site_base(cfg), "support_email": _s(cfg.get("support_email"), 120)}
+            "channels": rec.get("channels") or [], "user_email": user_email, "base_url": _site_base(cfg), "support_email": _s(cfg.get("support_email"), 120)}
 
 
 def _copy_message(cfg, rec):
@@ -560,6 +573,7 @@ def submit(p, user=None):
     contact = claimed if claimed and claimed.lower() == jobs_api.known_contact(job["id"]).lower() else ""
     policy = jobs_api.job_policy(job["id"])      # 'direct' (employer opted in), 'link' (employer's own page) or 'unknown' (example)
     hook = jobs_api.known_webhook(job["id"]) if policy == "direct" else None      # the HTTPS address the employer registered, if any
+    ats = jobs_api.known_ats(job["id"]) if policy == "direct" else None           # the employer's own hiring system and key, if they connected
     send_args = None
     with _lock:
         for a in APPS:
@@ -578,7 +592,7 @@ def submit(p, user=None):
             rec["to"] = contact or _simulated_recipient(job["co"])
             rec["simulated"] = True
             rec["status"] = "delivered_test"
-            rec["channels"] = ["email (simulated)"] + (["webhook (simulated)"] if hook else [])
+            rec["channels"] = ["email (simulated)"] + (["webhook (simulated)"] if hook else []) + (["hiring system (simulated)"] if ats else [])
             APPS.append(rec)
             _append("applications.jsonl", rec)
         else:
@@ -591,14 +605,15 @@ def submit(p, user=None):
                 return 400, {"error": "Live sending needs the user to review and press Send."}
             target = _redirect(cfg) or contact
             hook = None if _redirect(cfg) else hook          # a test redirect must never reach a real employer's system
-            if (target and _smtp_ready(cfg)) or hook:
+            ats = None if _redirect(cfg) else ats
+            if (target and _smtp_ready(cfg)) or hook or ats:
                 today = time.time() - 86400
                 sent_today = sum(1 for a in APPS if a["mode"] == "live" and a["status"] in ("sent", "sending") and a["at"] > today)
                 if sent_today >= int(cfg.get("daily_limit", 20)):
                     return 429, {"error": "Daily sending limit reached."}
                 rec["to"], rec["status"] = target, "sending"      # reserved now, so a double tap cannot send twice
                 APPS.append(rec)
-                send_args = (cfg, target if _smtp_ready(cfg) else "", cand, job, note, contact, resume_meta, resume_bytes, hook, rec)
+                send_args = (cfg, target if _smtp_ready(cfg) else "", cand, job, note, contact, resume_meta, resume_bytes, hook, rec, ats)
             else:
                 rec["status"] = "handoff"
                 APPS.append(rec)
