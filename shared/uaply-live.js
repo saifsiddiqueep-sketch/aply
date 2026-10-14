@@ -183,7 +183,7 @@ function kitApply(w,host){
         else if(j.status==="failed"){setStatus(j.error||"The email could not be sent.",true);if(sendBtn)sendBtn.disabled=false;return}
         else setStatus("Done.");
         var rc=j.receipt,au=w.__uaplyAuth?w.__uaplyAuth():null;
-        if(rc)statusEl.textContent+=" "+({sent:"Confirmation emailed to "+rc.to+".",delivered_test:"Confirmation is in the test inbox.",not_configured:(isRelease?"":"No confirmation email: email sending is not set up yet."),failed:"The confirmation email to "+rc.to+" could not be sent."}[rc.status]||"");
+        if(rc)statusEl.textContent+=" "+({sent:"Confirmation emailed to "+rc.to+".",delivered_test:testInboxNote(),not_configured:(isRelease?"":"No confirmation email: email sending is not set up yet."),failed:"The confirmation email to "+rc.to+" could not be sent."}[rc.status]||"");
         else if(au&&au.up&&!au.user)statusEl.textContent+=" Sign in to get a confirmation email.";
         if(j.status!=="handoff")undoBtn.hidden=true;
         if(sendBtn&&(j.status==="sent"||j.status==="delivered_test"||j.status==="duplicate"))sendBtn.hidden=true;
@@ -225,6 +225,12 @@ function kitApply(w,host){
 
   /* ---- quiet apply: a swipe right is the whole action, like pressing Submit application ---- */
   var isRelease=!!((host&&host.defaultView&&host.defaultView.UAplyOpts)||{}).release;
+  /* with no real email connected yet, a confirmation is only saved in the test inbox page of the owner's own server: say where. A hosted server has none, so say nothing. */
+  function testInboxNote(){
+    if(!w.__uaplyTestInbox)return isRelease?"":"Confirmation saved in the test inbox.";
+    var origin="";try{origin=host.defaultView.location.origin}catch(e){}
+    return "Confirmation is in the test inbox: "+origin+w.__uaplyTestInbox;
+  }
   var showSheet=!!((host&&host.defaultView&&host.defaultView.UAplyOpts)||{}).showSheet;   /* opt back in to the full sheet */
   function toast(msg,action,fn,ms){
     var old=d.getElementById("kitToast");if(old)old.remove();
@@ -268,7 +274,7 @@ function kitApply(w,host){
     /* what happened to the applicant's own email receipt (signed-in accounts only) */
     function receiptNote(j){
       var rc=j.receipt,au=w.__uaplyAuth?w.__uaplyAuth():null;
-      if(rc)return " "+({sent:"Confirmation emailed to "+rc.to+".",delivered_test:"Confirmation is in the test inbox.",not_configured:(isRelease?"":"No confirmation email: email sending is not set up yet."),failed:"The confirmation email could not be sent."}[rc.status]||"");
+      if(rc)return " "+({sent:"Confirmation emailed to "+rc.to+".",delivered_test:testInboxNote(),not_configured:(isRelease?"":"No confirmation email: email sending is not set up yet."),failed:"The confirmation email could not be sent."}[rc.status]||"");
       return au&&au.up&&!au.user?" Sign in to get a confirmation email.":"";
     }
     function deliver(){
@@ -323,7 +329,7 @@ function kitApply(w,host){
 
 function submitApply(w){
   w.__uaplySubmitOn=true;   /* from here on a swipe right applies by itself (see quietApply) */
-  return w.fetch("/api/apply/config").then(function(r){return r.json()}).then(function(c){w.__uaplyMode=c.mode==="live"?"live":"test";w.__uaplyRedirect=c.redirect||"";w.__uaplyAuto=c.autoSend!==false;w.__uaplyGrace=typeof c.graceSeconds==="number"?c.graceSeconds:5}).catch(function(){});
+  return w.fetch("/api/apply/config").then(function(r){return r.json()}).then(function(c){w.__uaplyMode=c.mode==="live"?"live":"test";w.__uaplyRedirect=c.redirect||"";w.__uaplyAuto=c.autoSend!==false;w.__uaplyTestInbox=c.testInbox||"";w.__uaplyGrace=typeof c.graceSeconds==="number"?c.graceSeconds:5}).catch(function(){});
 }
 
 window.UAplyLive={patch:patch,apply:apply,kit:{patch:kitPatch,apply:kitApply},submit:{apply:submitApply}};

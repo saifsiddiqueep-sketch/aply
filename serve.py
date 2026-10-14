@@ -170,7 +170,10 @@ class H(http.server.SimpleHTTPRequestHandler):
                 if p == "/api/jobs":
                     return self._send(200, jobs_api.get_json())
                 if p == "/api/apply/config":
-                    return self._send(200, uaply_api.public_config())
+                    cfg_out = uaply_api.public_config()
+                    if not PUBLIC:                          # only a copy running on the owner's computer has a test inbox page to point to
+                        cfg_out["testInbox"] = "/outbox"
+                    return self._send(200, cfg_out)
                 if p == "/api/outbox":
                     return self._send(200, uaply_api.outbox_json())
                 if p == "/outbox":

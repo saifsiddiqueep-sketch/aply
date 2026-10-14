@@ -4,6 +4,12 @@ How versions move: work happens in `sandbox`, is tested there, and goes to `dev`
 build: it is what the hosted site and the phone apps run. Each version is tagged on GitHub (Releases). `main` is the original
 production page and only changes when the owner decides.
 
+## 1.0.0-rc.4 (release candidate)
+
+- **The swipe message now says where the test confirmation is.** With no real email connected, a signed-in swipe saves the confirmation in the test
+  inbox page of the owner's own server, and the message gives its address (for example `http://localhost:8767/outbox`). Before, it only said
+  "in the test inbox". A hosted server has no such page, so real users are told nothing about it. `tools/ui-swipes.js` checks both.
+
 ## 1.0.0-rc.3 (release candidate)
 
 Applications now reach employers who connect, with the person's resume, and swiping is covered by tests of every gesture.
