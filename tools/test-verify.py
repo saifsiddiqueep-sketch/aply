@@ -37,14 +37,19 @@ cfg = {"delivery": "test", "smtp": {"host": "127.0.0.1", "port": port, "starttls
 uaply_api.config = lambda: cfg
 uaply_api.init("verify")
 auth_api.init("verify")
-VERIFY_MAIL = "Your UAply verification code is:\n\n    %s\n\nEnter it in UAply."
 
 
 def send(token):
     """What serve.py does at sign-up: make the first code and email it."""
     uid, addr, digits = auth_api.issue_code_for_token(token)
-    uaply_api.send_system_mail(uid, addr, "%s is your UAply verification code" % digits, VERIFY_MAIL % digits)
+    uaply_api.send_verification_mail(uid, addr, digits)
     return digits
+
+
+def stored_mail(user_id):
+    """Every saved copy of mail sent to this person (subject and body together), as one string."""
+    with auth_api._db() as c:
+        return " ".join("%s %s" % (r["subject"], r["body"]) for r in c.execute("SELECT subject, body FROM user_mail WHERE user_id=?", (user_id,)))
 
 
 def last_mail(to):
@@ -66,6 +71,25 @@ try:
     with auth_api._db() as c:
         row = c.execute("SELECT code_hash FROM email_codes").fetchone()
     t("only a hash of the code is stored", code not in row["code_hash"] and len(row["code_hash"]) == 64, True)
+    uid1 = auth_api.user_for(tok)["id"]
+    t("once really emailed, the code is not kept in the saved copy of the email (subject or body)", code in stored_mail(uid1), False)
+    t("the saved copy still says a verification email was sent", "verification code" in stored_mail(uid1).lower(), True)
+    # with no real email connected (this computer's test inbox) the code MUST be kept, or nobody could ever read it
+    saved_smtp = cfg["smtp"]
+    cfg["smtp"] = {}
+    s, out, tok_t = auth_api.signup("testinbox@example.com", "correct horse 99", "10.0.0.20", True)
+    code_t = send(tok_t)
+    t("in the test inbox (no real email connected) the code is kept so it can be read there", code_t in stored_mail(auth_api.user_for(tok_t)["id"]), True)
+    cfg["smtp"] = saved_smtp
+    # a failed real send must not leave the code behind either
+    saved_send = uaply_api._send_receipt
+    def _boom(*a, **k):
+        raise OSError("mail server down")
+    uaply_api._send_receipt = _boom
+    s, out, tok_f = auth_api.signup("failedsend@example.com", "correct horse 99", "10.0.0.21", True)
+    code_f = send(tok_f)
+    t("even when the real send fails, the code is not kept in the saved copy", code_f in stored_mail(auth_api.user_for(tok_f)["id"]), False)
+    uaply_api._send_receipt = saved_send
 
     # wrong, then right
     wrong = "%06d" % ((int(code) + 1) % 1000000)
@@ -78,7 +102,7 @@ try:
     t("the account is now verified", auth_api.user_for(tok)["emailVerified"], True)
     t("a code works only once", auth_api.verify_code(tok, code, "10.0.0.1")[1].get("already"), True)
     with auth_api._db() as c:
-        t("the code is deleted after use", c.execute("SELECT COUNT(*) FROM email_codes").fetchone()[0], 0)
+        t("the code is deleted after use", c.execute("SELECT COUNT(*) FROM email_codes WHERE user_id=?", (uid1,)).fetchone()[0], 0)
 
     # five wrong tries end the code
     s, out, tok2 = auth_api.signup("verify2@example.com", "correct horse 99", "10.0.0.2", True)
@@ -139,6 +163,25 @@ try:
     # a Google sign-in is verified from the start, and an old unverified account becomes verified by it
     err, user, tok8 = auth_api.oauth_login("google", "g-1", "googler@example.com", True)
     t("an account made with Google is verified", user["emailVerified"], True)
+
+    # deleting an account removes what the sign-in features stored about it (the privacy policy promises this)
+    def count(sql, *a):
+        with auth_api._db() as c:
+            return c.execute(sql, a).fetchone()[0]
+    s, out, tok9 = auth_api.signup("deleteme@example.com", "correct horse 99", "10.0.0.8", True)
+    send(tok9)
+    uid9 = auth_api.user_for(tok9)["id"]
+    t("before deleting, the account has a pending code, a session and a saved email", (count("SELECT COUNT(*) FROM email_codes WHERE user_id=?", uid9),
+      count("SELECT COUNT(*) FROM sessions WHERE user_id=?", uid9), count("SELECT COUNT(*) FROM user_mail WHERE user_id=?", uid9)), (1, 1, 1))
+    s, out, gone = auth_api.delete_account(tok9, "correct horse 99", "10.0.0.8")
+    t("a password account is deleted with its password", (s, gone), (200, uid9))
+    t("its code, sessions and saved email went with it", (count("SELECT COUNT(*) FROM email_codes WHERE user_id=?", uid9), count("SELECT COUNT(*) FROM sessions WHERE user_id=?", uid9),
+      count("SELECT COUNT(*) FROM user_mail WHERE user_id=?", uid9)), (0, 0, 0))
+    gid = user["id"]
+    t("before deleting, the Google account has its Google identity", count("SELECT COUNT(*) FROM identities WHERE user_id=?", gid), 1)
+    s, out, gone2 = auth_api.delete_account(tok8, "", "10.0.0.9", "DELETE")
+    t("a Google account is deleted by typing DELETE", (s, gone2), (200, gid))
+    t("its Google identity and sessions went with it", (count("SELECT COUNT(*) FROM identities WHERE user_id=?", gid), count("SELECT COUNT(*) FROM sessions WHERE user_id=?", gid)), (0, 0))
 finally:
     proc.terminate()
 

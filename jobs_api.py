@@ -92,6 +92,22 @@ SKILLS = [
     ("Roadmapping", r"roadmap"), ("Budgeting", r"\bbudget"), ("PyTorch", r"pytorch"),
 ]
 SKILL_RES = [(n, re.compile(p, re.I)) for n, p in SKILLS]
+# "recruiting" appears in nearly every company's boilerplate (equal-opportunity text, privacy notices), so "Hiring" counts as a skill only for people roles
+TITLE_GATED = {"Hiring": re.compile(r"recruit|talent|people|\bhr\b|human resources|staffing|sourcer|hiring", re.I)}
+REMOTE_WORD = re.compile(r"^\W*remote\b(?:\s*[-–—:,/]\s*|\s*\()?", re.I)
+
+
+def _place(loc, mode):
+    """The place shown next to a job's work style. A remote job whose location already begins with "Remote" would read
+    "Remote - USA  Remote" on the card, so that repeated word is dropped ("USA"; a bare "Remote" becomes "United States",
+    which is what the US-only rule above guarantees)."""
+    m = REMOTE_WORD.match(loc or "") if mode == "remote" else None
+    if m:                                                    # only a place that starts with "Remote" is changed; anything else is left exactly as listed
+        rest = (loc or "")[m.end():]
+        if m.group(0).rstrip().endswith("("):               # "Remote (US)": the opening bracket went with the word, so its closing one goes too
+            rest = rest.replace(")", "", 1)
+        loc = rest.strip(" -–—:,/") or "United States"
+    return loc or "Not listed"
 
 STATES = "AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY".split()
 STATE_NAMES = ("Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|District of Columbia|Florida|Georgia|Hawaii|Idaho|Illinois|"
@@ -123,7 +139,7 @@ _cache = {}
 _lock = threading.Lock()
 _disk = {"loaded": False, "dirty": False}
 DISK_MAX_AGE = 24 * 3600          # never trust a saved copy older than a day
-CACHE_VERSION = 4                  # raise this whenever the rules for keeping or classifying postings change: older saved copies are then ignored
+CACHE_VERSION = 5                  # raise this whenever the rules for keeping or classifying postings change: older saved copies are then ignored
 
 
 def _cache_file():
@@ -338,6 +354,8 @@ def _normalize(raw, kind, name):
     hay = (title + " ") * 2 + text
     found = []
     for skill, rx in SKILL_RES:
+        if skill in TITLE_GATED and not TITLE_GATED[skill].search(title):
+            continue
         n = len(rx.findall(hay))
         if n:
             found.append((n, skill))
@@ -359,7 +377,7 @@ def _normalize(raw, kind, name):
     jid = 100000 + int(hashlib.sha1(("%s:%s" % (kind, raw["id"])).encode()).hexdigest()[:6], 16)
     src = name if kind in ("remotive", "jobicy", "muse") else "%s's careers page" % raw["company"]
     # contact is deliberately empty and apply is "link": a third-party feed never gets an application emailed to anyone
-    return dict(id=jid, co=raw["company"], role=title, loc=loc or "Not listed", mode=mode,
+    return dict(id=jid, co=raw["company"], role=title, loc=_place(loc, mode), mode=mode,
                 sal=raw.get("sal") or _salary(raw["salary_text"], text), yrs=yrs, edu=edu, skills=skills, blurb=blurb, desc=desc,
                 type=typ, url=raw["url"], source=src, contact="", apply="link", live=True,
                 posted=raw.get("posted", 0), perks=_perks(text), comm=bool(COMM_RE.search(text)))

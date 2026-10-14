@@ -60,7 +60,7 @@ Real jobs and application sending need `serve.py --api` running somewhere.
 
 1. Create an empty repository on GitHub, then:
    ```bash
-   git remote add origin https://github.com/YOUR-NAME/uaply.git
+   git remote add origin https://github.com/saifsiddiqueep-sketch/uaply.git
    git push -u origin main dev sandbox
    ```
 2. Settings, Pages: set the source to **GitHub Actions**. Then Settings, Environments, `github-pages`: under

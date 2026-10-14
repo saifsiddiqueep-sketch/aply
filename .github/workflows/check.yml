@@ -28,3 +28,12 @@ jobs:
         run: |
           python -m pip install pyyaml
           python tools/audit-files.py
+      # The behavior tests that need no browser, network or open port. The rest (screens, swipes, Google, the public server)
+      # run on the owner's computer with: bash tools/run-all-tests.sh
+      - name: Test job rules, email codes, delivery to employers, the setup form and the emails
+        run: |
+          python tools/test-jobs.py
+          python tools/test-verify.py
+          python tools/test-delivery.py
+          python tools/test-setup.py
+          python tools/test-emails.py

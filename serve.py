@@ -60,14 +60,21 @@ if api:
     import threading
     threading.Thread(target=jobs_api.get_jobs, daemon=True).start()   # warm the job cache so the first visitor does not wait
 
-VERIFY_MAIL = ("Your UAply verification code is:\n\n    %s\n\nEnter it in UAply to confirm this email address. It works for 10 minutes and for one account. "
-               "If you did not create a UAply account, ignore this email.\n\n--\nUAply")
 MAX_BODY = 40000
 MAX_APPLY_BODY = 1500000
 
 class H(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **k):
         super().__init__(*a, directory=root, **k)
+
+    def parse_request(self):
+        """A null byte in the address (raw or as %00) is never valid: answer 400 instead of letting the file lookup fail and drop the connection."""
+        if not super().parse_request():
+            return False
+        if "\x00" in self.path or "%00" in self.path.lower():
+            self.send_error(400, "Bad request")
+            return False
+        return True
 
     def translate_path(self, path):
         p = path.split("?", 1)[0].split("#", 1)[0]
@@ -213,7 +220,9 @@ class H(http.server.SimpleHTTPRequestHandler):
             return self._send(403, {"error": "cross-site request refused"})
         try:
             n = int(self.headers.get("Content-Length") or 0)
-            if n <= 0 or n > (MAX_APPLY_BODY if p == "/api/apply" else MAX_BODY):         # an application may carry a resume file (up to 1 MB, sent as text)
+            if n <= 0:                                                                     # nothing was sent: a bad request, not a too-large one
+                return self._send(400, {"error": "bad request"})
+            if n > (MAX_APPLY_BODY if p == "/api/apply" else MAX_BODY):                    # an application may carry a resume file (up to 1 MB, sent as text)
                 return self._send(413, {"error": "bad size"})
             payload = json.loads(self.rfile.read(n).decode("utf-8"))
             if not isinstance(payload, dict):
@@ -228,7 +237,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 code, out, token = auth_api.signup(payload.get("email"), payload.get("password"), ip, payload.get("agree"))
                 if token:                                        # a new password account must prove it owns the email: send the first code
                     uid, addr, digits = auth_api.issue_code_for_token(token)
-                    out = dict(out, delivery=uaply_api.send_system_mail(uid, addr, "%s is your UAply verification code" % digits, VERIFY_MAIL % digits))
+                    out = dict(out, delivery=uaply_api.send_verification_mail(uid, addr, digits))
                 return self._send(code, out, headers=self._cookie(token) if token else ())
             if p == "/api/auth/login":
                 code, out, token = auth_api.login(payload.get("email"), payload.get("password"), ip)
@@ -269,7 +278,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 code, out, mail = auth_api.resend_code(self._token(), ip)
                 if mail:
                     uid, addr, digits = mail
-                    mail_status = uaply_api.send_system_mail(uid, addr, "%s is your UAply verification code" % digits, VERIFY_MAIL % digits, secret=False)
+                    mail_status = uaply_api.send_verification_mail(uid, addr, digits)
                     out = dict(out, delivery=mail_status)
                 return self._send(code, out)
             if p == "/api/auth/forgot":
@@ -328,4 +337,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         if not PUBLIC:                                                   # keep request logs out of a host's logs (they hold IPs)
             super().log_message(fmt, *args)
 
-http.server.ThreadingHTTPServer((BIND, port), H).serve_forever()
+class Server(http.server.ThreadingHTTPServer):
+    request_queue_size = 128         # Python's default of 5 refuses connections outright when a burst of visitors arrives at once
+
+Server((BIND, port), H).serve_forever()

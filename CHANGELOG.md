@@ -4,6 +4,34 @@ How versions move: work happens in `sandbox`, is tested there, and goes to `dev`
 build: it is what the hosted site and the phone apps run. Each version is tagged on GitHub (Releases). `main` is the original
 production page and only changes when the owner decides.
 
+## 1.0.0-rc.6 (release candidate)
+
+A sweep of the whole site and app (every file, every screen at iPhone size, the server with bad input), and what it found.
+
+- **Privacy fix: the emailed verification code is no longer kept.** The saved copy of the email (subject and body) held the 6-digit code even after
+  the email was really sent, which contradicted "only a hash of the code is stored". Now, once a real email was attempted, the saved copy says only
+  that a code was emailed. The test inbox on the owner's own computer still shows it (that is its purpose). Covered by new tests, including a failed send.
+- **Privacy Policy updated to match the product:** Google sign-in (what Google tells us and what we keep), the emailed code, Google's button loading from
+  Google when the sign-in screen opens (and its own cookie), and that deleting an account also removes the linked Google number and any pending code.
+  Still a draft for an attorney to review. Tests now prove that deleting an account removes its code, sessions, saved email and Google link.
+- **A new profile no longer starts with a made-up email.** The Settings form was pre-filled with a sample person's address while the name and skills
+  were blank; a person who typed only a name would have kept it as their reply address.
+- **Job cards:** "Hiring" is listed as a skill only on recruiting and people roles (company boilerplate about "recruiting" put it on a firmware co-op).
+  A remote job's place no longer repeats the word ("Remote - USA  Remote" is now "USA  Remote"). A "100%" score now fits inside its ring.
+- **Server:** an address with a null byte (`%00`) now gets a clean 400 instead of a dropped connection, and an empty POST gets 400 instead of "too large".
+  A burst of visitors no longer gets connections refused: Python's default waiting line of 5 overflowed when 300 requests arrived at once, so it is now 128.
+  A new test (`tools/stress.py`, part of the full run) fires 300 simultaneous reads three times, 24 simultaneous sign-ups and a 24-guess password attack: no
+  server errors, no locked database, and the lock-out holds.
+- **Repository hygiene:** a local-only copy of the partner list (`uaply-partners.json.bak`) had been committed; it is untracked and `.gitignore` now covers
+  backups. The file audit now fails on any tracked backup, temporary or log file and on stray control characters (the sign of a mangled backslash).
+  The pull-request check now also runs the five behavior tests that need no browser (jobs, codes, delivery, setup form, emails). The test runner prints
+  each test's real count. The README clone address is the real repository. Help wording says "Coop" like the menu.
+- New tools: `tools/ui-effects.js` (skill chips, empty Add, the three file downloads), `tools/ui-checklist.js` (every profile checklist item lands on
+  its field), `tools/ui-polish.js` (measures the ring, place line, blank email, assistant answer), `tools/shot-all.js` (a screenshot of every screen).
+  More tests: jobs 46, verification 34, public server 46.
+- **Not code, but needed before launch:** the phone app is set to load `https://uaply-dev.onrender.com`, which does not exist yet (deploy with
+  `render.yaml`, see DEPLOY.md); the legal pages are drafts that say a lawyer has not reviewed them.
+
 ## 1.0.0-rc.5 (release candidate)
 
 Sign-in the way the big job sites do it: Google's own button, and an email code that proves an email is real.

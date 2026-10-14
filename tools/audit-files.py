@@ -110,6 +110,9 @@ for f in files:
     except UnicodeDecodeError as e:
         err(f, "not valid UTF-8 (%s)" % e)
         continue
+    stray = re.search(r"[\x01-\x08\x0b\x0c\x0e-\x1f\x7f]", text)
+    if stray:                                             # a backspace or similar inside code is nearly always a backslash escape that got mangled on the way in
+        err(f, "contains a stray control character (%r), usually a mangled backslash escape" % stray.group(0))
     if text.startswith("﻿"):
         err(f, "starts with a byte-order mark")
     if "\r\n" in text and not f.endswith((".bat", ".cmd")) and "gradlew.bat" not in f:
@@ -172,6 +175,9 @@ tracked = set(git("ls-files").split("\n"))
 for secret in ("uaply-config.json", "uaply-partners.json"):
     if secret in tracked:
         err(secret, "is committed to git, but it holds private settings")
+for t in sorted(tracked):                                 # backups and scratch files named to slip past .gitignore (this happened with a ".bak" copy of the partner list)
+    if re.search(r"(\.bak|\.orig|\.rej|\.swp|\.tmp|\.log|~)$", t) or os.path.basename(t).startswith(("uaply-config.json.", "uaply-partners.json.")):
+        err(t, "looks like a local backup, temporary or log file and should not be committed")
 for d in ("data/", "__pycache__/"):
     if any(t.startswith(d) or "/" + d in t for t in tracked):
         err(d, "files under here are committed to git")

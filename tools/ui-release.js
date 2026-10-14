@@ -44,8 +44,8 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
     await sleep(500);
     await scan("Profile > " + s);
     if (s === "Settings") {
-      const vals = JSON.parse(await ev("JSON.stringify(['pName','pTitle','pYears','pSkills','pSalary','pLoc'].map(id=>(" + F + ".getElementById(id)||{}).value))"));
-      check("a new profile starts blank (no sample name, title, skills, pay or city)", vals.every((v) => v === ""), JSON.stringify(vals));
+      const vals = JSON.parse(await ev("JSON.stringify(['pName','pEmail','pTitle','pYears','pSkills','pSalary','pLoc'].map(id=>(" + F + ".getElementById(id)||{}).value))"));
+      check("a new profile starts blank (no sample name, email, title, skills, pay or city)", vals.every((v) => v === ""), JSON.stringify(vals));
     }
     if (s === "Account") {
       await sleep(600);

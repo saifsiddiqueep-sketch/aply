@@ -1,6 +1,9 @@
 # secrets and local records: never commit these
 uaply-config.json
 uaply-partners.json
+uaply-config.json.*
+uaply-partners.json.*
+*.bak
 data/
 
 # generated
