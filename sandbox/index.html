@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>UAply sandbox</title>
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="favicon-192.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=2">
+<link rel="icon" type="image/png" sizes="192x192" href="favicon-192.png?v=2">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
 <style>
 /* SANDBOX: every experiment can be toggled freely. Own storage key, never touches prod or dev data. */
 :root{--bg:#FDF0F2;--surface:#FFFFFF;--ink:#2A1218;--muted:#7B5560;--line:#F3DADF;--accent:#C92A55;--accent2:#F0663B;--accent-ink:#FFFFFF}
@@ -40,8 +40,9 @@ iframe{border:1px solid var(--line);border-radius:14px;background:var(--bg);widt
   <div class="chips" id="feats" role="group" aria-label="Experiments"></div>
   <p class="note" id="note">Pick an experiment to see what it does.</p>
 </div>
-<div class="stage" id="stage"><iframe id="app" title="UAply sandbox build"></iframe></div>
+<div class="stage" id="stage"><iframe id="app" title="UAply sandbox build" allow="geolocation"></iframe></div>
 <div class="log" id="log" aria-live="polite"></div>
+<script>window.UAplyOpts={nearMe:true};   /* sandbox only: ask for device location and show the commute slider */</script>
 <script src="uaply-nav.js"></script>
 <script src="uaply-live.js"></script>
 <script src="uaply-profile.js"></script>
