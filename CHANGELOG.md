@@ -4,6 +4,34 @@ How versions move: work happens in `sandbox`, is tested there, and goes to `dev`
 build: it is what the hosted site and the phone apps run. Each version is tagged on GitHub (Releases). `main` is the original
 production page and only changes when the owner decides.
 
+## Unreleased (sandbox and dev)
+
+### Profile setup, and what really changes your matches
+- **Profile setup** is now one guided flow, five short steps (About you, Jobs you want, Where and pay, Background and links,
+  Eligibility and extras), saved as you go, the same on phone and desktop. The old Settings, Resume and links, and Preferences
+  screens are folded into it, so the Profile menu has five items instead of seven. On desktop (960px and wider) a live "What
+  employers see" card sits beside the questions.
+- Deleting an account is tucked under "More account options", with a short skippable exit survey (anonymous).
+- **Your answers now do more work.** Your headline, About you and major count as skills a job asks for. Work style: tick nothing
+  and every style scores full points; the new "Hide work styles I did not pick" filter hides the rest. The opportunity types you
+  pick open first in Services. State and ZIP code help find where you live for the distance filter. One completeness score is used
+  everywhere. Optional EEO answers, work authorization and GPA are never used to score, rank or hide jobs.
+- dev now includes the Application profile (phone, links, school, work authorization, opportunity types) so those details reach
+  employers; before, dev sent none of them.
+- Fixed: errors on the Account screen were off-screen; a new profile was pre-filled with a stranger's email; restoring a backup
+  dropped the Application profile answers; the Account screen showed fake Google/Apple/phone sign-in previews next to the real
+  form; the desktop form was capped at half width; password, file and month inputs were unstyled; tap targets under 44px.
+
+### Jobs near you (sandbox only for now)
+- On first open the browser's own "share your location?" prompt appears, with a card above the jobs saying why. If location is
+  blocked in the browser, the card says so once and how to turn it on. The position is rounded to about a mile, kept only on the
+  device and never sent to the server.
+- Nearby in-person jobs score higher (full location points within 25 miles, partial to 60), and cards say "In your area" or
+  "About N miles from you".
+- Filters has a **Commute distance** slider: Remote only, 5 to 100 miles, Any distance. dev keeps the old distance choice.
+- Fixed: in the sandbox, Bottom navigation stopped part-way with "Cannot read properties of undefined (reading 'up')" (the
+  auto-message check read the sign-in state before it existed), which also left out everything that loads after it.
+
 ## 1.0.0-rc.8 (release candidate)
 
 Swipe right can now apply by itself: straight into the employer's own hiring system, for employers who connect.

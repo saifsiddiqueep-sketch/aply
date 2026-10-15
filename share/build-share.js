@@ -41,7 +41,10 @@ function build(src, out, title, edits) {
   console.log("wrote", out, Math.round(h.length / 1024) + "KB");
   if (process.argv.includes("--full")) {   // a complete page for ordinary web hosting (GitHub Pages)
     const full = out.replace(/\.html$/, ".full.html");
-    fs.writeFileSync(full, '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>\n' + h + "\n</body></html>\n");
+    // the icon links belong in <head>; the head was stripped above, so put them back there (in <body> some browsers show a plain globe)
+    const iconTags = h.match(/<link rel="(?:icon|apple-touch-icon)"[^>]*>\s*/g) || [];
+    const bodyHtml = iconTags.reduce((s, t) => s.replace(t, ""), h);
+    fs.writeFileSync(full, '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' + iconTags.map((t) => t.trim()).join("") + '</head><body>\n' + bodyHtml + "\n</body></html>\n");
     console.log("wrote", full);
   }
 }
@@ -51,7 +54,7 @@ build("sandbox/index.html", "share/sandbox.html", "UAply Sandbox", [
   ["Experiment freely. Reads a copy of index.html (prod); prod is never changed.", "Experiment freely. Hosted copy: example jobs only, and your swipes stay in your own browser."],
 ]);
 build("dev/index.html", "share/dev.html", "UAply", [
-  ['var PROMOTED=["nav","live","kit","submit",', 'var PROMOTED=["nav",'],
+  ['var PROMOTED=["nav","profile","live","kit","submit",', 'var PROMOTED=["nav","profile",'],
   // the hosted copy has no server, so it must say so instead of posing as the real app
   ['<div class="bar" id="devbar" hidden><span class="badge">DEV</span><span id="what">Release candidate</span></div>',
    '<div class="bar" id="devbar"><span class="badge">PREVIEW</span><span id="what">Static preview: example jobs only. Accounts and real jobs run on the UAply server.</span></div>'],

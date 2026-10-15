@@ -128,6 +128,7 @@ function apply(w){
   ];
   function curSection(){var b=d.querySelector("#secTitle");return b?b.textContent.toLowerCase():""}
   function goTo(sec,fieldId){
+    if(w.__uaplyGoField){w.__uaplyGoField(sec,fieldId);return}   /* the guided setup knows which step the field is on */
     function focus(){var c=d.getElementById(fieldId);if(c){c.scrollIntoView({block:"center"});c.focus()}}
     if(curSection()===sec){focus();return}
     var nb=d.getElementById("nb-prof");if(!nb)return;
