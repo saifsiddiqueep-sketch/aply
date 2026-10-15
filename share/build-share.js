@@ -41,7 +41,10 @@ function build(src, out, title, edits) {
   console.log("wrote", out, Math.round(h.length / 1024) + "KB");
   if (process.argv.includes("--full")) {   // a complete page for ordinary web hosting (GitHub Pages)
     const full = out.replace(/\.html$/, ".full.html");
-    fs.writeFileSync(full, '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>\n' + h + "\n</body></html>\n");
+    // the icon links belong in <head>; the head was stripped above, so put them back there (in <body> some browsers show a plain globe)
+    const iconTags = h.match(/<link rel="(?:icon|apple-touch-icon)"[^>]*>\s*/g) || [];
+    const bodyHtml = iconTags.reduce((s, t) => s.replace(t, ""), h);
+    fs.writeFileSync(full, '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' + iconTags.map((t) => t.trim()).join("") + '</head><body>\n' + bodyHtml + "\n</body></html>\n");
     console.log("wrote", full);
   }
 }
