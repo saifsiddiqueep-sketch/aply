@@ -64,8 +64,11 @@
    "id": "distance",
    "title": "Where is the distance filter?",
    "tags": "distance miles radius near me close commute location city 10 20 50",
-   "body": "Distance is in Profile setup, under Where and pay, and it only appears when you tick Hybrid or On-site under work style, because remote jobs don't need it. Choose 10, 20, 50 or 100 miles from where you live. UAply finds that from your city and state, or from your ZIP code if it doesn't know the city. Distance works for most larger US cities.",
-   "go": "prof:preferences"
+   "body": "Open Profile, then Filters, and drag the Commute distance slider. Far left shows remote jobs only, and far right shows every job. In between you choose how many miles from you in-person jobs can be, from 5 to 100. UAply measures from your device location if you tapped Use my location, otherwise from your city or ZIP code.",
+   "go": "prof:preferences",
+   "release": {
+    "body": "Distance is in Profile setup, under Where and pay, and it only appears when you tick Hybrid or On-site under work style, because remote jobs don't need it. Choose 10, 20, 50 or 100 miles from where you live. UAply finds that from your city and state, or from your ZIP code if it doesn't know the city. Distance works for most larger US cities."
+   }
   },
   {
    "id": "services",

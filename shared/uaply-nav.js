@@ -43,6 +43,10 @@ function patch(s){
   s=once(s,'{k:"Experience",w:20,','{k:"Experience",w:15,');
   s=once(s,'var pe=LEVELS.indexOf(p.edu),je=LEVELS.indexOf(job.edu);','var tt=window.__uaplyTitle?window.__uaplyTitle(job,p):{s:1,have:"No target titles set"};var pe=LEVELS.indexOf(p.edu),je=LEVELS.indexOf(job.edu);');
   s=once(s,'{k:"Education",w:5,','{k:"Title",w:15,s:tt.s,ask:job.role,have:tt.have},\n   {k:"Education",w:5,');
+  /* nearby jobs score higher when the page knows where you are (sandbox: window.__uaplyNearScore exists only then) */
+  s=once(s,'if(job.mode==="remote")lc=1;','if(job.mode==="remote")lc=1;else if(window.__uaplyNearScore&&window.__uaplyNearScore(job,p)!=null)lc=window.__uaplyNearScore(job,p);');   /* a known device location beats a typed city */
+  s=once(s,'else lc=p.reloc?0.6:0;','else{var ns=window.__uaplyNearScore?window.__uaplyNearScore(job,p):null;lc=ns!=null?ns:(p.reloc?0.6:0)}');
+  s=once(s,'(lc===1?"You live there":(lc?"Would relocate":"Different city"))','(lc===1?(window.__uaplyNearLabel&&window.__uaplyNearLabel(job)||"You live there"):(lc?(window.__uaplyNearLabel&&window.__uaplyNearLabel(job)||"Would relocate"):"Different city"))');
   /* a new person starts with nothing ticked under "Work style", which means no preference (every style scores full points) */
   s=once(s,'var mo=p.modes[job.mode]?1:((job.mode==="hybrid"&&p.modes.remote)?0.5:0);','var anyM=p.modes.remote||p.modes.hybrid||p.modes.onsite;var mo=!anyM?1:(p.modes[job.mode]?1:((job.mode==="hybrid"&&p.modes.remote)?0.5:0));');
   s=once(s,'have:mo===1?"Accepted":(mo?"Hybrid, you prefer remote":"Not on your list")','have:mo===1?(anyM?"Accepted":"No preference set"):(mo?"Hybrid, you prefer remote":"Not on your list")');
@@ -219,6 +223,14 @@ input[type=range]{accent-color:var(--accent);min-height:44px}
 #aEeo[open]>summary{color:var(--ink)}
 #aEeo>.eeoBody{display:flex;flex-direction:column;gap:10px;padding-top:6px}
 #banner:not([hidden]){display:flex!important}
+#locAsk{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;width:100%;max-width:620px}
+#locAsk p{margin:0;color:var(--muted);font-size:13.5px}
+#locAsk .acts{display:flex;gap:8px;flex-wrap:wrap}
+#fMilesWrap.nearbox{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+#fMilesWrap .rngrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+#fMilesWrap .rngrow b{font-size:15px}
+#fMilesWrap .rngrow .m{color:var(--muted);font-size:12px}
+#fLoc{display:flex;flex-direction:column;gap:6px;align-items:flex-start;margin-top:4px}
 @media (max-width:480px){.hdrbtn .em{display:none}.hdrbtn{padding:5px;max-width:none}}
 `;
 
@@ -227,6 +239,7 @@ function apply(w,host){
   if(!A)throw new Error("app hooks missing");
   var OPTS=(host&&host.defaultView&&host.defaultView.UAplyOpts)||{};   /* e.g. dev sets hideServiceCounts */
   var REL=!!OPTS.release;   /* release build: no test controls, no simulated sign-in, no sample data, no paid plans */
+  var NEAR=!!OPTS.nearMe;   /* sandbox only for now: ask for device location, commute slider in Filters, nearby jobs score higher */
   var NK=w.__uaplyKey+".nav";
   var SECS={
     svc:{label:"Services",items:[["job","Full-time"],["parttime","Part-time"],["internship","Internships"],["coop","Co-ops"]]},
@@ -480,7 +493,7 @@ function apply(w,host){
   var MILES=["any","10","20","50","100"],POSTED=["any","24h","7d","30d"];
   function cleanF(a){
     a.fPerks=Array.isArray(a.fPerks)?a.fPerks.filter(function(k){return PERK_KEYS.indexOf(k)>-1}).slice(0,PERKS.length):[];
-    if(MILES.indexOf(String(a.fMiles))<0)a.fMiles="any";a.fMiles=String(a.fMiles);
+    if(!(MILES.indexOf(String(a.fMiles))>-1||(NEAR&&/^(0|[1-9]\d?|100)$/.test(String(a.fMiles))&&+a.fMiles%5===0)))a.fMiles="any";a.fMiles=String(a.fMiles);
     if(POSTED.indexOf(a.fPosted)<0)a.fPosted="any";
     a.fApp=!!a.fApp;a.fStrict=!!a.fStrict;a.fAuto=!!a.fAuto;a.fTitleOnly=!!a.fTitleOnly;a.fNoComm=!!a.fNoComm;a.fEdu=!!a.fEdu;a.fWs=a.fWs!==false;
     var seen={};
@@ -528,7 +541,52 @@ function apply(w,host){
   var ZIP3=[["190 191",39.9526,-75.1652],["198",39.7447,-75.5484],["081",39.9259,-75.1196],["086",40.2171,-74.7429],["181",40.6084,-75.4902],["171",40.2732,-76.8867],["100 101 102 103 104 111 112 113 114",40.7128,-74.006],["070 071 072",40.7357,-74.1724],["073",40.7178,-74.0431],["021 022",42.3601,-71.0589],["029",41.824,-71.4128],["060 061",41.7658,-72.6734],["142",42.8864,-78.8784],["200 202 203 204 205",38.9072,-77.0369],["212",39.2904,-76.6122],["232",37.5407,-77.436],["150 151 152",40.4406,-79.9959],["276",35.7796,-78.6382],["282",35.2271,-80.8431],["303",33.749,-84.388],["331",25.7617,-80.1918],["328",28.5383,-81.3792],["336",27.9506,-82.4572],["606",41.8781,-87.6298],["482",42.3314,-83.0458],["432",39.9612,-82.9988],["441",41.4993,-81.6944],["452",39.1031,-84.512],["462",39.7684,-86.1581],["554",44.9778,-93.265],["631",38.627,-90.1994],["641",39.0997,-94.5786],["752",32.7767,-96.797],["770",29.7604,-95.3698],["787",30.2672,-97.7431],["782",29.4241,-98.4936],["802",39.7392,-104.9903],["850",33.4484,-112.074],["841",40.7608,-111.891],["891",36.1699,-115.1398],["900 901",34.0522,-118.2437],["921",32.7157,-117.1611],["941",37.7749,-122.4194],["951",37.3382,-121.8863],["946",37.8044,-122.2712],["981",47.6062,-122.3321],["972",45.5152,-122.6784],["372",36.1627,-86.7816],["701",29.9511,-90.0715]];
   function zipGeo(z){var p=String(z||"").slice(0,3);if(!/^\d{3}$/.test(p))return null;for(var i=0;i<ZIP3.length;i++)if((" "+ZIP3[i][0]+" ").indexOf(" "+p+" ")>-1)return [ZIP3[i][1],ZIP3[i][2]];return null}
   /* where you live: your city plus state (so "Columbus" + OH works), then your ZIP code if the city is not one we know */
-  function homeGeo(){var p=A.S.profile,ad=acct.addr||{};return geo((p.loc||"")+(ad.state?", "+ad.state:""))||geo(p.loc)||zipGeo(ad.zip)}
+  function homeGeo(){var p=A.S.profile,ad=acct.addr||{};return devPos()||geo((p.loc||"")+(ad.state?", "+ad.state:""))||geo(p.loc)||zipGeo(ad.zip)}
+
+  /* ---- device location (sandbox only). Asked once with a friendly card; kept only on this device, rounded to about a mile,
+     and used only to measure distance to jobs. It is never sent to the server. ---- */
+  var LK=w.__uaplyKey+".loc",DEV=null;
+  try{var lr=JSON.parse(w.localStorage.getItem(LK));if(lr&&typeof lr==="object")DEV=lr}catch(e){}
+  function devPos(){return NEAR&&DEV&&typeof DEV.lat==="number"&&typeof DEV.lon==="number"?[DEV.lat,DEV.lon]:null}
+  function saveDev(){try{if(DEV)w.localStorage.setItem(LK,JSON.stringify(DEV));else w.localStorage.removeItem(LK)}catch(e){}}
+  function askDevice(done){
+    if(!w.navigator.geolocation){done&&done(false);return}
+    w.navigator.geolocation.getCurrentPosition(function(pos){
+      DEV={lat:Math.round(pos.coords.latitude*100)/100,lon:Math.round(pos.coords.longitude*100)/100,at:Date.now(),asked:true};saveDev();
+      A.renderAll();syncLocUI();done&&done(true);
+    },function(){DEV={asked:true,denied:true,at:Date.now()};saveDev();syncLocUI();done&&done(false)},{enableHighAccuracy:false,timeout:12000,maximumAge:3600000});
+  }
+  function syncLocUI(){
+    var ask=d.getElementById("locAsk");if(ask&&(DEV&&DEV.asked))ask.remove();
+    var st=d.getElementById("fLocState"),bt=d.getElementById("fLocBtn");if(!st||!bt)return;
+    if(devPos()){st.textContent="Using your device location (accurate to about a mile). It stays on this device and is never sent to our server.";bt.textContent="Stop using my location";bt.setAttribute("data-mode","stop")}
+    else if(DEV&&DEV.denied){st.textContent="Location is off for this site. Allow it in your browser's site settings, then tap Use my location. Until then distance uses your city.";bt.textContent="Use my location";bt.setAttribute("data-mode","ask")}
+    else{st.textContent="Not using your device location. Distance uses your city or ZIP code.";bt.textContent="Use my location";bt.setAttribute("data-mode","ask")}
+  }
+  function nearBox(){
+    if(!NEAR||(DEV&&DEV.asked)||!w.navigator.geolocation||d.getElementById("locAsk"))return;
+    var c=d.createElement("div");c.id="locAsk";c.setAttribute("role","region");c.setAttribute("aria-label","Use your location");
+    c.innerHTML='<b>See jobs near you first?</b><p>UAply can use your device location to put nearby jobs at the top. It stays on this device and is never sent to our server. You can turn it off any time in Filters.</p><div class="acts"><button type="button" class="btn" data-near="yes">Use my location</button><button type="button" class="btn ghost" data-near="no">Not now</button></div>';
+    var fl=d.getElementById("filters");if(!fl||!fl.parentNode)return;fl.parentNode.insertBefore(c,fl);
+    c.addEventListener("click",function(e){
+      var b=e.target.closest("[data-near]");if(!b)return;
+      if(b.getAttribute("data-near")==="yes"){b.disabled=true;b.textContent="Finding you…";askDevice()}
+      else{DEV={asked:true,skipped:true,at:Date.now()};saveDev();c.remove();syncLocUI()}
+    });
+  }
+  if(NEAR){
+    w.__uaplyNearScore=function(job,p){var me=devPos(),there=me&&geo(job.loc);if(!there)return null;var mi=miles(me,there);return mi<=25?1:(mi<=60?0.6:(p&&p.reloc?0.6:0))};
+    w.__uaplyNearLabel=function(job){var me=devPos(),there=me&&geo(job.loc);if(!there)return "";var mi=Math.round(miles(me,there));return mi<3?"In your area":"About "+mi+" miles from you"};
+    setTimeout(function(){
+      var perm=w.navigator.permissions&&w.navigator.permissions.query?w.navigator.permissions.query({name:"geolocation"}):null;
+      if(perm)perm.then(function(r){
+        if(r.state==="granted"&&(!DEV||!DEV.lat||Date.now()-DEV.at>216e5))askDevice();      /* already allowed: refresh quietly */
+        else if(r.state==="denied"&&!(DEV&&DEV.asked)){DEV={asked:true,denied:true,at:Date.now()};saveDev();syncLocUI()}
+        else nearBox();
+      },function(){nearBox()});
+      else nearBox();
+    },600);
+  }
   function miles(a,b){var R=3958.8,r=Math.PI/180,dl=(b[0]-a[0])*r,dn=(b[1]-a[1])*r,x=Math.sin(dl/2)*Math.sin(dl/2)+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dn/2)*Math.sin(dn/2);return 2*R*Math.asin(Math.sqrt(x))}
   /* target titles: the main title plus up to four more. Words must appear in the job's role name (plurals allowed). */
   function titleList(){return [A.S.profile.title].concat(acct.titles).map(function(t){return String(t||"").trim()}).filter(Boolean)}
@@ -621,7 +679,8 @@ function apply(w,host){
     var pm=A.S.profile.modes||{};
     /* work styles you did not pick in your profile (nothing picked means no preference) */
     if(acct.fWs&&A.S.profile.custom&&(pm.remote||pm.hybrid||pm.onsite)&&!pm[j.mode])return true;
-    if(acct.fMiles!=="any"&&j.mode!=="remote"&&(pm.hybrid||pm.onsite)){
+    if(acct.fMiles!=="any"&&j.mode!=="remote"&&(NEAR||pm.hybrid||pm.onsite)){
+      if(NEAR&&+acct.fMiles===0)return true;   /* 0 miles means remote only */
       var home=homeGeo(),there=geo(j.loc);
       if(!home||!there){if(strict)return true}else if(miles(home,there)>+acct.fMiles)return true;
     }
@@ -864,7 +923,8 @@ function apply(w,host){
     var f=d.createElement("div");f.className="field";f.id="fMeta";
     f.innerHTML='<label for="fPosted">Posted</label><select id="fPosted"><option value="any">Any time</option><option value="24h">Past 24 hours</option><option value="7d">Past week</option><option value="30d">Past month</option></select>'+
       '<div class="checks" style="margin-top:8px"><label><input type="checkbox" id="fApp"> Under 10 applicants</label></div><small id="fAppNote">Applicant counts come from UAply. Listings from outside feeds do not have one yet.</small>'+
-      '<div id="fMilesWrap"><label for="fMiles">Distance from your city</label><select id="fMiles"><option value="any">Any distance</option><option value="10">Within 10 miles</option><option value="20">Within 20 miles</option><option value="50">Within 50 miles</option><option value="100">Within 100 miles</option></select><small id="fMilesNote"></small></div>'+
+      (NEAR?'<div id="fMilesWrap" class="nearbox"><label for="fMiles">Commute distance</label><input type="range" id="fMiles" min="0" max="105" step="5" value="105" aria-describedby="fMilesV"><div class="rngrow"><b id="fMilesV" aria-live="polite"></b><span class="m">Left end: remote only. Right end: any distance.</span></div><small id="fMilesNote"></small><div id="fLoc"><small id="fLocState"></small><button type="button" class="btn ghost" id="fLocBtn">Use my location</button></div></div>'
+        :'<div id="fMilesWrap"><label for="fMiles">Distance from your city</label><select id="fMiles"><option value="any">Any distance</option><option value="10">Within 10 miles</option><option value="20">Within 20 miles</option><option value="50">Within 50 miles</option><option value="100">Within 100 miles</option></select><small id="fMilesNote"></small></div>')+
       '<div class="checks" style="margin-top:8px"><label><input type="checkbox" id="fTitleOnly"> Hide roles that do not match my target titles</label></div><small>Uses your target titles in Profile setup. Off if you have not set your own details.</small>'+
       '<div class="checks" style="margin-top:8px"><label><input type="checkbox" id="fWsPick"> Hide work styles I did not pick</label></div><small>Uses the work styles ticked in Profile setup, under Where and pay. If none are ticked, every style shows.</small>'+
       '<div id="fCommWrap"><div class="checks" style="margin-top:8px"><label><input type="checkbox" id="fNoComm"> Remove commission-only roles</label></div><small>Shown because your titles are in sales. Based on what the posting says.</small></div>'+
@@ -880,19 +940,40 @@ function apply(w,host){
       d.getElementById("fCount").textContent=ok+" of "+tot+" listings in "+label("svc",ty)+" match your filters.";
     }
     function sync(){
-      d.getElementById("fPosted").value=acct.fPosted;d.getElementById("fApp").checked=acct.fApp;d.getElementById("fMiles").value=acct.fMiles;d.getElementById("fStrict").checked=acct.fStrict;d.getElementById("fTitleOnly").checked=acct.fTitleOnly;d.getElementById("fWsPick").checked=acct.fWs;d.getElementById("fNoComm").checked=acct.fNoComm;
+      d.getElementById("fPosted").value=acct.fPosted;d.getElementById("fApp").checked=acct.fApp;d.getElementById("fMiles").value=NEAR?(acct.fMiles==="any"?105:+acct.fMiles):acct.fMiles;d.getElementById("fStrict").checked=acct.fStrict;d.getElementById("fTitleOnly").checked=acct.fTitleOnly;d.getElementById("fWsPick").checked=acct.fWs;d.getElementById("fNoComm").checked=acct.fNoComm;
       d.getElementById("fCommWrap").hidden=!isSales();
       f.querySelectorAll("[data-lvl]").forEach(function(c){c.checked=acct.fLevels.indexOf(c.getAttribute("data-lvl"))>-1});
       f.querySelectorAll("[data-perk]").forEach(function(c){c.checked=acct.fPerks.indexOf(c.getAttribute("data-perk"))>-1});
       d.getElementById("fPerksSum").textContent="Benefits"+(acct.fPerks.length?" ("+acct.fPerks.length+" selected)":"");
-      d.getElementById("fMilesNote").textContent=acct.fMiles==="any"||homeGeo()?(acct.fMiles==="any"?"Remote jobs always show.":"Remote jobs always show. Distances are straight-line from "+(A.S.profile.loc||"your ZIP code")+"."+(A.S.profile.reloc?" You said you would relocate: pick Any distance to see far-away jobs too.":"")):"We do not recognize your city yet. Add your state and ZIP code in Profile setup, or use a larger US city.";
+      d.getElementById("fMilesNote").textContent=NEAR?nearNote():acct.fMiles==="any"||homeGeo()?(acct.fMiles==="any"?"Remote jobs always show.":"Remote jobs always show. Distances are straight-line from "+(A.S.profile.loc||"your ZIP code")+"."+(A.S.profile.reloc?" You said you would relocate: pick Any distance to see far-away jobs too.":"")):"We do not recognize your city yet. Add your state and ZIP code in Profile setup, or use a larger US city.";
       count();
     }
     function changed(){
-      acct.fPosted=d.getElementById("fPosted").value;acct.fApp=d.getElementById("fApp").checked;acct.fMiles=d.getElementById("fMiles").value;acct.fStrict=d.getElementById("fStrict").checked;acct.fTitleOnly=d.getElementById("fTitleOnly").checked;acct.fWs=d.getElementById("fWsPick").checked;acct.fNoComm=d.getElementById("fNoComm").checked;
+      acct.fPosted=d.getElementById("fPosted").value;acct.fApp=d.getElementById("fApp").checked;acct.fMiles=milesVal();acct.fStrict=d.getElementById("fStrict").checked;acct.fTitleOnly=d.getElementById("fTitleOnly").checked;acct.fWs=d.getElementById("fWsPick").checked;acct.fNoComm=d.getElementById("fNoComm").checked;
       acct.fLevels=[].slice.call(f.querySelectorAll("[data-lvl]")).filter(function(c){return c.checked}).map(function(c){return c.getAttribute("data-lvl")});
       acct.fPerks=[].slice.call(f.querySelectorAll("[data-perk]")).filter(function(c){return c.checked}).map(function(c){return c.getAttribute("data-perk")});
       cleanF(acct);saveA();A.renderAll();sync();
+    }
+    /* commute slider (sandbox): 0 = remote only, 5 to 100 miles, far right = any distance */
+    function milesVal(){var v=d.getElementById("fMiles").value;return NEAR?(+v>=105?"any":String(+v)):v}
+    function paintMiles(){
+      var el=d.getElementById("fMilesV");if(!el)return;var v=+d.getElementById("fMiles").value;
+      el.textContent=v>=105?"Any distance":(v===0?"Remote only":"Within "+v+" miles");
+    }
+    function nearNote(){
+      paintMiles();syncLocUI();
+      var v=+d.getElementById("fMiles").value;
+      if(v>=105)return "Every job shows, near or far. Remote jobs always show except at Remote only.";
+      if(v===0)return "Only remote jobs show.";
+      return homeGeo()?"Remote jobs always show. In-person jobs farther than "+v+" miles (straight line) are hidden."+(A.S.profile.reloc?" You said you would relocate: slide to Any distance to see far-away jobs too.":""):"We cannot tell where you are yet. Tap Use my location, or add your city and ZIP in Profile setup.";
+    }
+    if(NEAR){
+      d.getElementById("fMiles").addEventListener("input",function(){paintMiles()});
+      d.getElementById("fLocBtn").addEventListener("click",function(){
+        if(this.getAttribute("data-mode")==="stop"){DEV={asked:true,skipped:true,at:Date.now()};saveDev();A.renderAll();sync();return}
+        var b=this;b.disabled=true;b.textContent="Finding you…";
+        askDevice(function(){b.disabled=false;sync()});
+      });
     }
     f.addEventListener("change",changed);
     d.getElementById("fClear").onclick=function(){
@@ -996,10 +1077,13 @@ function apply(w,host){
       return L.join("\n");
     };
     /* distance moves to Preferences and shows only for hybrid or on-site */
-    var mf=d.createElement("div");mf.className="field full";mf.id="aMilesF";mf.appendChild(d.getElementById("fMilesWrap"));
-    d.querySelector("#form .grid").appendChild(mf);FIELDS.preferences.push("aMilesF");
-    d.getElementById("fMiles").addEventListener("change",function(){acct.fMiles=this.value;cleanF(acct);saveA();A.renderAll();syncMeta()});
-    function vis(){mf.classList.toggle("nomiles",!(d.getElementById("pm-hybrid").checked||d.getElementById("pm-onsite").checked))}
+    var mf=null;
+    if(!NEAR){   /* the sandbox keeps the commute slider in Filters instead */
+      mf=d.createElement("div");mf.className="field full";mf.id="aMilesF";mf.appendChild(d.getElementById("fMilesWrap"));
+      d.querySelector("#form .grid").appendChild(mf);FIELDS.preferences.push("aMilesF");
+      d.getElementById("fMiles").addEventListener("change",function(){acct.fMiles=this.value;cleanF(acct);saveA();A.renderAll();syncMeta()});
+    }
+    function vis(){if(mf)mf.classList.toggle("nomiles",!(d.getElementById("pm-hybrid").checked||d.getElementById("pm-onsite").checked))}
     ["pm-hybrid","pm-onsite"].forEach(function(id){d.getElementById(id).addEventListener("change",vis)});
     var base=w.__uaplySyncPrefs;
     w.__uaplySyncPrefs=function(){if(base)base();paintTitles();fillEeo();fillAddr();paintLevel();vis();setTimeout(function(){paintLevel();vis()},0)};
@@ -1266,7 +1350,7 @@ function apply(w,host){
     }
     else if(a==="wipe"){
       if(b.getAttribute("data-sure")!=="1"){b.setAttribute("data-sure","1");b.textContent="Click again to delete everything";return}
-      [w.__uaplyKey,AK,NK].forEach(function(k){try{w.localStorage.removeItem(k)}catch(x){}});
+      [w.__uaplyKey,AK,NK,LK].forEach(function(k){try{w.localStorage.removeItem(k)}catch(x){}});
       w.location.reload();
     }
   });
