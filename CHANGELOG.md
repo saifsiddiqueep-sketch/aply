@@ -22,6 +22,16 @@ production page and only changes when the owner decides.
   dropped the Application profile answers; the Account screen showed fake Google/Apple/phone sign-in previews next to the real
   form; the desktop form was capped at half width; password, file and month inputs were unstyled; tap targets under 44px.
 
+### Jobs near you (sandbox only for now)
+- On first open the browser's own "share your location?" prompt appears, with a card above the jobs saying why. If location is
+  blocked in the browser, the card says so once and how to turn it on. The position is rounded to about a mile, kept only on the
+  device and never sent to the server.
+- Nearby in-person jobs score higher (full location points within 25 miles, partial to 60), and cards say "In your area" or
+  "About N miles from you".
+- Filters has a **Commute distance** slider: Remote only, 5 to 100 miles, Any distance. dev keeps the old distance choice.
+- Fixed: in the sandbox, Bottom navigation stopped part-way with "Cannot read properties of undefined (reading 'up')" (the
+  auto-message check read the sign-in state before it existed), which also left out everything that loads after it.
+
 ## 1.0.0-rc.8 (release candidate)
 
 Swipe right can now apply by itself: straight into the employer's own hiring system, for employers who connect.

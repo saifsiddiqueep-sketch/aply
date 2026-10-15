@@ -46,7 +46,7 @@ function patch(s){
   /* nearby jobs score higher when the page knows where you are (sandbox: window.__uaplyNearScore exists only then) */
   s=once(s,'if(job.mode==="remote")lc=1;','if(job.mode==="remote")lc=1;else if(window.__uaplyNearScore&&window.__uaplyNearScore(job,p)!=null)lc=window.__uaplyNearScore(job,p);');   /* a known device location beats a typed city */
   s=once(s,'else lc=p.reloc?0.6:0;','else{var ns=window.__uaplyNearScore?window.__uaplyNearScore(job,p):null;lc=ns!=null?ns:(p.reloc?0.6:0)}');
-  s=once(s,'(lc===1?"You live there":(lc?"Would relocate":"Different city"))','(lc===1?(window.__uaplyNearLabel&&window.__uaplyNearLabel(job)||"You live there"):(lc?(window.__uaplyNearLabel&&window.__uaplyNearLabel(job)||"Would relocate"):"Different city"))');
+  s=once(s,'(lc===1?"You live there":(lc?"Would relocate":"Different city"))','(lc===1?(window.__uaplyNearLabel&&window.__uaplyNearLabel(job)||"You live there"):(lc?(window.__uaplyNearLabel&&window.__uaplyNearLabel(job)||"Would relocate"):(window.__uaplyNearLabel&&window.__uaplyNearLabel(job)||"Different city")))');
   /* a new person starts with nothing ticked under "Work style", which means no preference (every style scores full points) */
   s=once(s,'var mo=p.modes[job.mode]?1:((job.mode==="hybrid"&&p.modes.remote)?0.5:0);','var anyM=p.modes.remote||p.modes.hybrid||p.modes.onsite;var mo=!anyM?1:(p.modes[job.mode]?1:((job.mode==="hybrid"&&p.modes.remote)?0.5:0));');
   s=once(s,'have:mo===1?"Accepted":(mo?"Hybrid, you prefer remote":"Not on your list")','have:mo===1?(anyM?"Accepted":"No preference set"):(mo?"Hybrid, you prefer remote":"Not on your list")');
@@ -240,6 +240,7 @@ function apply(w,host){
   if(!A)throw new Error("app hooks missing");
   var OPTS=(host&&host.defaultView&&host.defaultView.UAplyOpts)||{};   /* e.g. dev sets hideServiceCounts */
   var REL=!!OPTS.release;   /* release build: no test controls, no simulated sign-in, no sample data, no paid plans */
+  var SRV={up:false,user:null,mode:"test"};   /* declared early: the plan and auto-message checks read it while the screens are built */
   var NEAR=!!OPTS.nearMe;   /* sandbox only for now: ask for device location, commute slider in Filters, nearby jobs score higher */
   var NK=w.__uaplyKey+".nav";
   var SECS={
@@ -544,49 +545,82 @@ function apply(w,host){
   /* where you live: your city plus state (so "Columbus" + OH works), then your ZIP code if the city is not one we know */
   function homeGeo(){var p=A.S.profile,ad=acct.addr||{};return devPos()||geo((p.loc||"")+(ad.state?", "+ad.state:""))||geo(p.loc)||zipGeo(ad.zip)}
 
-  /* ---- device location (sandbox only). Asked once with a friendly card; kept only on this device, rounded to about a mile,
-     and used only to measure distance to jobs. It is never sent to the server. ---- */
+  /* ---- device location (sandbox only). On open the browser's own location prompt is shown, with a card saying why; kept only
+     on this device, rounded to about a mile, and used only to measure distance to jobs. It is never sent to the server. ---- */
   var LK=w.__uaplyKey+".loc",DEV=null;
   try{var lr=JSON.parse(w.localStorage.getItem(LK));if(lr&&typeof lr==="object")DEV=lr}catch(e){}
   function devPos(){return NEAR&&DEV&&typeof DEV.lat==="number"&&typeof DEV.lon==="number"?[DEV.lat,DEV.lon]:null}
   function saveDev(){try{if(DEV)w.localStorage.setItem(LK,JSON.stringify(DEV));else w.localStorage.removeItem(LK)}catch(e){}}
+  function permState(cb){   /* "granted", "denied", "prompt", or "" when the browser cannot say */
+    try{w.navigator.permissions.query({name:"geolocation"}).then(function(r){cb(r.state)},function(){cb("")})}catch(e){cb("")}
+  }
   function askDevice(done){
     if(!w.navigator.geolocation){done&&done(false);return}
     w.navigator.geolocation.getCurrentPosition(function(pos){
       DEV={lat:Math.round(pos.coords.latitude*100)/100,lon:Math.round(pos.coords.longitude*100)/100,at:Date.now(),asked:true};saveDev();
       A.renderAll();syncLocUI();done&&done(true);
-    },function(){DEV={asked:true,denied:true,at:Date.now()};saveDev();syncLocUI();done&&done(false)},{enableHighAccuracy:false,timeout:12000,maximumAge:3600000});
+    },function(err){
+      /* blocked: remember it, and Filters explains how to turn it back on. Closed without answering, or no fix right now: ask again next time */
+      permState(function(st){
+        if(err.code===1&&st!=="prompt"){DEV={asked:true,denied:true,told:!!d.getElementById("locAsk"),at:Date.now()};saveDev()}
+        syncLocUI();done&&done(false,err.code===1?(st==="prompt"?"dismissed":"denied"):"nofix");
+      });
+    },{enableHighAccuracy:false,timeout:15000,maximumAge:3600000});
   }
   function syncLocUI(){
-    var ask=d.getElementById("locAsk");if(ask&&(DEV&&DEV.asked))ask.remove();
+    var ask=d.getElementById("locAsk");if(ask&&(devPos()||(DEV&&DEV.skipped)))ask.remove();
     var st=d.getElementById("fLocState"),bt=d.getElementById("fLocBtn");if(!st||!bt)return;
     if(devPos()){st.textContent="Using your device location (accurate to about a mile). It stays on this device and is never sent to our server.";bt.textContent="Stop using my location";bt.setAttribute("data-mode","stop")}
-    else if(DEV&&DEV.denied){st.textContent="Location is off for this site. Allow it in your browser's site settings, then tap Use my location. Until then distance uses your city.";bt.textContent="Use my location";bt.setAttribute("data-mode","ask")}
+    else if(DEV&&DEV.denied){st.textContent="Location is blocked for this site. Allow it in your browser's site settings (the icon at the left of the address bar), then tap Use my location. Until then distance uses your city.";bt.textContent="Use my location";bt.setAttribute("data-mode","ask")}
     else{st.textContent="Not using your device location. Distance uses your city or ZIP code.";bt.textContent="Use my location";bt.setAttribute("data-mode","ask")}
   }
-  function nearBox(){
-    if(!NEAR||(DEV&&DEV.asked)||!w.navigator.geolocation||d.getElementById("locAsk"))return;
-    var c=d.createElement("div");c.id="locAsk";c.setAttribute("role","region");c.setAttribute("aria-label","Use your location");
-    c.innerHTML='<b>See jobs near you first?</b><p>UAply can use your device location to put nearby jobs at the top. It stays on this device and is never sent to our server. You can turn it off any time in Filters.</p><div class="acts"><button type="button" class="btn" data-near="yes">Use my location</button><button type="button" class="btn ghost" data-near="no">Not now</button></div>';
-    var fl=d.getElementById("filters");if(!fl||!fl.parentNode)return;fl.parentNode.insertBefore(c,fl);
-    c.addEventListener("click",function(e){
-      var b=e.target.closest("[data-near]");if(!b)return;
-      if(b.getAttribute("data-near")==="yes"){b.disabled=true;b.textContent="Finding you…";askDevice()}
-      else{DEV={asked:true,skipped:true,at:Date.now()};saveDev();c.remove();syncLocUI()}
+  var LOC_TXT={
+    ask:["See jobs near you first?","Your browser will ask to share your location. UAply uses it only to put nearby jobs at the top. It stays on this device and is never sent to our server. You can turn it off any time in Profile, Filters.","Use my location"],
+    again:["See jobs near you first?","Tap Use my location, then choose Allow when your browser asks. UAply uses it only to put nearby jobs at the top, and it never leaves this device.","Use my location"],
+    blocked:["Location is blocked for UAply","To see jobs near you first, allow location for this site: click the icon at the left of the address bar, set Location to Allow, then tap Try again. On a phone, also check that your browser may use location in the phone's settings.","Try again"],
+    nofix:["We could not find you just now","Your browser allowed it, but this device could not tell where it is (on a computer, check that location is turned on in the system settings). Try again, or skip this and UAply will use your city instead.","Try again"]
+  };
+  function nearBox(mode){   /* the card above the job stack; mode is one of LOC_TXT */
+    if(!NEAR||!w.navigator.geolocation)return null;
+    var c=d.getElementById("locAsk");
+    if(!c){
+      var fl=d.getElementById("filters");if(!fl||!fl.parentNode)return null;
+      c=d.createElement("div");c.id="locAsk";c.setAttribute("role","region");c.setAttribute("aria-label","Use your location");
+      c.innerHTML='<b></b><p></p><div class="acts"><button type="button" class="btn" data-near="yes"></button><button type="button" class="btn ghost" data-near="no">Not now</button></div>';
+      fl.parentNode.insertBefore(c,fl);
+      c.addEventListener("click",function(e){
+        var b=e.target.closest("[data-near]");if(!b)return;
+        if(b.getAttribute("data-near")==="yes")nearAsk(c);
+        else{DEV={asked:true,skipped:true,at:Date.now()};saveDev();c.remove();syncLocUI()}
+      });
+    }
+    var t=LOC_TXT[mode]||LOC_TXT.ask,yes=c.querySelector('[data-near="yes"]');
+    c.querySelector("b").textContent=t[0];c.querySelector("p").textContent=t[1];yes.textContent=t[2];yes.disabled=false;
+    return c;
+  }
+  function nearAsk(c){   /* shows the browser's own "Allow location?" prompt; the card says what is happening and what came of it */
+    var yes=c.querySelector('[data-near="yes"]');
+    yes.disabled=true;yes.textContent="Waiting for your browser…";
+    askDevice(function(ok,why){
+      if(ok||!c.isConnected)return;
+      nearBox(why==="denied"?"blocked":why==="nofix"?"nofix":"again");
     });
   }
   if(NEAR){
     w.__uaplyNearScore=function(job,p){var me=devPos(),there=me&&geo(job.loc);if(!there)return null;var mi=miles(me,there);return mi<=25?1:(mi<=60?0.6:(p&&p.reloc?0.6:0))};
     w.__uaplyNearLabel=function(job){var me=devPos(),there=me&&geo(job.loc);if(!there)return "";var mi=Math.round(miles(me,there));return mi<3?"In your area":"About "+mi+" miles from you"};
     setTimeout(function(){
-      var perm=w.navigator.permissions&&w.navigator.permissions.query?w.navigator.permissions.query({name:"geolocation"}):null;
-      if(perm)perm.then(function(r){
-        if(r.state==="granted"&&(!DEV||!DEV.lat||Date.now()-DEV.at>216e5))askDevice();      /* already allowed: refresh quietly */
-        else if(r.state==="denied"&&!(DEV&&DEV.asked)){DEV={asked:true,denied:true,at:Date.now()};saveDev();syncLocUI()}
-        else nearBox();
-      },function(){nearBox()});
-      else nearBox();
-    },600);
+      permState(function(st){
+        if(DEV&&DEV.skipped)return;                     /* they chose Not now, or turned it off in Filters */
+        if(st==="granted"){if(!devPos()||Date.now()-DEV.at>216e5)askDevice();return}   /* already allowed: refresh quietly */
+        if(st==="denied"||(!st&&DEV&&DEV.denied)){     /* blocked in the browser: say so once, with how to turn it on */
+          if(DEV&&DEV.denied&&DEV.told)return;
+          DEV={asked:true,denied:true,told:true,at:Date.now()};saveDev();syncLocUI();nearBox("blocked");return;
+        }
+        if(DEV&&DEV.denied){DEV=null;saveDev()}         /* they unblocked it in the browser since: ask again */
+        var c=nearBox("ask");if(c)nearAsk(c);           /* first visit: the browser's own prompt, with the card saying why */
+      });
+    },400);
   }
   function miles(a,b){var R=3958.8,r=Math.PI/180,dl=(b[0]-a[0])*r,dn=(b[1]-a[1])*r,x=Math.sin(dl/2)*Math.sin(dl/2)+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dn/2)*Math.sin(dn/2);return 2*R*Math.asin(Math.sqrt(x))}
   /* target titles: the main title plus up to four more. Words must appear in the job's role name (plurals allowed). */
@@ -1467,7 +1501,6 @@ function apply(w,host){
     renderAcct("account");msg("Signed in with "+VIA[via]+".");
   }
   /* ---------- real accounts on this server (auth_api.py). Used whenever the back end is running. ---------- */
-  var SRV={up:false,user:null,mode:"test"};
   function apiPost(path,body){
     return w.fetch(path,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
       .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j}},function(){return {ok:false,j:{error:"The server sent an unexpected reply."}}})})
