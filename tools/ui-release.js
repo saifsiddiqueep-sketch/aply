@@ -11,7 +11,7 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   const sub = (s) => ev("(()=>{const e=[...(" + F + ").querySelectorAll('button,a,[role=tab]')].find(b=>b.offsetParent&&b.innerText.split(/\\s+/).join(' ').trim().startsWith(" + JSON.stringify(s) + "));if(e)e.click();return !!e})()");
   const setVal = (id, v) => ev("(()=>{const e=" + F + ".getElementById('" + id + "');if(!e)return false;e.value=" + JSON.stringify(v) + ";e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
   // words that must never reach a real user of the release build
-  const BANNED = /SANDBOX|TEST MODE|\(test\)|simulated|Sandbox controls|Northwind|Calloway|Ironbridge|Seaside Software|Redwood Marketing|Atlas Robotics|Harbor Bank|Summit Health|Corner Table|Brightpath|Lumen Labs|Release candidate|Plan & billing|Choose Plus|Choose Pro|Jordan Lee/i;
+  const BANNED = /SANDBOX|TEST MODE|\(test\)|simulated|Sandbox controls|Northwind|Calloway|Ironbridge|Seaside Software|Redwood Marketing|Atlas Robotics|Harbor Bank|Summit Health|Corner Table|Brightpath|Lumen Labs|Release candidate|Choose Plus|Choose Pro|Jordan Lee/i;
   const scan = async (where) => {
     const t = await pageText();
     const m = t.match(BANNED);
@@ -38,8 +38,8 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
 
   await ev(F + ".getElementById('nb-prof').click()"); await sleep(500);
   const items = await ev("[...(" + F + ").querySelectorAll('button')].filter(b=>b.offsetParent).map(b=>b.innerText.trim().split(" + nl + ")[0]).join('|')");
-  check("Profile menu has no Plan & billing", !/Plan & billing/.test(items), items.split("|").slice(-8).join(", "));
-  for (const s of ["Account", "Settings", "Resume", "Preferences", "Filters", "Data"]) {
+  check("Profile menu has Plan & billing (real plans, backed by Stripe)", /Plan/.test(items), items.split("|").slice(-8).join(", "));
+  for (const s of ["Account", "Settings", "Resume", "Preferences", "Filters", "Plan", "Data"]) {
     if (!(await sub(s))) { await ev(F + ".getElementById('nb-prof').click()"); await sleep(350); await sub(s); }   // reopen the menu only if it closed
     await sleep(500);
     await scan("Profile > " + s);

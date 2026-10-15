@@ -65,7 +65,7 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   // profile sections
   await ev(F + ".getElementById('nb-prof').click()");
   await sleep(500);
-  for (const t of ["Account", "Settings", "Resume", "Preferences", "Filters", "Plan", "Data"].filter((x) => !(REL && x === "Plan"))) {
+  for (const t of ["Account", "Settings", "Resume", "Preferences", "Filters", "Plan", "Data"]) {
     const ok = await clickText(t);
     await sleep(350);
     const txt = await visibleText();

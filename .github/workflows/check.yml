@@ -40,3 +40,4 @@ jobs:
           python tools/test-support.py
           python tools/test-ats.py
           python tools/test-ats-flow.py
+          python tools/test-billing.py

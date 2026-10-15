@@ -53,7 +53,7 @@ if api:
                      ("/uaply-chat.js", "shared/uaply-chat.js"), ("/help/articles.json", "help/articles.json"),
                      ("/prod-index.html", "prod/index.html")):
         alias.setdefault(url, os.path.join(HERE, rel))
-    import jobs_api, uaply_api, auth_api, chat_api, google_auth, setup_api
+    import jobs_api, uaply_api, auth_api, chat_api, google_auth, setup_api, billing_api
     uaply_api.init(os.path.basename(root))
     auth_api.init(os.path.basename(root))
     chat_api.init(os.path.basename(root))
@@ -206,6 +206,8 @@ class H(http.server.SimpleHTTPRequestHandler):
                     return self._send(200, google_auth.public_config(*self._origin_parts()))
                 if p in ("/api/auth/google/start", "/api/auth/google/callback"):
                     return self._google(p)
+                if p == "/api/billing/status":
+                    return self._send(200, billing_api.status(auth_api.user_for(self._token())))
                 if p == "/api/chat/config":
                     return self._send(200, dict(chat_api.public_config(), owner=not PUBLIC))      # "owner": this server runs on the owner's own computer, so owner-only hints may be shown
                 if p == "/feedback":
@@ -219,9 +221,18 @@ class H(http.server.SimpleHTTPRequestHandler):
 
     def do_POST(self):
         p = self.path.split("?", 1)[0]
+        if api and p == "/api/billing/webhook":        # from Stripe, not from our pages: its signature replaces the same-site check
+            try:
+                n = int(self.headers.get("Content-Length") or 0)
+            except ValueError:
+                n = 0
+            if not 0 < n <= 512000:
+                return self._send(400, {"error": "bad size"})
+            code, out = billing_api.webhook(self.rfile.read(n), self.headers.get("Stripe-Signature") or "")
+            return self._send(code, out)
         if not api or p not in ("/api/apply", "/api/decision", "/api/auth/signup", "/api/auth/login", "/api/auth/logout",
                                 "/api/auth/delete", "/api/auth/forgot", "/api/auth/reset", "/api/auth/change-password",
-                                "/api/setup/test-mail", "/api/setup/save-mail", "/api/setup/save-google", "/api/setup/save-ats", "/api/setup/remove-ats", "/api/auth/google/token", "/api/auth/verify", "/api/auth/resend", "/api/chat", "/api/feedback"):
+                                "/api/setup/test-mail", "/api/setup/save-mail", "/api/setup/save-google", "/api/setup/save-ats", "/api/setup/remove-ats", "/api/setup/save-stripe", "/api/auth/google/token", "/api/auth/verify", "/api/auth/resend", "/api/chat", "/api/feedback", "/api/billing/checkout", "/api/billing/portal"):
             return self._send(404, {"error": "not found"})
         # Only accept requests made by this site's own pages (blocks cross-site forms and scripts).
         origin = self.headers.get("Origin")
@@ -259,6 +270,13 @@ class H(http.server.SimpleHTTPRequestHandler):
                 if PUBLIC:
                     return self._send(403, {"ok": False, "message": "On a hosted server, add the Google client ID in the host's dashboard (UAPLY_CONFIG_JSON), not here."})
                 code, out = setup_api.save_google(payload)
+                return self._send(code, out)
+            if p == "/api/setup/save-stripe":
+                if not self._owner_ok():
+                    return self._send(403, {"error": "Owner pages are off or need the owner password."})
+                if PUBLIC:
+                    return self._send(403, {"ok": False, "message": "On a hosted server, add the Stripe keys in the host's dashboard (STRIPE_SECRET_KEY and the others), not here."})
+                code, out = setup_api.save_stripe(payload)
                 return self._send(code, out)
             if p in ("/api/setup/save-ats", "/api/setup/remove-ats"):
                 if not self._owner_ok():
@@ -336,7 +354,13 @@ class H(http.server.SimpleHTTPRequestHandler):
             elif p == "/api/feedback":
                 code, out = chat_api.feedback(payload, ip, auth_api.user_for(self._token()), notify=uaply_api.send_support_ticket)
             elif p == "/api/apply":
-                code, out = uaply_api.submit(payload, auth_api.user_for(self._token()))
+                u = auth_api.user_for(self._token())
+                over = billing_api.limit_reached(u)
+                code, out = (402, {"error": over, "code": "limit"}) if over else uaply_api.submit(payload, u)
+            elif p == "/api/billing/checkout":
+                code, out = billing_api.checkout(auth_api.user_for(self._token()), payload.get("plan"), self._site_base())
+            elif p == "/api/billing/portal":
+                code, out = billing_api.portal(auth_api.user_for(self._token()), self._site_base())
             else:
                 code, out = uaply_api.record_decision(payload)
         except Exception as e:

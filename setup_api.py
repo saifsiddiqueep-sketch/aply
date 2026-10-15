@@ -16,6 +16,7 @@ import os
 
 import ats_api
 import auth_api
+import billing_api
 import google_auth
 import jobs_api
 import uaply_api
@@ -79,6 +80,14 @@ def checks(host, proto):
          "todo": ["Ask the employer to create a Greenhouse Job Board API key or a Lever Postings API key (EMPLOYERS.md says where).",
                   "Paste it in the Connect an employer's hiring system box below, with the board name from their job-board address.",
                   "Set delivery to live in the settings (UAPLY_CONFIG_JSON on a host) so applications are really sent."] if not connections() else []},
+        {"name": "Payments for Plus and Pro (Stripe)", "ok": billing_api.settings()["on"] and bool(billing_api.settings().get("webhook_secret")),
+         "detail": ("On, in %s mode." % ("TEST" if billing_api.settings()["test"] else "LIVE")) if billing_api.settings()["on"] else "Off. Plans show, but Choose says payments are not switched on yet.",
+         "todo": ["Create a Stripe account at https://dashboard.stripe.com/register (start in test mode).",
+                  "Product catalog: add a product Plus with a monthly price of 9.99 USD and a product Pro at 19.99 USD. Copy both price ids (price_...).",
+                  "Developers, API keys: copy the secret key (sk_test_...).",
+                  "Developers, Webhooks: add an endpoint " + proto + "://" + host + "/api/billing/webhook with the events checkout.session.completed and customer.subscription.updated, created and deleted; copy its signing secret (whsec_...). On this computer use the Stripe CLI: stripe listen --forward-to localhost:8767/api/billing/webhook.",
+                  "Settings, Billing, Customer portal: turn it on so people can switch plans and cancel.",
+                  "Paste the four values in the Connect Stripe box below."] if not billing_api.settings()["on"] else []},
         {"name": "Copy of every application to you", "ok": bool(owner),
          "detail": ("Every swipe right is also emailed to " + owner + (" once email sending is on." if not smtp_ok else ".")) if owner else "Off. Set owner_copy to your email.",
          "todo": [] if owner else ["Run: python tools/setup-config.py and enter your email when it asks."]},
@@ -153,6 +162,30 @@ def remove_ats(payload):
     if len(data["ats_connections"]) != len(before):
         _write_partners(path, data)
     return 200, {"ok": True, "message": "Disconnected."}
+
+
+def save_stripe(payload):
+    """The "Connect Stripe" box: save the Stripe keys and the two price ids into the git-ignored uaply-config.json on this computer. (status, body)."""
+    g = lambda k: (payload.get(k) if isinstance(payload.get(k), str) else "").strip()
+    key, wh, plus, pro = g("secret_key"), g("webhook_secret"), g("price_plus"), g("price_pro")
+    if not re.match(r"^sk_(test|live)_[A-Za-z0-9]{8,}$", key):
+        return 400, {"ok": False, "message": "The secret key starts with sk_test_ (test mode) or sk_live_. Find it in Stripe, Developers, API keys."}
+    if not (plus.startswith("price_") and pro.startswith("price_")):
+        return 400, {"ok": False, "message": "Paste the two price ids (they start with price_) of the monthly Plus and Pro prices you made in Stripe, Product catalog."}
+    if wh and not wh.startswith("whsec_"):
+        return 400, {"ok": False, "message": "The webhook signing secret starts with whsec_."}
+    try:
+        with open(uaply_api.CONFIG_PATH, encoding="utf-8") as f:
+            cfg = json.load(f)
+    except (OSError, ValueError):
+        cfg = {}
+    old = cfg.get("stripe") if isinstance(cfg.get("stripe"), dict) else {}
+    cfg["stripe"] = {"secret_key": key, "webhook_secret": wh or old.get("webhook_secret", ""), "price_plus": plus, "price_pro": pro}
+    tmp = uaply_api.CONFIG_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline=chr(10)) as f:
+        json.dump(cfg, f, indent=2)
+    os.replace(tmp, uaply_api.CONFIG_PATH)
+    return 200, {"ok": True, "saved": True, "message": "Saved. Plus and Pro can now be bought in Profile, Plan" + ("" if cfg["stripe"]["webhook_secret"] else "; add the webhook signing secret so plans switch on after payment") + "."}
 
 
 def save_mail(payload):
@@ -264,6 +297,11 @@ code{background:var(--bg);padding:1px 5px;border-radius:5px}
 <p><input id="aa" type="password" placeholder="The employer's API key" autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><button id="as" type="button">Connect</button> <span id="ar" class="m" role="status"></span></p>
 @@CONNS@@</article>
+<article id="billing"><b>Connect Stripe (Plus and Pro)</b><p class="m">Saved only in uaply-config.json on this computer. Card numbers never reach UAply; people pay on Stripe's page.</p>
+<p><input id="ss" type="password" placeholder="Secret key sk_test_..." autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p><input id="sw" type="password" placeholder="Webhook signing secret whsec_..." autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p><input id="sp1" type="text" placeholder="Plus price id price_..." style="width:200px;padding:8px;border:1px solid var(--line);border-radius:8px"> <input id="sp2" type="text" placeholder="Pro price id price_..." style="width:200px;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p><button id="sb" type="button">Save Stripe</button> <span id="sbr" class="m" role="status"></span></p></article>
 <article><b>Send a test email</b><p class="m">Sends one message to your copy address so you can see that real email works.</p>
 <p><button id="t" type="button">Send test email</button> <span id="r" class="m" role="status"></span></p></article>
 <p class="m">%d accounts and %d emails recorded on this server. <a href="/outbox">Test inbox</a></p></main>
@@ -276,5 +314,7 @@ fetch('/api/setup/save-mail',{method:'POST',headers:{'Content-Type':'application
 document.getElementById('as').onclick=function(){var r=document.getElementById('ar'),g=function(i){return document.getElementById(i).value};r.textContent='Saving...';
 fetch('/api/setup/save-ats',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:g('ak'),board:g('ab'),api_key:g('aa')})}).then(function(x){return x.json()}).then(function(j){if(j.saved){document.getElementById('aa').value='';setTimeout(function(){location.reload()},900)}r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
 document.querySelectorAll('.rm').forEach(function(b){b.onclick=function(){fetch('/api/setup/remove-ats',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:b.getAttribute('data-k'),board:b.getAttribute('data-b')})}).then(function(){location.reload()})}})
+document.getElementById('sb').onclick=function(){var r=document.getElementById('sbr'),g=function(i){return document.getElementById(i).value};r.textContent='Saving...';
+fetch('/api/setup/save-stripe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret_key:g('ss'),webhook_secret:g('sw'),price_plus:g('sp1'),price_pro:g('sp2')})}).then(function(x){return x.json()}).then(function(j){if(j.saved){document.getElementById('ss').value='';document.getElementById('sw').value=''}r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
 document.querySelectorAll('.cp').forEach(function(b){b.onclick=function(){var v=b.getAttribute('data-v');(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(function(){b.textContent='Copied'},function(){b.textContent='Select the address and copy it'})}})</script>
 </body></html>""".replace("@@ORIGINS@@", origin_html).replace("@@CONNS@@", conn_html) % ("".join(rows), n["users"], n["mail"])).encode("utf-8")

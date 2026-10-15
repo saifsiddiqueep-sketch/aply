@@ -103,7 +103,9 @@ def init(instance):
             salt TEXT NOT NULL,
             expires_at INTEGER NOT NULL,
             attempts INTEGER NOT NULL DEFAULT 0)""")
-        for col in ("terms_at INTEGER", "has_password INTEGER NOT NULL DEFAULT 1", "email_verified INTEGER NOT NULL DEFAULT 0"):      # databases made before these columns existed
+        for col in ("terms_at INTEGER", "has_password INTEGER NOT NULL DEFAULT 1", "email_verified INTEGER NOT NULL DEFAULT 0",
+                    "plan TEXT NOT NULL DEFAULT 'free'", "plan_status TEXT NOT NULL DEFAULT ''", "plan_renews INTEGER NOT NULL DEFAULT 0",
+                    "plan_cancel INTEGER NOT NULL DEFAULT 0", "stripe_customer TEXT NOT NULL DEFAULT ''", "stripe_sub TEXT NOT NULL DEFAULT ''"):      # databases made before these columns existed
             try:
                 c.execute("ALTER TABLE users ADD COLUMN " + col)
             except sqlite3.OperationalError:
@@ -154,7 +156,33 @@ def _new_session(c, user_id):
 
 
 def public_user(row):
-    return {"id": row["id"], "email": row["email"], "hasPassword": bool(row["has_password"]), "emailVerified": bool(row["email_verified"])}
+    keys = row.keys()
+    return {"id": row["id"], "email": row["email"], "hasPassword": bool(row["has_password"]), "emailVerified": bool(row["email_verified"]),
+            "plan": (row["plan"] if "plan" in keys and row["plan"] in ("free", "plus", "pro") else "free")}
+
+
+def billing_row(user_id):
+    """The stored subscription of one account, or None."""
+    with _db() as c:
+        r = c.execute("SELECT id, email, plan, plan_status, plan_renews, plan_cancel, stripe_customer, stripe_sub FROM users WHERE id=?", (user_id,)).fetchone()
+    return dict(r) if r else None
+
+
+def find_billing(customer="", sub=""):
+    """The account id for a Stripe customer or subscription id, or None."""
+    with _db() as c:
+        r = c.execute("SELECT id FROM users WHERE (stripe_customer!='' AND stripe_customer=?) OR (stripe_sub!='' AND stripe_sub=?)", (customer or "-", sub or "-")).fetchone()
+    return r["id"] if r else None
+
+
+def set_billing(user_id, **fields):
+    """Update the subscription fields of one account (only the known columns)."""
+    allowed = ("plan", "plan_status", "plan_renews", "plan_cancel", "stripe_customer", "stripe_sub")
+    pairs = [(k, v) for k, v in fields.items() if k in allowed]
+    if not pairs:
+        return
+    with _db() as c:
+        c.execute("UPDATE users SET %s WHERE id=?" % ", ".join("%s=?" % k for k, _ in pairs), [v for _, v in pairs] + [user_id])
 
 
 def signup(email, password, ip, agree=False):

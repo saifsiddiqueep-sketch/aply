@@ -141,12 +141,12 @@ function apply(w,host){
     dash:{label:"Dashboard",items:[["overview","Overview"],["applied","Applied"],["accepted","Accepted"],["rejected","Rejected"],["interview","Interviews"]]},
     prof:{label:"Profile",items:[["account","Account"],["settings","Settings"],["resume","Resume & links"],["preferences","Preferences"],["filters","Filters"],["plan","Plan & billing"],["data","Data & privacy"]]}
   };
-  if(REL)SECS.prof.items=SECS.prof.items.filter(function(it){return it[0]!=="plan"});
+  /* the Plan screen is in every build: on a real server it is backed by Stripe (see billingHTML); the simulated one remains only without a server */
   var ACCT={account:1,resume:1,plan:1,data:1};
   var LEADS={
     account:"Sign in so your profile and applications follow you to any device.",
     resume:"What employers ask for besides your skills. Fill these in once; they are saved on this device and sent with every application.",
-    plan:"Choose how you pay for UAply. Sandbox: no real payments happen and no card is needed.",
+    plan:"Choose your plan. Payments are made on Stripe's secure page; you can cancel any time.",
     data:"Back up, move or delete everything UAply keeps about you.",
     settings:"Your details. Every card is scored against them, and they fill in your application note and the email address recruiters reply to.",
     preferences:"What you want in a job. These change every match score.",
@@ -382,7 +382,7 @@ function apply(w,host){
     a.fPerks=Array.isArray(a.fPerks)?a.fPerks.filter(function(k){return PERK_KEYS.indexOf(k)>-1}).slice(0,PERKS.length):[];
     if(MILES.indexOf(String(a.fMiles))<0)a.fMiles="any";a.fMiles=String(a.fMiles);
     if(POSTED.indexOf(a.fPosted)<0)a.fPosted="any";
-    a.fApp=!!a.fApp;a.fStrict=!!a.fStrict;a.fAuto=!!a.fAuto;a.fTitleOnly=!!a.fTitleOnly;a.fNoComm=!!a.fNoComm;a.fEdu=!!a.fEdu;
+    a.fApp=!!a.fApp;a.fInstant=!!a.fInstant;a.fStrict=!!a.fStrict;a.fAuto=!!a.fAuto;a.fTitleOnly=!!a.fTitleOnly;a.fNoComm=!!a.fNoComm;a.fEdu=!!a.fEdu;
     var seen={};
     a.titles=(Array.isArray(a.titles)?a.titles:[]).filter(function(t){return typeof t==="string"}).map(function(t){return t.trim().replace(/\s+/g," ").slice(0,60)}).filter(function(t){var k=t.toLowerCase();if(!t||seen[k])return false;seen[k]=1;return true}).slice(0,4);
     a.fLevels=(Array.isArray(a.fLevels)?a.fLevels:[]).filter(function(k){return LEVEL_KEYS.indexOf(k)>-1});
@@ -472,6 +472,7 @@ function apply(w,host){
       var lim={"24h":DAY,"7d":7*DAY,"30d":30*DAY}[acct.fPosted];
       if(!j.posted){if(strict)return true}else if(now-j.posted>lim)return true;
     }
+    if(acct.fInstant&&!j.instant)return true;           /* only jobs where swipe right really sends the application */
     if(acct.fApp){
       if(j.applicants==null){if(strict)return true}else if(j.applicants>=10)return true;
     }
@@ -720,7 +721,7 @@ function apply(w,host){
   (function(){
     var f=d.createElement("div");f.className="field";f.id="fMeta";
     f.innerHTML='<label for="fPosted">Posted</label><select id="fPosted"><option value="any">Any time</option><option value="24h">Past 24 hours</option><option value="7d">Past week</option><option value="30d">Past month</option></select>'+
-      '<div class="checks" style="margin-top:8px"><label><input type="checkbox" id="fApp"> Under 10 applicants</label></div><small id="fAppNote">Applicant counts come from UAply. Listings from outside feeds do not have one yet.</small>'+
+      '<div class="checks" style="margin-top:8px"><label><input type="checkbox" id="fApp"> Under 10 applicants</label><label><input type="checkbox" id="fInstant"> Only jobs I can apply to instantly</label></div><small id="fAppNote">Applicant counts come from UAply. Listings from outside feeds do not have one yet.</small>'+
       '<div id="fMilesWrap"><label for="fMiles">Distance from your city</label><select id="fMiles"><option value="any">Any distance</option><option value="10">Within 10 miles</option><option value="20">Within 20 miles</option><option value="50">Within 50 miles</option><option value="100">Within 100 miles</option></select><small id="fMilesNote"></small></div>'+
       '<div class="checks" style="margin-top:8px"><label><input type="checkbox" id="fTitleOnly"> Hide roles that do not match my target titles</label></div><small>Uses your target titles in Profile, Settings. Off if you have not set your own details.</small>'+
       '<div id="fCommWrap"><div class="checks" style="margin-top:8px"><label><input type="checkbox" id="fNoComm"> Remove commission-only roles</label></div><small>Shown because your titles are in sales. Based on what the posting says.</small></div>'+
@@ -736,7 +737,7 @@ function apply(w,host){
       d.getElementById("fCount").textContent=ok+" of "+tot+" listings in "+label("svc",ty)+" match your filters.";
     }
     function sync(){
-      d.getElementById("fPosted").value=acct.fPosted;d.getElementById("fApp").checked=acct.fApp;d.getElementById("fMiles").value=acct.fMiles;d.getElementById("fStrict").checked=acct.fStrict;d.getElementById("fTitleOnly").checked=acct.fTitleOnly;d.getElementById("fNoComm").checked=acct.fNoComm;
+      d.getElementById("fPosted").value=acct.fPosted;d.getElementById("fApp").checked=acct.fApp;d.getElementById("fInstant").checked=acct.fInstant;d.getElementById("fMiles").value=acct.fMiles;d.getElementById("fStrict").checked=acct.fStrict;d.getElementById("fTitleOnly").checked=acct.fTitleOnly;d.getElementById("fNoComm").checked=acct.fNoComm;
       d.getElementById("fCommWrap").hidden=!isSales();
       f.querySelectorAll("[data-lvl]").forEach(function(c){c.checked=acct.fLevels.indexOf(c.getAttribute("data-lvl"))>-1});
       f.querySelectorAll("[data-perk]").forEach(function(c){c.checked=acct.fPerks.indexOf(c.getAttribute("data-perk"))>-1});
@@ -745,14 +746,14 @@ function apply(w,host){
       count();
     }
     function changed(){
-      acct.fPosted=d.getElementById("fPosted").value;acct.fApp=d.getElementById("fApp").checked;acct.fMiles=d.getElementById("fMiles").value;acct.fStrict=d.getElementById("fStrict").checked;acct.fTitleOnly=d.getElementById("fTitleOnly").checked;acct.fNoComm=d.getElementById("fNoComm").checked;
+      acct.fPosted=d.getElementById("fPosted").value;acct.fApp=d.getElementById("fApp").checked;acct.fInstant=d.getElementById("fInstant").checked;acct.fMiles=d.getElementById("fMiles").value;acct.fStrict=d.getElementById("fStrict").checked;acct.fTitleOnly=d.getElementById("fTitleOnly").checked;acct.fNoComm=d.getElementById("fNoComm").checked;
       acct.fLevels=[].slice.call(f.querySelectorAll("[data-lvl]")).filter(function(c){return c.checked}).map(function(c){return c.getAttribute("data-lvl")});
       acct.fPerks=[].slice.call(f.querySelectorAll("[data-perk]")).filter(function(c){return c.checked}).map(function(c){return c.getAttribute("data-perk")});
       cleanF(acct);saveA();A.renderAll();sync();
     }
     f.addEventListener("change",changed);
     d.getElementById("fClear").onclick=function(){
-      acct.fPosted="any";acct.fApp=false;acct.fPerks=[];acct.fMiles="any";acct.fStrict=false;acct.fTitleOnly=false;acct.fNoComm=false;acct.fLevels=[];acct.fEdu=false;acct.fSal=false;acct.fYrs="any";acct.fCo="";acct.fKw="";
+      acct.fPosted="any";acct.fApp=false;acct.fInstant=false;acct.fPerks=[];acct.fMiles="any";acct.fStrict=false;acct.fTitleOnly=false;acct.fNoComm=false;acct.fLevels=[];acct.fEdu=false;acct.fSal=false;acct.fYrs="any";acct.fCo="";acct.fKw="";
       saveA();A.setMin(0);A.setFilter("all");A.renderAll();sync();if(w.__uaplySyncPrefsBase)w.__uaplySyncPrefsBase();savePrefs();syncFilters();
     };
     var base=w.__uaplySyncPrefs;w.__uaplySyncPrefsBase=base;
@@ -991,7 +992,44 @@ function apply(w,host){
      application, so only to employers that agreed to receive applications through UAply (the server decides that).
      The owner's legal review advised against writing messages for recruiters; the product owner chose to include it on
      2026-10-13, so it needs the attorney review before launch. */
-  function autoAllowed(){if(REL)return true;var s=planState();return s.plan!==PLANS.trial&&s.ok}
+  /* ---------- real plans: the server keeps the plan, Stripe takes the payment ---------- */
+  var BILL={enabled:false,plan:"free",signedIn:false,plans:{free:{name:"Free",price:0,cap:50},plus:{name:"Plus",price:9.99,cap:250},pro:{name:"Pro",price:19.99,cap:0}}};
+  function loadBilling(){return w.fetch("/api/billing/status",{credentials:"same-origin"}).then(function(r){return r.ok?r.json():null}).then(function(j){if(j){j._asked=BILL._asked;BILL=j;if(!acctSec.hidden&&sub.prof==="plan")renderAcct("plan")}}).catch(function(){})}
+  loadBilling();
+  function billingHTML(){
+    var who=SRV.user?SRV.user.id:0;
+    if(!!BILL.signedIn!==!!SRV.user&&BILL._asked!==who){BILL._asked=who;loadBilling()}       /* signed in or out since the plan was last read: read it again (the screen redraws when it arrives) */
+    var keys=["free","plus","pro"],cur=BILL.plan||"free",P=BILL.plans;
+    var h='<div class="plan" style="display:flex;flex-direction:column;gap:6px">'+(BILL.test?'<span class="tag">TEST PAYMENTS</span>':'')+'<b>Current plan: '+E(P[cur].name)+(BILL.canceling?' (ends '+new Date(BILL.renews*1000).toLocaleDateString()+')':'')+'</b>'+
+      (BILL.signedIn?'<small>'+(P[cur].cap?(BILL.used||0)+' of '+P[cur].cap+' applications used this week':(BILL.used||0)+' applications this week, no limit')+(cur!=="free"&&BILL.renews&&!BILL.canceling?' · renews '+new Date(BILL.renews*1000).toLocaleDateString():'')+'</small>'+(P[cur].cap?'<div class="bar"><i style="width:'+Math.min(100,Math.round((BILL.used||0)/P[cur].cap*100))+'%"></i></div>':''):'<small>Sign in to choose a plan. Your plan is saved to your account.</small>')+'</div><div class="plans">';
+    keys.forEach(function(k){
+      var p=PLANS[k==="free"?"trial":k==="plus"?"starter":"pro"],isCur=cur===k;
+      var btn=k==="free"?(isCur?'<small>Your current plan</small>':''):
+        (isCur?'<button type="button" class="btn ghost" data-bill="portal">Manage billing</button>':
+          (!BILL.enabled?'<small>Payments are not switched on yet.'+(SRV.testInbox?' Connect Stripe in <a href="/setup#billing" target="_blank" rel="noopener noreferrer">setup</a>.':'')+'</small>':
+          (!BILL.signedIn?'<button type="button" class="btn" data-bill="signin">Sign in to choose '+p.name+'</button>':
+          (cur!=="free"?'<button type="button" class="btn ghost" data-bill="portal">Switch in Manage billing</button>':'<button type="button" class="btn" data-bill="'+k+'">Choose '+p.name+'</button>'))));
+      h+='<div class="plan" data-cur="'+isCur+'"><b>'+p.name+'</b><span class="pr">'+(p.price?"$"+p.price.toFixed(2)+'<small>/month</small>':"$0")+'</span><ul>'+p.perks.map(function(x){return '<li>'+E(x)+'</li>'}).join("")+'</ul>'+btn+'</div>';
+    });
+    return h+'</div><p class="note">Payments are handled by Stripe on its own secure page. UAply never sees or stores your card number. Cancel any time in Manage billing; the plan stays until the end of the paid month.</p>';
+  }
+  function billingAction(k,btn){
+    if(k==="signin"){sub.prof="account";renderAcct("account");return}
+    btn.disabled=true;msg(k==="portal"?"Opening billing…":"Opening secure checkout…");
+    apiPost(k==="portal"?"/api/billing/portal":"/api/billing/checkout",k==="portal"?{}:{plan:k}).then(function(r){
+      btn.disabled=false;
+      if(r.ok&&r.j&&r.j.url){try{w.top.location.href=r.j.url}catch(e){w.location.href=r.j.url}return}
+      msg((r.j&&r.j.error)||"Could not open the payment page. Try again.");
+    });
+  }
+  (function billingReturn(){
+    var q=null;try{q=new w.URLSearchParams(w.top.location.search)}catch(e){return}
+    var b=q.get("billing");if(!b)return;
+    try{w.top.history.replaceState(null,"",w.top.location.pathname)}catch(e){}
+    setTimeout(function(){sub.prof="plan";cur="prof";go("prof");renderAcct("plan");msg(b==="success"?"Thank you! Your plan is being activated; it shows here in a few seconds.":b==="cancel"?"Checkout canceled. Nothing was charged.":"Billing updated.");
+      var n=0,t=setInterval(function(){loadBilling();if(++n>=5)clearInterval(t)},2000)},300);
+  })();
+  function autoAllowed(){if(REL||SRV.up)return BILL.plan!=="free"||!BILL.enabled;var s=planState();return s.plan!==PLANS.trial&&s.ok}
   w.__uaplyAutoMsg=function(){return autoAllowed()&&!!acct.fAuto};
   /* what the application sends besides the profile: the details saved under Resume and links (phone, LinkedIn, portfolio, About you, resume link) win over the optional profile form */
   w.__uaplyApplyExt=function(){var x=Object.assign({},XV());var ph=phoneOf(),li=linkOf("linkedin"),pf=linkOf("portfolio"),su=summaryOf(),rs=resumeLinkOf();if(ph)x.phone=ph;if(li)x.linkedin=li;if(pf)x.portfolio=pf;if(su)x.summary=su;if(rs)x.resume=rs;return x};
@@ -1049,6 +1087,8 @@ function apply(w,host){
         '<div class="field full"><label for="aCover">Cover note template</label><textarea id="aCover" maxlength="1500" placeholder="Hi, I am excited about the {role} role at {company}...">'+E(a.cover)+'</textarea><small>Use {role}, {company} and {name}. Saved for when you write to a recruiter.</small></div>'+
         '<div class="field full"><span class="l">Resume</span><small>'+(a.resumeName||a.resumeUrl?"On file: "+E([a.resumeName,a.resumeUrl?"link":""].filter(Boolean).join(" and ")):"No resume added yet.")+' Add or change your resume file and link in Profile, Preferences.</small><button type="button" class="btn ghost" data-a="toprefs" style="align-self:flex-start">Go to Preferences</button></div></div>'+
         '<div class="acts"><button type="button" class="btn" data-a="saveres">Save</button></div>';
+    }else if(v==="plan"&&(SRV.up||REL)){
+      h+=billingHTML();
     }else if(v==="plan"){
       var ps=planState();
       h+='<div class="plan" style="display:flex;flex-direction:column;gap:6px"><span class="tag">SANDBOX · TEST MODE</span><b>Current plan: '+E(ps.plan.name)+(acct.canceled&&acct.plan!=="trial"?" (ends "+new Date(acct.renews).toLocaleDateString()+")":"")+'</b>'+
@@ -1096,6 +1136,8 @@ function apply(w,host){
     }
   });
   acctSec.addEventListener("click",function(e){
+    var bb=e.target.closest("[data-bill]");
+    if(bb){billingAction(bb.getAttribute("data-bill"),bb);return}
     var pb=e.target.closest("[data-plan]"),b=e.target.closest("[data-a]");
     if(e.target.closest("[data-csv]"))return exportCsv();
     if(pb){
