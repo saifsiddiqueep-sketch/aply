@@ -5,8 +5,9 @@ one of them needs a key that the EMPLOYER's own administrator creates and hands 
 (see EMPLOYERS.md); for every other job UAply sends the person to the employer's own page and sends nothing.
 
   greenhouse  POST {base}/v1/boards/{board}/jobs/{id}   Basic auth with the employer's Job Board API key; multipart first_name, last_name, email, phone,
-              resume, answers to the posting's questions. The questions are read first (GET ...?questions=true); a required question UAply cannot answer
-              from the person's profile means nothing is sent and the person finishes on the employer's page instead.
+              resume, answers to the posting's questions. The form is read and answered by autofill.py (the same public form the employer's careers
+              page shows); a required question that neither the profile nor the person's saved answers can answer means nothing is sent, and the app
+              asks the person that question once.
   lever       POST {base}/v0/postings/{site}/{id}?key=KEY   multipart name, email, phone, org, urls[...], comments, resume. Lever's API carries no
               custom questions.
 
@@ -63,10 +64,10 @@ def _multipart(fields, files):
     return b"".join(out), "multipart/form-data; boundary=" + boundary
 
 
-def _call(req):
+def _call(req, timeout=20):
     """Returns (status, parsed_json_or_None). Never raises: a network failure comes back as status 0."""
     try:
-        with _open(req, timeout=20) as r:
+        with _open(req, timeout=timeout) as r:
             raw = r.read(200000)
             status = r.status
     except urllib.error.HTTPError as e:
@@ -92,115 +93,17 @@ def _short(body):
 
 
 # ---------------------------------------------------------------- Greenhouse ----------------------------------------------------------------
-_LINKEDIN = re.compile(r"linked\s*in", re.I)
-_SITE = re.compile(r"(website|portfolio|github|personal (site|page)|\burl\b|\blink\b)", re.I)
-_AUTH = re.compile(r"(authori[sz]ed|legally|eligible|right)\b.*\bwork|work.*(authori[sz]ation|eligib)", re.I)
-_SPONSOR = re.compile(r"sponsor", re.I)
-_HEAR = re.compile(r"(how|where) did you (hear|find|learn)", re.I)
-_EMPLOYER = re.compile(r"(current|most recent|present|previous) (employer|company)", re.I)
-_LOCATION = re.compile(r"(location|\bcity\b|where .*(based|located|live))", re.I)
-_PHONE = re.compile(r"phone", re.I)
-
-
-def _pick_option(values, *wanted):
-    """The value of the option whose label best matches one of the wanted words (case-insensitive, whole label first, then contained)."""
-    opts = [(str(v.get("label", "")).strip().lower(), v.get("value")) for v in values if isinstance(v, dict)]
-    for w in wanted:
-        for label, value in opts:
-            if label == w:
-                return value
-    for w in wanted:
-        for label, value in opts:
-            if re.search(r"\b%s\b" % re.escape(w), label):
-                return value
-    return None
-
-
-def _answer(question_label, field, cand, ext, note):
-    """What to put in one Greenhouse question field, or None when the profile cannot answer it."""
-    label, ftype, values = question_label or "", field.get("type"), field.get("values") or []
-    if _LINKEDIN.search(label):
-        return ext.get("linkedin") or None
-    if _AUTH.search(label):
-        auth = ext.get("auth")
-        want = "yes" if auth in ("citizen", "authorized") else "no" if auth == "none" else ""
-        return (_pick_option(values, want) if ftype.startswith("multi_value") else want.capitalize()) if want else None
-    if _SPONSOR.search(label):
-        spon = ext.get("sponsor")
-        return (_pick_option(values, spon) if ftype.startswith("multi_value") else spon.capitalize()) if spon in ("yes", "no") else None
-    if _HEAR.search(label):
-        if ftype.startswith("multi_value"):
-            return _pick_option(values, "job board", "online", "linkedin", "other", "internet")
-        return "UAply"
-    if _EMPLOYER.search(label):
-        return ext.get("employer") or None
-    if _PHONE.search(label):
-        return ext.get("phone") or None
-    if _SITE.search(label):
-        return ext.get("portfolio") or ext.get("resume") or None
-    if _LOCATION.search(label):
-        return cand.get("loc") or None
-    return None
-
-
 def _greenhouse(board, job_id, key, cand, note, resume_meta, resume_bytes):
+    import autofill                                            # here, not at the top: autofill imports this module
     base = _base("greenhouse")
-    ext = cand.get("ext") or {}
-    status, form = _call(urllib.request.Request("%s/v1/boards/%s/jobs/%s?questions=true" % (base, board, job_id), headers={"Accept": "application/json"}))
-    if status != 200 or not isinstance(form, dict):
+    form, status = autofill.read_form(board, job_id)
+    if not form:
         return "failed", "could not read the job's application form (HTTP %s)" % status
-    name = (cand.get("name") or "").strip()
-    first, _, last = name.partition(" ")
-    last = last.strip() or first
-    fields, files, missing = [], [], []
-    answered = set()
-
-    def put(fname, value):
-        if value not in (None, "") and fname not in answered:
-            fields.append((fname, str(value)))
-            answered.add(fname)
-            return True
-        return False
-
-    questions = list(form.get("questions") or []) + list(form.get("location_questions") or [])
-    for q in questions:
-        label = q.get("label") or ""
-        q_ok = False                                          # a question with several fields (a resume file OR pasted text) is answered when any one is
-        for f in q.get("fields") or []:
-            fname, ftype = f.get("name") or "", f.get("type") or ""
-            if not fname:
-                continue
-            if fname in answered:
-                q_ok = True
-                continue
-            ok = False
-            if fname == "first_name":
-                ok = put(fname, first)
-            elif fname == "last_name":
-                ok = put(fname, last)
-            elif fname == "email":
-                ok = put(fname, cand.get("email"))
-            elif fname == "phone":
-                ok = put(fname, ext.get("phone"))
-            elif fname in ("resume", "cover_letter") and ftype == "input_file":
-                if fname == "resume" and resume_bytes and resume_meta:
-                    files.append(("resume", resume_meta["name"], resume_meta["type"], resume_bytes))
-                    answered.add(fname)
-                    ok = True
-                elif fname == "cover_letter" and not q.get("required"):
-                    ok = True
-            elif fname == "resume_text":
-                ok = put(fname, ext.get("summary") or note or ext.get("headline")) if not resume_bytes else True
-            elif fname == "cover_letter_text":
-                ok = put(fname, note or ext.get("summary")) if (note or ext.get("summary")) else not q.get("required")
-            else:
-                value = _answer(label, f, cand, ext, note)
-                ok = put(fname, value) if value is not None else False
-            q_ok = q_ok or ok
-        if q.get("required") and not q_ok:
-            missing.append(label.strip()[:60] or "a required question")
-    if missing:
-        return "needs_manual", "required questions UAply cannot answer from the profile: " + "; ".join(missing[:5])
+    plan = autofill.plan_greenhouse(form, cand, {"co": form.get("company_name") or "", "role": form.get("title") or ""}, note,
+                                    resume_meta, resume_bytes, cand.get("answers"))
+    if plan["missing"]:
+        return "needs_manual", "required questions UAply cannot answer from the profile: " + "; ".join(m["q"][:60] for m in plan["missing"][:5])
+    fields, files = plan["fields"], plan["files"]
     body, ctype = _multipart(fields, files)
     token = base64.b64encode((key + ":").encode("utf-8")).decode("ascii")
     status, reply = _call(urllib.request.Request("%s/v1/boards/%s/jobs/%s" % (base, board, job_id), data=body, method="POST",

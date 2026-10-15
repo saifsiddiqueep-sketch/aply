@@ -4,6 +4,38 @@ How versions move: work happens in `sandbox`, is tested there, and goes to `dev`
 build: it is what the hosted site and the phone apps run. Each version is tagged on GitHub (Releases). `main` is the original
 production page and only changes when the owner decides.
 
+## Unreleased (in sandbox, not yet in dev)
+
+Swipe right fills in the employer's real application form, asks only what the person alone can answer (once), and says honestly what happened.
+
+- **Autofill engine** (`autofill.py`). Greenhouse publishes every job's application form (questions, field types, options) through its public Job
+  Board API, with no key. UAply reads that form and answers each question from the profile: name, email, phone, resume file, LinkedIn, website,
+  location, US state (by full name or two-letter code), ZIP code, the hidden map position behind the location box (from the ZIP code, using the
+  Census Bureau's public ZIP data in `autofill_zip3.json`), school, degree, major, graduation date, GPA, current employer, work authorization and
+  sponsorship (including forms whose options are whole sentences), OPT, 18 or older, former employee, government official, office work, relocation,
+  "how did you hear", and the person's own "why this company" text. Voluntary self-identification (gender, race, veteran, disability) is never
+  answered. Privacy and AI-use acknowledgments are ticked only if the person chose that in Profile.
+- **Asked once, then remembered.** A required question the profile cannot answer is asked in a short sheet after the swipe ("2 questions from
+  Dropbox"); the answer is saved on the device and used for every later form that asks the same thing, at any company. On 59 real forms from
+  today's feed: 9 were complete from the profile alone, the typical form left 2 questions, and after answering each new question once, 58 of 59
+  were complete.
+- **Where it applies by itself.** Employers that connected their Greenhouse: the filled form goes straight in. Every other employer: nothing is
+  sent, the job is kept as "Not sent yet" with a Finish on their site button. In the sandbox (test mode), every Greenhouse posting is filled in
+  the same way and delivered to the test inbox, which now shows the employer's form exactly as UAply filled it in. Nothing reaches an employer.
+- **Profile, Preferences, "Questions employers ask"**: office work, former employee, government official, PhD, pronouns, notices, "why" text.
+  Relocation comes from the existing "Willing to relocate".
+- **The Applied list tells the truth.** It said "Application sent to the company" for jobs where nothing was sent (the employer's own page
+  was needed). Now: sent, sent to the test inbox, not sent yet (finish on their site), or waiting to send.
+- **A swipe that sends nothing goes back to the deck** (missing name or email, the weekly limit, unverified email, too fast) instead of sitting
+  in Applied. Offline swipes are kept as "waiting to send" and sent when the connection returns. Undo takes back that exact job, never just
+  "the last one".
+- **Server**: at most 40 applications and 150 swipes per minute per visitor (a script can no longer fill the disk); the weekly plan limit counts
+  only real applications, not hand-offs.
+- **Fixed earlier in this round**: the first-application agreement reappearing on every swipe; the browser test runner always reporting success
+  (now it fails on any failed check, and each check has a 10-minute limit); three stale test expectations that the old runner had hidden.
+- New tests: `test-autofill.py` (34, real forms saved in `tools/fixtures/`), more in `test-ats-flow.py` (20); `tools/shot-autofill.js` shows the
+  whole flow in the sandbox at phone size.
+
 ## 1.0.0-rc.8 (release candidate)
 
 Swipe right can now apply by itself: straight into the employer's own hiring system, for employers who connect.

@@ -62,7 +62,7 @@ def _stripe(method, path, params=None):
 def _week_used(user_id):
     since = time.time() - 7 * 86400
     with uaply_api._lock:
-        return sum(1 for a in uaply_api.APPS if a.get("user") == user_id and a["at"] >= since and a["status"] not in ("failed", "duplicate"))
+        return sum(1 for a in uaply_api.APPS if a.get("user") == user_id and a["at"] >= since and a["status"] not in ("failed", "duplicate", "handoff"))   # a hand-off sent nothing, so it is not an application
 
 
 def plan_of(user):

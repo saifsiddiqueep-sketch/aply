@@ -40,6 +40,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(ROOT, "data")
 CONFIG_PATH = os.path.join(ROOT, "uaply-config.json")
 import ats_api
+import autofill
 import jobs_api
 import auth_api
 import emails
@@ -126,10 +127,14 @@ def _load():
 hide_errors = False        # serve.py sets this on a hosted server: visitors then see a plain sentence, never a mail server's or an employer's raw error text
 
 
+INSTANCE = ""
+
+
 def init(instance):
     """Each instance (sandbox, dev) keeps its own records in data/<instance>/."""
-    global DATA
-    DATA = os.path.join(data_root(), re.sub(r"[^A-Za-z0-9_-]", "", instance) or "default")
+    global DATA, INSTANCE
+    INSTANCE = re.sub(r"[^A-Za-z0-9_-]", "", instance) or "default"
+    DATA = os.path.join(data_root(), INSTANCE)
     APPS.clear()
     DECISIONS.clear()
     _load()
@@ -175,11 +180,18 @@ def _ext(raw):
     except (TypeError, ValueError):
         gpa = ""
     types = [t for t in x.get("types") if t in _TYPES] if isinstance(x.get("types"), list) else []
+    zipc = _s(x.get("zip"), 10)
+    state = _s(x.get("state"), 30)
     return {"phone": phone, "headline": _s(x.get("headline"), 120), "summary": _s(x.get("summary"), 600),
             "resume": _https(x.get("resume")), "linkedin": _linkedin(x.get("linkedin")), "portfolio": _https(x.get("portfolio")),
             "school": _s(x.get("school"), 100), "major": _s(x.get("major"), 100), "grad": grad, "gpa": gpa,
             "employer": _s(x.get("employer"), 100), "auth": _pick(x.get("auth"), _AUTH),
-            "sponsor": _pick(x.get("sponsor"), ("yes", "no")), "start": _pick(x.get("start"), _START), "types": types}
+            "sponsor": _pick(x.get("sponsor"), ("yes", "no")), "start": _pick(x.get("start"), _START), "types": types,
+            # the common questions employers' own forms ask (used by autofill.py to fill those forms; none of them is shown to a recruiter otherwise)
+            "zip": zipc if re.match(r"^\d{5}(-\d{4})?$", zipc) else "", "state": state if re.match(r"^[A-Za-z .]{2,30}$", state) else "",
+            "relocate": _pick(x.get("relocate"), ("yes", "no")), "office": _pick(x.get("office"), ("yes", "no")),
+            "former": _pick(x.get("former"), ("no", "ask")), "govt": _pick(x.get("govt"), ("yes", "no")), "phd": _pick(x.get("phd"), ("yes", "no")),
+            "pronouns": _s(x.get("pronouns"), 30), "ack": x.get("ack") is True, "why": _s(x.get("why"), 600)}
 
 
 def _detail_rows(c, note=""):
@@ -574,15 +586,64 @@ def submit(p, user=None):
     policy = jobs_api.job_policy(job["id"])      # 'direct' (employer opted in), 'link' (employer's own page) or 'unknown' (example)
     hook = jobs_api.known_webhook(job["id"]) if policy == "direct" else None      # the HTTPS address the employer registered, if any
     ats = jobs_api.known_ats(job["id"]) if policy == "direct" else None           # the employer's own hiring system and key, if they connected
-    send_args = None
-    with _lock:
+    answers = autofill.clean_answers(p.get("answers"))      # the person's own answers to questions employers' forms asked before
+
+    def dup():
         for a in APPS:
             if a["job"]["id"] == job["id"] and a["candidate"]["email"] == cand["email"] and a["status"] != "failed":
                 return 200, {"status": "duplicate", "id": a["id"], "to": a.get("to", ""), "mode": a["mode"]}
+        return None
+
+    with _lock:
+        seen = dup()
+    if seen:
+        return seen
+    if mode == "live" and policy == "direct":
+        # an application sent straight to an employer carries the person's email as the reply address, so that address must be proven theirs
+        if not user or not user.get("emailVerified"):
+            return 403, {"error": "Verify your email first (Profile, Account) so the employer can trust your address.", "code": "verify"}
+        if cand["email"] != user["email"].lower():
+            return 400, {"error": "Use your account email in Profile, Settings, so the employer replies to an address you verified."}
+        if p.get("confirm_real") is not True:
+            return 400, {"error": "Live sending needs the user to review and press Send."}
+
+    # Autofill: read the job's real application form (Greenhouse publishes it) and answer it from the profile and saved answers.
+    #   - an employer that connected its Greenhouse: anything the form requires that the profile cannot answer is asked first, then it all goes in
+    #   - the sandbox, in test mode: the same, for every Greenhouse posting, and the filled form goes to the test inbox (nothing reaches the employer)
+    #   - every other posting: the filled answers come back with the hand-off, so finishing on the employer's page is quick
+    ref = known.get("ats") if isinstance(known.get("ats"), dict) else None
+    gh = ats if (ats and ats.get("kind") == "greenhouse") else (ref if ref and ref.get("kind") == "greenhouse" else None)
+    preview = (mode == "test" and policy == "link" and gh is not None and
+               (cfg.get("autofill_preview") is True or (INSTANCE == "sandbox" and cfg.get("autofill_preview") is not False)))
+    plan = None
+    if gh and (policy in ("direct", "link") or preview) and not _redirect(cfg):
+        form = autofill.fetch_form(gh["board"], gh["id"])
+        plan = autofill.plan_greenhouse(form, cand, job, note, resume_meta, resume_bytes, answers) if form else None
+        if plan and plan["missing"] and (preview or (policy == "direct" and ats)):
+            pub = autofill.public_plan(plan)
+            return 200, {"status": "needs_answers", "mode": mode, "questions": pub["missing"], "filled": pub["filled"], "total": pub["total"]}
+    summary = ({"filled": plan["filled"], "total": plan["total"],
+                "items": [{"q": i["q"][:160], "a": i["a"][:200]} for i in plan["items"] if i["a"] and not i.get("skip")][:40]} if plan else None)
+
+    send_args = None
+    with _lock:
+        seen = dup()                                       # checked again: a second tap may have landed while the form was being read
+        if seen:
+            return seen
         rec = {"id": uuid.uuid4().hex[:12], "at": int(time.time()), "mode": mode, "job": job, "candidate": cand,
                "note": note, "match": int(p.get("match") or 0), "to": "", "simulated": False, "status": "",
                "user": user["id"] if user else None, "resume": resume_meta, "channels": []}
-        if policy == "link" or (policy == "unknown" and mode == "live"):
+        if summary:
+            rec["autofill"] = summary
+        if preview and plan:
+            # the sandbox shows exactly what would go into the employer's hiring system once they connect; nothing is sent to them
+            rec["to"] = "%s hiring system (simulated)" % job["co"]
+            rec["simulated"] = True
+            rec["status"] = "delivered_test"
+            rec["channels"] = ["hiring system (simulated)"]
+            APPS.append(rec)
+            _append("applications.jsonl", rec)
+        elif policy == "link" or (policy == "unknown" and mode == "live"):
             # a third-party listing, or an example in live mode: UAply never sends an application to anyone here.
             # The person is pointed to the employer's own application page instead.
             rec["status"] = "handoff"
@@ -596,13 +657,6 @@ def submit(p, user=None):
             APPS.append(rec)
             _append("applications.jsonl", rec)
         else:
-            # an application sent straight to an employer carries the person's email as the reply address, so that address must be proven theirs
-            if not user or not user.get("emailVerified"):
-                return 403, {"error": "Verify your email first (Profile, Account) so the employer can trust your address.", "code": "verify"}
-            if cand["email"] != user["email"].lower():
-                return 400, {"error": "Use your account email in Profile, Settings, so the employer replies to an address you verified."}
-            if p.get("confirm_real") is not True:
-                return 400, {"error": "Live sending needs the user to review and press Send."}
             target = _redirect(cfg) or contact
             hook = None if _redirect(cfg) else hook          # a test redirect must never reach a real employer's system
             ats = None if _redirect(cfg) else ats
@@ -613,7 +667,8 @@ def submit(p, user=None):
                     return 429, {"error": "Daily sending limit reached."}
                 rec["to"], rec["status"] = target, "sending"      # reserved now, so a double tap cannot send twice
                 APPS.append(rec)
-                send_args = (cfg, target if _smtp_ready(cfg) else "", cand, job, note, contact, resume_meta, resume_bytes, hook, rec, ats)
+                send_args = (cfg, target if _smtp_ready(cfg) else "", dict(cand, answers=answers) if ats else cand, job, note, contact,
+                             resume_meta, resume_bytes, hook, rec, ats)
             else:
                 rec["status"] = "handoff"
                 APPS.append(rec)
@@ -626,6 +681,8 @@ def submit(p, user=None):
                 rec["error"] = err
             _append("applications.jsonl", rec)
     out = {"status": rec["status"], "id": rec["id"], "to": rec["to"], "mode": mode, "simulated": rec["simulated"], "copied": False}
+    if summary:
+        out["plan"] = summary
     if rec.get("error"):
         sys.stderr.write("[uaply] delivery of application %s failed: %s\n" % (rec["id"], rec["error"]))      # the real reason stays in the server's own log and applications.jsonl
         out["error"] = ("The email could not be sent right now. Try again in a moment." if hide_errors
@@ -693,6 +750,16 @@ def outbox_json():
         return {"stats": st, "applications": list(reversed(APPS))[:100]}
 
 
+def _autofill_html(af):
+    """The employer's own application form as UAply filled it in (question and answer), for the test inbox."""
+    if not isinstance(af, dict) or not af.get("items"):
+        return ""
+    e = html.escape
+    rows = "".join("<tr><td>%s</td><td>%s</td></tr>" % (e(i.get("q", "")), e(i.get("a", ""))) for i in af["items"])
+    return ('<details open><summary>Employer\'s application form, filled in by UAply: %d of %d answers</summary>'
+            '<table class="af">%s</table></details>' % (af.get("filled", 0), af.get("total", 0), rows))
+
+
 def outbox_html():
     e = html.escape
     st = stats()
@@ -705,10 +772,11 @@ def outbox_html():
         rows.append(
             '<article><header><span class="b">%s</span><b>%s</b> to %s%s<time>%s</time></header>'
             '<p class="m">From %s &lt;%s&gt; · %s, %s yrs · match %d%% · <a href="%s" target="_blank" rel="noopener noreferrer">posting</a></p>'
-            '<pre>%s</pre></article>' % (
+            '<pre>%s</pre>%s</article>' % (
                 e(badge), e(j["role"]), e(j["co"]), (" &lt;%s&gt;" % e(a["to"])) if a["to"] else "",
                 time.strftime("%b %d, %H:%M", time.localtime(a["at"])),
-                e(c["name"]), e(c["email"]), e(c["title"] or "candidate"), c["years"], a["match"], e(j["url"]), e(_application_text(c, j, a["note"]))))
+                e(c["name"]), e(c["email"]), e(c["title"] or "candidate"), c["years"], a["match"], e(j["url"]), e(_application_text(c, j, a["note"])),
+                _autofill_html(a.get("autofill"))))
     body = "".join(rows) or "<p class='m'>No applications yet. Swipe right on a job in the sandbox or dev app.</p>"
     try:
         mails = auth_api.mail_list(30)
@@ -732,6 +800,8 @@ article{background:var(--surface);border:1px solid var(--line);border-radius:14p
 header{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}header time{margin-left:auto;color:var(--muted);font-size:13px}
 .b{font:700 11px ui-monospace,Menlo,monospace;padding:2px 7px;border-radius:6px;background:var(--accent);color:#fff}
 pre{white-space:pre-wrap;margin:8px 0 0;font:inherit;background:var(--bg);border-radius:10px;padding:10px}a{color:var(--accent)}
+details{margin-top:8px}summary{cursor:pointer;font-weight:700}.af{width:100%%;border-collapse:collapse;margin-top:6px;font-size:13.5px}
+.af td{border-top:1px solid var(--line);padding:6px 4px;vertical-align:top}.af td:first-child{color:var(--muted);width:55%%}
 </style></head><body><main><h1>UAply test inbox</h1><p class="m">Simulated recruiter inbox. In test mode nothing leaves this computer.</p>
 <div class="stats"><div><b>%d</b><small>Swipes right</small></div><div><b>%d</b><small>Swipes left</small></div><div><b>%d</b><small>Applications</small></div><div><b>%d</b><small>Testers</small></div></div>
 %s%s</main></body></html>""" % (st["right"], st["left"], st["applications"], st["sessions"], body, receipts)).encode("utf-8")

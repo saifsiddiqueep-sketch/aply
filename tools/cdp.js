@@ -7,6 +7,9 @@ const path = require("path");
 
 const CHROME = path.join(process.env.LOCALAPPDATA || "", "Google", "Chrome", "Application", "chrome.exe");
 
+let failed = false;                                       // set when the test prints a FAIL line, so the runner (run-all-tests.sh) can see it
+const _log = console.log;
+console.log = (...a) => { const t = a.join(" "); if (/^FAIL\b|^TEST SCRIPT FAILED/.test(t)) failed = true; _log(...a); };
 (async () => {
   const port = 9300 + Math.floor(Math.random() * 500);
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), "uaply-cdp-"));
@@ -55,5 +58,5 @@ const CHROME = path.join(process.env.LOCALAPPDATA || "", "Google", "Chrome", "Ap
   console.log("CONSOLE ISSUES:", logs.length ? "\n" + logs.join("\n") : "none");
   ws.close(); proc.kill();
   try { fs.rmSync(profile, { recursive: true, force: true }); } catch (e) {}
-  process.exit(0);
+  process.exit(failed || process.exitCode ? 1 : 0);      // a FAIL line, a crashed test script or exitCode set by the test makes the whole run fail
 })();

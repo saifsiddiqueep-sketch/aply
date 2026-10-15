@@ -41,3 +41,4 @@ jobs:
           python tools/test-ats.py
           python tools/test-ats-flow.py
           python tools/test-billing.py
+          python tools/test-autofill.py

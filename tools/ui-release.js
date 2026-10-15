@@ -89,7 +89,7 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   await ev(F + ".getElementById('btnYes').click()"); await sleep(1200);
   await ev("(()=>{const m=" + F + ".getElementById('kcYes');if(m)m.click()})()"); await sleep(2200);
   const after = await pageText();
-  check("swiping right on a real job says plainly what happened (applied, or finish at the employer)", /Saved\. Finish applying at|Applied to/i.test(after), after.slice(-160));
+  check("swiping right on a real job says plainly what happened (applied, or finish at the employer)", /Saved\. Finish applying at|Not sent yet: .* takes applications on its own site|Applied to/i.test(after), after.slice(-160));
   await ev(F + ".getElementById('nb-dash').click()"); await sleep(400);
   await sub("Applied"); await sleep(600);
   check("the swiped job appears under Dashboard > Applied", (await ev(F + ".querySelectorAll('.app,.appitem,[data-app],article,.row').length")) > 0 || /intern/i.test(await pageText()));

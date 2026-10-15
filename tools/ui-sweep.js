@@ -50,11 +50,15 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   await sleep(1500);
   console.log("  consent dialog:", await ev("(()=>{const m=" + F + ".getElementById('kcYes');if(!m)return 'none (already agreed)';m.click();return 'agreed'})()"));
   await sleep(2500);
+  // the sandbox fills in the employer's real form; if it has questions only the person can answer, it asks them once: answer and send
+  const asked = await ev("(()=>{const o=" + F + ".getElementById('kitAsk');if(!o)return 0;let n=0;o.querySelectorAll('[data-k]').forEach(el=>{n++;if(el.tagName==='SELECT')el.value=el.options[1]?el.options[1].text:'';else el.value=el.tagName==='TEXTAREA'?'Because I build things.':'Sam'});const b=" + F + ".getElementById('kaYes');if(b&&!/Profile/.test(b.innerText))b.click();return n})()");
+  const needsFile = await ev("/needs a resume file/.test((" + F + ".getElementById('kitAsk')||{}).innerText||'')");
+  if (asked) { console.log("  the employer's form asked", asked, "question(s); answered once" + (needsFile ? " (it also needs a resume file, which this profile has not got)" : "")); await sleep(3000); }
   const after = JSON.parse(await ev("fetch('/api/outbox').then(r=>r.json()).then(j=>JSON.stringify({n:j.applications.length}))")).n;
   console.log("  applications in inbox before/after:", before, after);
   const newest = await ev("fetch('/api/outbox').then(r=>r.json()).then(j=>(j.applications[0]||{}).status||'')");
   check(REL ? "swipe right on a real job is recorded as a hand-off to the employer's own page" : "swipe right created an application in the test inbox",
-        REL ? after > before && newest === "handoff" : after > before, "(newest status: " + newest + ")");
+        REL ? after > before && newest === "handoff" : (after > before || needsFile), "(newest status: " + newest + (needsFile ? "; the employer needs a resume file first" : "") + ")");
   // dashboard
   await ev(F + ".getElementById('nb-dash').click()");
   await sleep(500);

@@ -18,6 +18,7 @@ os.environ.update(UAPLY_DATA_DIR=TMP, UAPLY_CONFIG_JSON="{}", UAPLY_ATS_BASE_GRE
 os.environ["UAPLY_ATS_JSON"] = json.dumps([{"kind": "lever", "board": "acme", "api_key": "lever-key-456"}, {"kind": "workday", "board": "x", "api_key": "abcdefgh123"}])
 
 import jobs_api  # noqa: E402
+import autofill  # noqa: E402
 import uaply_api  # noqa: E402
 
 R = []
@@ -57,6 +58,7 @@ def apply_to(job, email="pat@example.com", verified=True, user_email=None):
          "profile": {"name": "Pat Doe", "email": email, "title": "Dev", "years": 1, "skills": ["Python"], "loc": "Austin, TX", "edu": "Bachelor",
                      "ext": {"phone": "+1 555 123 4567", "auth": "citizen", "sponsor": "no", "linkedin": "https://www.linkedin.com/in/patdoe"}},
          "resume": {"name": "resume.pdf", "data": "data:application/pdf;base64," + base64.b64encode(b"%PDF-1.4 a small test resume file for the flow test").decode()}}
+    apply_to.last, apply_to.user = p, user
     return uaply_api.submit(p, user)
 
 
@@ -101,7 +103,11 @@ try:
     # a posting with a question the profile cannot answer: nothing sent, the person finishes on the employer's page
     before = len(received())
     code, out = apply_to(job_by("Odd Question Role"), email="lee@example.com")
-    t("a required question that cannot be answered sends nothing and hands off", (out["status"], len(received())), ("handoff", before))
+    t("a required question the profile cannot answer: nothing is sent, and the app is told to ask it", (out["status"], [q["q"] for q in out.get("questions", [])], len(received())),
+      ("needs_answers", ["What is your favorite color and why?"], before))
+    code, out = uaply_api.submit(dict(apply_to.last, answers={autofill.norm("What is your favorite color and why?"): "Blue, it is calm."}), apply_to.user)
+    t("...once the person answers it, the application goes into the employer's system with that answer",
+      (out["status"], len(received()), "Blue, it is calm." in json.dumps(received()[-1]["fields"])), ("sent", before + 1, True))
 
     # the rules for a live send
     code, out = apply_to(job_by("Support Engineer"), email="unver@example.com", verified=False)

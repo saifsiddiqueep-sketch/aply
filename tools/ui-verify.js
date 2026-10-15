@@ -36,7 +36,7 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   const t1 = await text();
   check("after sign-up, the page asks for the 6-digit code", /Verify your email/.test(t1) && !!(await ev("!!" + F + ".getElementById('sCode')")));
   check("it says the email is not verified yet", /email not verified yet/.test(t1));
-  check("the message says where the code is", /6-digit code/.test(await msg()), await msg());
+  check("the message says where the code is", /6-digit code|code is in the test inbox/.test(await msg()), await msg());
 
   // wrong code, then the right one
   await setVal("sCode", "000000"); await click("sverify"); await sleep(1500);
@@ -46,7 +46,7 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   check("a code that is too short is caught before sending", /6-digit code/.test(await msg()));
   check("Send a new code works", await click("sresend"));
   await sleep(2000);
-  check("it says a new code is on its way", /new code|on its way/i.test(await msg()), await msg());
+  check("it says a new code is on its way", /new code|on its way|code is in the test inbox/i.test(await msg()), await msg());
   const code = await codeFromInbox();
   check("the code can be found in the test inbox", /^[0-9]{6}$/.test(code), code);
   await setVal("sCode", code); await click("sverify"); await sleep(2000);

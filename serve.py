@@ -26,7 +26,7 @@ Serves ROOT; each urlpath=file alias maps one URL to a file outside ROOT (e.g. /
   GET  /feedback          the feedback summary page (this server only listens on this computer)
   GET  /help/articles.json  the help articles the assistant answers from
 Accounts use an HttpOnly session cookie. When a signed-in user swipes right, a receipt goes to their email."""
-import sys, os, json, http.server, base64, hmac
+import sys, os, json, http.server, base64, hmac, threading, time
 
 port = int(sys.argv[1])
 # Locally the server only listens on this computer. A host sets HOST=0.0.0.0 so the public can reach it (always behind HTTPS).
@@ -58,7 +58,6 @@ if api:
     auth_api.init(os.path.basename(root))
     chat_api.init(os.path.basename(root))
     uaply_api.hide_errors = jobs_api.hide_errors = PUBLIC       # a hosted server never shows visitors raw error text; the owner's own computer still does
-    import threading
     threading.Thread(target=jobs_api.get_jobs, daemon=True).start()   # warm the job cache so the first visitor does not wait
 
 OOPS = "Something went wrong on our side. Try again in a moment."
@@ -72,6 +71,28 @@ def log_oops(where, e):
 
 MAX_BODY = 40000
 MAX_APPLY_BODY = 1500000
+
+# Swipes per visitor per minute. A person swipes a few times a minute; a script hammering the server would otherwise fill its disk and memory.
+SWIPE_LIMITS = {"/api/apply": 40, "/api/decision": 150}
+_swipes, _swipes_lock = {}, threading.Lock()
+
+
+def too_fast(path, ip):
+    limit = SWIPE_LIMITS.get(path)
+    if not limit:
+        return False
+    now = time.time()
+    with _swipes_lock:
+        if len(_swipes) > 20000:                          # forget visitors who have gone quiet
+            for k in [k for k, v in _swipes.items() if not v or now - v[-1] > 60]:
+                del _swipes[k]
+        hits = [t for t in _swipes.get((path, ip), []) if now - t < 60]
+        if len(hits) >= limit:
+            _swipes[(path, ip)] = hits
+            return True
+        hits.append(now)
+        _swipes[(path, ip)] = hits
+        return False
 
 class H(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **k):
@@ -254,6 +275,8 @@ class H(http.server.SimpleHTTPRequestHandler):
         ip = self.client_address[0]
         if PUBLIC and self.headers.get("X-Forwarded-For"):          # behind the host's proxy: the visitor's own address
             ip = self.headers["X-Forwarded-For"].split(",")[0].strip()[:64] or ip
+        if too_fast(p, ip):
+            return self._send(429, {"error": "You're swiping faster than UAply can keep up. Wait a moment and try again.", "code": "slow_down"})
         try:
             if p == "/api/auth/signup":
                 code, out, token = auth_api.signup(payload.get("email"), payload.get("password"), ip, payload.get("agree"))
