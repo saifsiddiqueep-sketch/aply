@@ -145,7 +145,7 @@ function kitApply(w,host){
       '<h2 id="kitH" style="margin:0;font:800 20px var(--display)">'+(submitOn&&!ask?'Sending to ':'Finish applying to ')+esc(job.co)+'</h2>'+
       '<p style="margin:0;color:var(--muted);font-size:14px">'+intro+'</p>'+
       (!p.custom?'<p style="margin:0;color:var(--mid);font-size:13px">This uses the example profile. Add your own details in Profile first.</p>':'')+
-      (submitOn&&!profileOk?'<p style="margin:0;color:var(--no);font-size:13px">Add your name and a valid email in Profile, Settings so the recruiter can reply.</p>':'')+
+      (submitOn&&!profileOk?'<p style="margin:0;color:var(--no);font-size:13px">Add your name and a valid email in Profile setup, under About you, so the recruiter can reply.</p>':'')+
       '<textarea id="kitText" rows="7" aria-label="Application note" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font:inherit;resize:vertical"></textarea>'+
       '<p id="kitStatus" role="status" style="margin:0;font-size:13.5px;font-weight:600;min-height:1.3em"></p>'+
       '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
@@ -250,9 +250,14 @@ function kitApply(w,host){
   function hasConsent(){try{var c=JSON.parse(w.localStorage.getItem(consentKey()));return !!(c&&c.v===CONSENT_V)}catch(e){return false}}
   /* consentFirst (sandbox): ask once when the swipe deck first opens, so no swipe is ever interrupted by it */
   var consentFirst=!!((host&&host.defaultView&&host.defaultView.UAplyOpts)||{}).consentFirst;
-  function ensureConsent(go,cancel){
+  /* the sandbox opens the box before the first swipe (atStart). A swipe made while that box is open (the keyboard can reach the
+     deck behind it) waits for the answer and then goes on, or back. Only one: more presses, or a double tap on a box a swipe
+     opened, add nothing, so a job is never sent twice. */
+  var consentWait=[],consentAtStart=false;
+  function ensureConsent(go,cancel,atStart){
     if(hasConsent()){go();return}      /* outside hasConsent's try: a problem while applying must never look like "not agreed yet" and bring this box back */
-    if(d.getElementById("kitConsent"))return;
+    if(d.getElementById("kitConsent")){if(consentAtStart&&!consentWait.length&&!atStart)consentWait.push([go,cancel]);return}
+    consentAtStart=!!atStart;
     var b=legalBase(),o=d.createElement("div");o.id="kitConsent";
     o.style.cssText="position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.45);overflow:auto";
     o.innerHTML='<div role="dialog" aria-modal="true" aria-labelledby="kcH" style="background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:20px;max-width:460px;width:100%;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;font-size:14px">'+
@@ -265,9 +270,10 @@ function kitApply(w,host){
       '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button type="button" class="btn ghost" id="kcNo">'+(consentFirst?"Not now":"Cancel")+'</button><button type="button" class="btn" id="kcYes">'+(consentFirst?"Agree and start swiping":"Agree and continue")+'</button></div></div>';
     d.body.appendChild(o);
     d.getElementById("kcYes").focus();
-    d.getElementById("kcYes").onclick=function(){try{w.localStorage.setItem(consentKey(),JSON.stringify({v:CONSENT_V,at:Date.now()}))}catch(e){}o.remove();go()};
-    d.getElementById("kcNo").onclick=function(){o.remove();cancel()};
-    o.addEventListener("keydown",function(e){if(e.key==="Escape"){o.remove();cancel()}});
+    function answer(ok){o.remove();var waiting=consentWait.splice(0);(ok?go:cancel)();waiting.forEach(function(p){(ok?p[0]:p[1])()})}
+    d.getElementById("kcYes").onclick=function(){try{w.localStorage.setItem(consentKey(),JSON.stringify({v:CONSENT_V,at:Date.now()}))}catch(e){}answer(true)};
+    d.getElementById("kcNo").onclick=function(){answer(false)};
+    o.addEventListener("keydown",function(e){if(e.key==="Escape")answer(false)});
   }
   function openProfile(){var b=d.getElementById("nb-prof");if(b){b.click();var it=d.querySelector('.nwrap[data-k=prof] .nitem[data-v=settings]');if(it)it.click()}}
 
@@ -289,7 +295,7 @@ function kitApply(w,host){
     qs.forEach(function(q,i){
       var id="kaQ"+i;
       h+='<div style="display:flex;flex-direction:column;gap:5px"><label for="'+id+'" style="font-weight:600">'+esc(q.q)+'</label>';
-      if(q.kind==="file")h+='<small id="'+id+'" style="color:var(--no)">Upload your resume in Profile, Resume and links, then swipe right again.</small>';
+      if(q.kind==="file")h+='<small id="'+id+'" style="color:var(--no)">Upload your resume in Profile setup, under Background and links, then swipe right again.</small>';
       else if(q.opts&&q.opts.length)h+='<select id="'+id+'" data-k="'+esc(q.key)+'" style="'+fld+'"><option value="">Choose</option>'+q.opts.map(function(x){return '<option>'+esc(x)+'</option>'}).join("")+'</select>';
       else if(q.kind==="textarea")h+='<textarea id="'+id+'" data-k="'+esc(q.key)+'" rows="4" maxlength="2000" style="'+fld+';resize:vertical"></textarea>';
       else h+='<input id="'+id+'" data-k="'+esc(q.key)+'" maxlength="300" style="'+fld+'">';
@@ -412,7 +418,7 @@ function kitApply(w,host){
   w.__uaplyQuiet=!showSheet;
   if(consentFirst&&!showSheet){
     /* not while someone is in Hiring mode: employers do not swipe. Hiring mode calls this again when they switch back */
-    w.__uaplyAskConsent=function(){if(!hasConsent()&&!d.body.classList.contains("hire"))ensureConsent(function(){},function(){})};
+    w.__uaplyAskConsent=function(){if(!hasConsent()&&!d.body.classList.contains("hire"))ensureConsent(function(){},function(){},true)};
     w.setTimeout(w.__uaplyAskConsent,700);
   }
 }

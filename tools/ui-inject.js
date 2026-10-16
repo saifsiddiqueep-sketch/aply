@@ -33,12 +33,12 @@ module.exports = async ({ ev, sleep, nav }) => {
   await ev(F + ".querySelector('[data-auth=ssubmit]').click()"); await sleep(2500);
 
   // hostile text in every free-text profile field
-  await goto("nb-prof", "Settings");
+  await goto("nb-prof", "Profile setup");
   await set("pName", P1); await set("pEmail", "inject.tester@example.com"); await set("pSkills", P1 + ", " + P4 + ", Python"); await set("pLoc", P4);
   await set("px-phone", "+1 555 123 4567");                  // a phone box rightly refuses markup, so it gets a valid number; every free-text box gets the payload
   for (const id of ["px-school", "px-major", "px-employer", "px-headline", "px-gpa"]) await set(id, P1);
   await ev(F + ".getElementById('saveBtn').click()"); await sleep(800);
-  await goto("nb-prof", "Resume");
+  await goto("nb-prof", "Profile setup");   // Settings, Resume and Preferences are now steps of Profile setup: every field is on this one form
   await set("px-phone", "+1 555 123 4567");
   for (const id of ["px-school", "px-major", "px-employer", "px-headline", "px-gpa"]) await set(id, P1);
   for (const id of ["px-linkedin", "px-portfolio", "px-resume"]) await set(id, P3);
@@ -51,14 +51,14 @@ module.exports = async ({ ev, sleep, nav }) => {
   // reload (everything is now read back from storage) and walk every screen
   await nav("http://127.0.0.1:" + PORT + "/");
   await sleep(3500);
-  for (const [nb, label] of [["nb-prof", "Account"], ["nb-prof", "Settings"], ["nb-prof", "Resume"], ["nb-prof", "Preferences"], ["nb-prof", "Filters"], ["nb-prof", "Data"],
+  for (const [nb, label] of [["nb-prof", "Account"], ["nb-prof", "Profile setup"], ["nb-prof", "Filters"], ["nb-prof", "Data"],
                              ["nb-dash", "Overview"], ["nb-dash", "Applied"], ["nb-dash", "Interviews"], ["nb-svc", "Internships"], ["nb-svc", "Coop"], ["nb-svc", "Full-time"]]) {
     await goto(nb, label);
     r = JSON.parse(await injected());
     check("after reload, " + label + " runs and shows nothing injected", r.xss === 0 && r.imgs === 0 && r.svgs === 0 && r.scripts === 0 && r.handlers === 0, r.xss || r.imgs || r.handlers ? JSON.stringify(r) : "");
   }
   // the typed text is shown as plain text, not as markup
-  await goto("nb-prof", "Settings");
+  await goto("nb-prof", "Profile setup");
   const nameShown = await ev(F + ".getElementById('pName').value");
   check("the name box still holds the exact text typed (shown, not run)", nameShown === P1, JSON.stringify(nameShown).slice(0, 60));
 
@@ -75,7 +75,7 @@ module.exports = async ({ ev, sleep, nav }) => {
   r = JSON.parse(await injected());
   check("after applying with the hostile profile nothing ran", r.xss === 0 && r.imgs === 0 && r.handlers === 0, JSON.stringify(r));
   // the job title is typed last: a custom title rightly filters the deck, so it goes in after the swipe
-  await goto("nb-prof", "Settings");
+  await goto("nb-prof", "Profile setup");
   await set("pTitle", P2);
   await ev(F + ".getElementById('saveBtn').click()"); await sleep(800);
   r = JSON.parse(await injected());

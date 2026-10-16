@@ -241,9 +241,9 @@ def _validate(p):
     if not _s(job.get("co"), 200) or not _s(job.get("role"), 200):
         return "Missing company or role."
     if not _s(prof.get("name"), 100):
-        return "Add your name in Profile, Settings first."
+        return "Add your name in Profile setup, under About you, first."
     if not EMAIL_RE.match(_s(prof.get("email"), 200)):
-        return "Add a valid email in Profile, Settings so the recruiter can reply."
+        return "Add a valid email in Profile setup, under About you, so the recruiter can reply."
     note = p.get("note", "")                       # optional: the application is the profile, not a message
     if note is not None and (not isinstance(note, str) or len(note) > 4000):
         return "The note must be at most 4000 characters."
@@ -260,7 +260,7 @@ _RESUME_KINDS = {"pdf": (b"%PDF", "application", "pdf"), "doc": (b"\xd0\xcf\x11\
 
 
 def _resume(raw):
-    """The resume file the person uploaded under Profile, Resume and links, as (details, bytes). Returns (None, None) when there is
+    """The resume file the person uploaded in Profile setup, under Background and links, as (details, bytes). Returns (None, None) when there is
     none and raises ValueError when it is not a real PDF, Word or text file under 1 MB (checked by content, not just the name)."""
     if not raw:
         return None, None
@@ -577,7 +577,7 @@ def submit(p, user=None):
     try:
         resume_meta, resume_bytes = _resume(p.get("resume"))
     except (ValueError, TypeError):
-        return 400, {"error": "Your resume file could not be used. Replace it under Profile, Resume and links with a PDF, Word or text file under 1 MB."}
+        return 400, {"error": "Your resume file could not be used. Replace it in Profile setup, under Background and links, with a PDF, Word or text file under 1 MB."}
     if resume_meta:
         cand["resume_file"] = resume_meta["name"]
     note = (p.get("note") or "").strip()
@@ -609,7 +609,7 @@ def submit(p, user=None):
         if not user or not user.get("emailVerified"):
             return 403, {"error": "Verify your email first (Profile, Account) so the employer can trust your address.", "code": "verify"}
         if cand["email"] != user["email"].lower():
-            return 400, {"error": "Use your account email in Profile, Settings, so the employer replies to an address you verified."}
+            return 400, {"error": "Use your account email in Profile setup, under About you, so the employer replies to an address you verified."}
         if p.get("confirm_real") is not True:
             return 400, {"error": "Live sending needs the user to review and press Send."}
 

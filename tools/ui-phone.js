@@ -71,7 +71,7 @@ module.exports = async ({ ev, sleep, nav, send, logs, shot }) => {
   };
   const before = await ev("(" + F + ").body.innerText.length");
   const items = { "nb-svc": ["Full-time", "Part-time", "Internships", "Coop"], "nb-dash": ["Overview", "Applied", "Accepted", "Rejected", "Interviews"],
-                  "nb-prof": ["Account", "Settings", "Resume", "Preferences", "Filters", "Plan", "Data"] };
+                  "nb-prof": ["Profile setup", "Filters", "Account", "Plan", "Data"] };   // Settings, Resume and Preferences are now steps of Profile setup
   for (const [nb, list] of Object.entries(items)) {
     for (const it of list) {
       const opened = await menu(nb, it);

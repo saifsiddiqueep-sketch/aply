@@ -117,6 +117,11 @@ Swipe right fills in the employer's real application form, asks only what the pe
   with Mohammed's iPhone fixes, stay on in the sandbox as the fallback when Phone swipe is switched off. dev uses Phone swipe instead of
   Axis lock, and now also includes Profile setup.
 - The consent screen keeps both fixes: shown once before the first swipe (sandbox), and never shown again because of a problem while applying.
+- A swipe made while that first consent screen is open (the keyboard can still reach the cards) now waits for the answer and then goes
+  on, or back to the deck, instead of being lost. Only one waits, so a double tap still applies once.
+- Messages and the privacy policy pointed to screens that no longer exist ("Profile, Settings", "Profile, Resume and links"). They now
+  name the Profile setup step: About you, Jobs you want, Where and pay, Background and links, or Eligibility and extras.
+- Five browser tests still opened the old Settings, Resume and Preferences screens; they now fill in Profile setup step by step.
 
 ## 1.0.0-rc.8 (release candidate)
 

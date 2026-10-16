@@ -674,7 +674,7 @@ function apply(w,host){
       });
     }
     n.hidden=!(shown===0&&byTitle>0);
-    if(!n.hidden)n.textContent=byTitle+" listing"+(byTitle===1?" is":"s are")+" hidden because "+(byTitle===1?"it does":"they do")+" not match your target titles. Add more titles in Profile, Settings, or turn off \"Hide roles that do not match my target titles\" in Profile, Filters.";
+    if(!n.hidden)n.textContent=byTitle+" listing"+(byTitle===1?" is":"s are")+" hidden because "+(byTitle===1?"it does":"they do")+" not match your target titles. Add more titles in Profile setup, under Jobs you want, or turn off \"Hide roles that do not match my target titles\" in Profile, Filters.";
   }
   /* a short note when you are looking at an opportunity type you did not pick in your profile */
   function typeNote(){
