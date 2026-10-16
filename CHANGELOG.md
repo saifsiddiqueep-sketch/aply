@@ -6,6 +6,26 @@ production page and only changes when the owner decides.
 
 ## Unreleased (sandbox and dev)
 
+### Hiring mode for employers (sandbox only for now) — Mohammed
+- A **Switch to hiring** pill in the header (next to the account button) opens the employer hub; **Switch to job search** goes back.
+  Same UAply account for both.
+- **Company profile** once: name, logo upload (PNG, JPEG or WebP, resized for you), industry and number of employees (both
+  dropdowns, required), United States or Canada, state or province, city, website and About the company.
+- **Post a job** on one page with a live preview of the swipe card. Each section says which job seeker fields it is matched to:
+  title, job type, work style, city, relocation help, yearly pay range, commission only, minimum experience and education,
+  skills, preferred majors, minimum GPA, graduation window, who can apply (work authorization), visa sponsorship, start date,
+  benefits, a one-line summary and a full description. **Meet the hiring team**: name, title, email and LinkedIn; the name and
+  title can show on the card, the email and LinkedIn stay on the server for the Plus/Pro "message the hiring manager" option.
+- **Hub**: Overview (open jobs, applicants, new this week, average match), Jobs (edit, pause, close, reopen, delete), Applicants
+  (best match first, must-haves checked, "only people who meet every must-have", stage New to Hired, private notes), Company,
+  Billing. Prices are **TBD**; posting is free while testing.
+- **Job seekers** see employer jobs in the same deck with the logo, "What the company asks for" checked against their own
+  answers, "Meet the hiring team", and About the job and company. A new filter hides jobs they are not eligible for. Paused and
+  closed jobs leave the deck at once and refuse new applications.
+- Applications go to the employer's **verified account email**, never to an address typed into a form; browsers never receive it.
+- The consent screen now shows **once, before the first swipe**; after that every swipe is just a swipe (sandbox only).
+- Removed every mention that UAply is made with or integrated with Claude; the AI disclosure page now credits the founders.
+
 ### Profile setup, and what really changes your matches
 - **Profile setup** is now one guided flow, five short steps (About you, Jobs you want, Where and pay, Background and links,
   Eligibility and extras), saved as you go, the same on phone and desktop. The old Settings, Resume and links, and Preferences
@@ -202,7 +222,7 @@ The first release build. Everything below is in `dev`.
   password, delete account. **Sign in with Google** is built and switches on when Google keys are added.
 - Dashboard (Applied, Accepted, Rejected, Interviews), Profile (Settings, Resume and links, Preferences, Filters), Data and
   privacy (backup, restore, delete, and the legal pages).
-- UAply Assistant: help answers from written articles (AI answers when an Anthropic key is set), plus feedback.
+- UAply Assistant: help answers from written articles (AI answers when an AI provider key is set), plus feedback.
 
 ### What is different from sandbox (the release build)
 - No developer bar, no "SANDBOX / TEST MODE" labels, no simulated Google/Apple/email-link/phone sign-in.

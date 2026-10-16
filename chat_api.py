@@ -1,6 +1,6 @@
 """UAply Assistant: support answers and feedback for the sandbox and dev instances (prod does not use it).
 
-  POST /api/chat        answer a question. With AI switched on, Claude writes the answer from UAply's help articles
+  POST /api/chat        answer a question. With AI switched on, the AI model writes the answer from UAply's help articles
                         (help/articles.json); otherwise the best-matching article is returned. Either way the reply
                         says which article it came from and whether a person should take over.
   POST /api/feedback    store one piece of feedback (rating, text, topic, optional email for a follow-up).
@@ -261,7 +261,7 @@ def _ask_ai(history, settings):
     request = dict(model=settings["model"], max_tokens=16000, system=system, messages=history,
                    output_config={"effort": settings["effort"], "format": {"type": "json_schema", "schema": SCHEMA}})
     try:
-        # if a safety classifier declines, re-run the request on Anthropic's recommended fallback model
+        # if a safety classifier declines, re-run the request on the provider's recommended fallback model
         resp = client.beta.messages.create(betas=["server-side-fallback-2026-07-01"], fallbacks="default", **request)
     except (TypeError, anthropic.BadRequestError):
         resp = client.messages.create(**request)                 # an SDK or model that doesn't take the fallback option
