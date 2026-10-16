@@ -87,7 +87,7 @@ module.exports = async ({ ev, sleep, nav, send, logs, shot }) => {
   await ev(F + ".getElementById('btnNo').click()"); await sleep(900);
   screens.push(["right after a swipe (message showing)", await coverage("after swipe")]);
   for (const [name, covered] of screens) check("nothing covers a button: " + name, covered.length === 0, covered.slice(0, 4).join("; "));
-  await shot((process.env.OUT || ".") + "/phone-after-swipe.png");
+  await shot((process.env.OUT || require("os").tmpdir()) + "/phone-after-swipe.png");
   check("the screen changed when menus were tapped (sanity)", (await ev("(" + F + ").body.innerText.length")) !== before);
 
   // ---------------------------------------------------------------- 2. swipes the way people swipe
