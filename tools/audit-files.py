@@ -84,7 +84,7 @@ def link_exists(base, ref):
     return os.path.exists(target)
 
 
-SECRET_RES = [(re.compile(r"sk-ant-[A-Za-z0-9_-]{20,}"), "an Anthropic API key"), (re.compile(r"AKIA[0-9A-Z]{16}"), "an AWS access key"),
+SECRET_RES = [(re.compile(r"sk-ant-[A-Za-z0-9_-]{20,}"), "an AI provider API key"), (re.compile(r"AKIA[0-9A-Z]{16}"), "an AWS access key"),
               (re.compile(r"GOCSPX-[A-Za-z0-9_-]{10,}"), "a Google client secret"), (re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"), "a private key"),
               (re.compile(r"ghp_[A-Za-z0-9]{30,}"), "a GitHub token"), (re.compile(r"xox[baprs]-[A-Za-z0-9-]{10,}"), "a Slack token")]
 OLD_BRAND = re.compile(r"\bUApply\b|\bAply\b|\buapply\b|\baply\b|(?<![uU])aply[-_.](?:api|config|partners|envs|nav|live|profile)")
