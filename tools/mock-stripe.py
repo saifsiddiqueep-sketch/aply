@@ -33,7 +33,7 @@ class H(http.server.BaseHTTPRequestHandler):
                     "<p style='color:#555'>Subscribe to UAply</p><h2 style='margin:4px 0'>%s</h2><p>%s</p>"
                     "<div style='border:1px solid #ddd;border-radius:8px;padding:12px;background:#fff;color:#888'>Card number 4242 4242 4242 4242 (Stripe test card)</div>"
                     "<p style='margin-top:14px'><span style='background:#635bff;color:#fff;padding:12px 20px;border-radius:8px;display:inline-block'>Subscribe</span></p></div>") % (
-                "Plus, $9.99 per month" if last.get("line_items[0][price]") == "price_plus1" else "Pro, $19.99 per month", last.get("customer_email", ""))
+                "Plus, $9.99 per month" if last.get("metadata[plan]") == "plus" else "Pro, $19.99 per month", last.get("customer_email", ""))
             b = body.encode()
             self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
             return

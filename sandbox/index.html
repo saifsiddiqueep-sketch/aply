@@ -42,7 +42,9 @@ iframe{border:1px solid var(--line);border-radius:14px;background:var(--bg);widt
 </div>
 <div class="stage" id="stage"><iframe id="app" title="UAply sandbox build" allow="geolocation"></iframe></div>
 <div class="log" id="log" aria-live="polite"></div>
-<script>window.UAplyOpts={nearMe:true,consentFirst:true};   /* sandbox only: ask for device location and show the commute slider; ask for consent once, before the first swipe */</script>
+<script>window.UAplyOpts={nearMe:true,consentFirst:true,
+  /* Stripe Payment Links (TEST mode, "UAply sandbox" Stripe account): used where there is no server, like the GitHub Pages copy */
+  stripeLinks:{starter:"https://buy.stripe.com/test_00w6oA7S25nWcZUcEDcEw00",pro:"https://buy.stripe.com/test_dRm9AM8W6aIgcZU8oncEw01"}};   /* sandbox only: ask for device location and show the commute slider; ask for consent once, before the first swipe */</script>
 <script src="uaply-nav.js"></script>
 <script src="uaply-live.js"></script>
 <script src="uaply-profile.js"></script>

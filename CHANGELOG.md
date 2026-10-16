@@ -6,6 +6,13 @@ production page and only changes when the owner decides.
 
 ## Unreleased (sandbox and dev)
 
+### Paying for Plus and Pro in the sandbox (Stripe, test mode) — Mohammed
+- On the hosted sandbox (no server), **Choose Plus** and **Choose Pro** open Stripe's own secure checkout through Stripe Payment
+  Links in the "UAply sandbox" Stripe account (test mode: card 4242 4242 4242 4242, no real money). After paying, Stripe sends the
+  person back to the sandbox and the plan is switched on, with the payment listed as "Stripe test".
+- On a UAply server the existing Stripe Checkout, webhook and billing portal are used instead. The sandbox Render service now
+  names the two Stripe prices; the secret key and webhook secret are typed into Render, never stored in GitHub.
+
 ### Hiring mode for employers (sandbox only for now) — Mohammed
 - A **Switch to hiring** pill in the header (next to the account button) opens the employer hub; **Switch to job search** goes back.
   Same UAply account for both.
