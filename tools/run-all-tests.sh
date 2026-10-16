@@ -27,6 +27,8 @@ unset ANTHROPIC_API_KEY
 step "Static checks (syntax of every script, Python lint, JSON, legal pages, release flags, hosted builds)"
 run "node check.js" node check.js
 run "audit of every file (JSON, Python, JS, HTML, links, XML, images, secrets, git hygiene)" python tools/audit-files.py
+run "every page and email renders, every script parses, no line break JavaScript would join, shell scripts parse" python tools/test-pages.py
+if python -m ruff --version >/dev/null 2>&1; then run "Python syntax errors and undefined names (Ruff)" python -m ruff check --select E9,F63,F7,F82 .; fi
 
 step "Servers"
 mkdir -p "$TMP/sb" "$TMP/dv" "$TMP/pub" "$TMP/smtp" "$TMP/g"
