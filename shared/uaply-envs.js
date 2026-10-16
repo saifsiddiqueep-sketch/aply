@@ -83,6 +83,15 @@ var FEATURES={
      if(!lock){var ax=Math.abs(e.clientX-sx),ay=Math.abs(e.clientY-sy);if(ax>8||ay>8){lock=ay>ax*1.2?"y":"x";w.__axisY=lock==="y"}}
      if(lock==="y")e.stopPropagation();
    },true);
+   /* iPhone: once a drag is clearly sideways, keep Safari from turning it into a scroll. Otherwise Safari cancels the
+      swipe part-way (pointercancel) and the card snaps back. Up-and-down drags still scroll the card. */
+   var tx=0,ty=0,tlock="";
+   deck.addEventListener("touchstart",function(e){var t=e.touches[0];if(t){tx=t.clientX;ty=t.clientY;tlock=""}},{capture:true,passive:true});
+   deck.addEventListener("touchmove",function(e){
+     var t=e.touches[0];if(!t)return;
+     if(!tlock){var ax=Math.abs(t.clientX-tx),ay=Math.abs(t.clientY-ty);if(ax>6||ay>6)tlock=ay>ax*1.2?"y":"x"}
+     if(tlock==="x"&&e.cancelable&&!(e.target.closest&&e.target.closest("details,input,textarea,select")))e.preventDefault();
+   },{capture:true,passive:false});
  }},
  caps:{name:"Must-have caps",note:"If pay, work style or experience is a clear miss, the match is capped at 45% and the card says why.",patch:function(s){
    s=once(s,"return {pct:Math.round(total),rows:rows,matched:matched};","var pct=Math.round(total);var hard=rows[2].s===0||rows[3].s===0||ex<0.5;if(hard&&pct>45)pct=45;return {pct:pct,rows:rows,matched:matched,capped:hard};");

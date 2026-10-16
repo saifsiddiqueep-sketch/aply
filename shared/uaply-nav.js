@@ -356,7 +356,10 @@ function apply(w,host){
       items[(i2+items.length)%items.length].focus();
     }else if(key==="Escape"&&!menu.hidden){e.stopPropagation();closeMenus();btn.focus()}
   });
-  nav.addEventListener("focusout",function(e){if(!e.relatedTarget||!nav.contains(e.relatedTarget))closeMenus()});
+  /* close only when focus really moves somewhere else. iPhone Safari (and every iPhone browser) drops focus to nothing at the
+     start of a tap on a button, so closing on "no new focus" hid the menu before the tap on its item landed. Taps outside the
+     menu are handled by the pointerdown listener below. */
+  nav.addEventListener("focusout",function(e){if(e.relatedTarget&&!nav.contains(e.relatedTarget))closeMenus()});
   d.addEventListener("pointerdown",function(e){if(!e.target.closest("#bnav"))closeMenus()},true);
 
   /* dashboard: applications by status */
