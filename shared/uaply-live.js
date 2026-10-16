@@ -246,17 +246,22 @@ function kitApply(w,host){
   var CONSENT_V=2;   /* 2: also explains the optional hiring-manager message and that voluntary answers are never sent */
   function legalBase(){var p=(host&&host.defaultView&&host.defaultView.location.pathname)||"/";return /\/(sandbox|dev)\/$/.test(p)?"../legal/":"legal/"}
   function consentKey(){return (w.__uaplyKey||"uaply")+".consent"}
+  function hasConsent(){try{var c=JSON.parse(w.localStorage.getItem(consentKey()));return !!(c&&c.v===CONSENT_V)}catch(e){return false}}
+  /* consentFirst (sandbox): ask once when the swipe deck first opens, so no swipe is ever interrupted by it */
+  var consentFirst=!!((host&&host.defaultView&&host.defaultView.UAplyOpts)||{}).consentFirst;
   function ensureConsent(go,cancel){
-    try{var c=JSON.parse(w.localStorage.getItem(consentKey()));if(c&&c.v===CONSENT_V){go();return}}catch(e){}
+    if(hasConsent()){go();return}
+    if(d.getElementById("kitConsent"))return;
     var b=legalBase(),o=d.createElement("div");o.id="kitConsent";
     o.style.cssText="position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.45);overflow:auto";
     o.innerHTML='<div role="dialog" aria-modal="true" aria-labelledby="kcH" style="background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:20px;max-width:460px;width:100%;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;font-size:14px">'+
-      '<h2 id="kcH" style="margin:0;font:800 20px var(--display)">Before your first application</h2>'+
+      '<h2 id="kcH" style="margin:0;font:800 20px var(--display)">'+(consentFirst?"Before you start swiping":"Before your first application")+'</h2>'+
       '<p style="margin:0">When you swipe right, UAply applies for you. It sends the details in your profile (your name, email, and anything else you filled in, such as phone, resume link, education or work authorization) to the employer, plus a short message if you turned on "Message the hiring manager", but only if that employer has agreed to receive applications through UAply. Otherwise it sends you to the employer\'s own application page. UAply never emails a company that has not agreed.</p>'+
       '<p style="margin:0">Your voluntary answers (such as race, gender, veteran or disability status) are never sent. They stay on your device unless you copy them yourself.</p>'+
       '<p style="margin:0">The match percentage is worked out automatically from your profile to help order jobs. It never rejects you, and employers make every hiring decision. <a href="'+b+'ai-and-employment.html" target="_blank" rel="noopener noreferrer">How matching works</a></p>'+
       '<p style="margin:0">By continuing you confirm you are 18 or older and agree to the <a href="'+b+'terms.html" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="'+b+'privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</p>'+
-      '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button type="button" class="btn ghost" id="kcNo">Cancel</button><button type="button" class="btn" id="kcYes">Agree and continue</button></div></div>';
+      (consentFirst?'<p style="margin:0">You only see this once. After you agree, every swipe is just a swipe.</p>':'')+
+      '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button type="button" class="btn ghost" id="kcNo">'+(consentFirst?"Not now":"Cancel")+'</button><button type="button" class="btn" id="kcYes">'+(consentFirst?"Agree and start swiping":"Agree and continue")+'</button></div></div>';
     d.body.appendChild(o);
     d.getElementById("kcYes").focus();
     d.getElementById("kcYes").onclick=function(){try{w.localStorage.setItem(consentKey(),JSON.stringify({v:CONSENT_V,at:Date.now()}))}catch(e){}o.remove();go()};
@@ -325,6 +330,11 @@ function kitApply(w,host){
     else if(job.url)sheet(job,m,p,undo,S,save);
   };
   w.__uaplyQuiet=!showSheet;
+  if(consentFirst&&!showSheet){
+    /* not while someone is in Hiring mode: employers do not swipe. Hiring mode calls this again when they switch back */
+    w.__uaplyAskConsent=function(){if(!hasConsent()&&!d.body.classList.contains("hire"))ensureConsent(function(){},function(){})};
+    w.setTimeout(w.__uaplyAskConsent,700);
+  }
 }
 
 function submitApply(w){

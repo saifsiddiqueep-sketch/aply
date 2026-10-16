@@ -7,6 +7,7 @@ const read = (p) => fs.readFileSync(p, "utf8");
 const prod = read("prod/index.html");
 const nav = read("shared/uaply-nav.js");
 const profile = read("shared/uaply-profile.js");
+const employers = read("shared/uaply-employers.js");     // Hiring mode: sandbox only (it registers itself after envs)
 let envs = read("shared/uaply-envs.js");
 
 const NEEDS_SERVER = ["live", "kit", "submit", "chat"];   // the assistant needs chat_api.py, which a static host cannot run
@@ -27,9 +28,9 @@ function darkBlocks(html) {
     "@media (prefers-color-scheme: dark){:root:not([data-theme=\"light\"]){" + vars + ";color-scheme:dark}}\n:root[data-theme=\"dark\"]{" + vars + ";color-scheme:dark}");
 }
 
-function build(src, out, title, edits) {
+function build(src, out, title, edits, extra) {
   let h = read(src);
-  h = h.replace(/(<script src="uaply-[a-z]+\.js"><\/script>\s*)+/, () => inline + "\n");
+  h = h.replace(/(<script src="uaply-[a-z]+\.js"><\/script>\s*)+/, () => inline + (extra || "") + "\n");
   if (!h.includes("__PROD_SRC")) throw new Error("script tags not found in " + src);
   h = h.replace(/<title>[^<]*<\/title>/, "<title>" + title + "</title>");
   edits.forEach(([a, b]) => { if (!h.includes(a)) throw new Error("edit target missing: " + a.slice(0, 40)); h = h.replace(a, () => b); });
@@ -52,7 +53,7 @@ function build(src, out, title, edits) {
 build("sandbox/index.html", "share/sandbox.html", "UAply Sandbox", [
   ["on={nav:true,profile:true,live:true,kit:true,submit:true,", "on={nav:true,profile:true,"],
   ["Experiment freely. Reads a copy of index.html (prod); prod is never changed.", "Experiment freely. Hosted copy: example jobs only, and your swipes stay in your own browser."],
-]);
+], "\n<script>" + safe(employers) + "</script>");
 build("dev/index.html", "share/dev.html", "UAply", [
   ['var PROMOTED=["nav","profile","live","kit","submit",', 'var PROMOTED=["nav","profile",'],
   // the hosted copy has no server, so it must say so instead of posing as the real app

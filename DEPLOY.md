@@ -32,7 +32,7 @@ plans, and it starts every new profile blank. `sandbox` is the test bench and ke
 2. At render.com: sign up, then **New > Blueprint** and pick this repository. It reads `render.yaml` and creates
    `uaply-dev` and `uaply-sandbox`, each with a 1 GB disk for accounts, applications and feedback.
 3. When Render asks for the secret values, enter:
-   - `ANTHROPIC_API_KEY`: your key from console.anthropic.com (turns on AI answers in the assistant).
+   - `ANTHROPIC_API_KEY`: your AI provider's API key (turns on AI answers in the assistant).
    - `OWNER_PASSWORD`: a long password of your choice for `/outbox` and `/feedback`.
    - `SUPPORT_EMAIL`: the address for "Talk to a person", for example `uaplytechnologies@gmail.com`. Every help request and problem report from the
      assistant is emailed there with the person's own email as the reply address, so you answer by pressing Reply. It needs the email login in

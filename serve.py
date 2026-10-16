@@ -50,11 +50,13 @@ if api:
     # the sandbox and dev pages load these shared files and a copy of the production page; no command-line aliases needed
     for url, rel in (("/uaply-envs.js", "shared/uaply-envs.js"), ("/uaply-nav.js", "shared/uaply-nav.js"),
                      ("/uaply-live.js", "shared/uaply-live.js"), ("/uaply-profile.js", "shared/uaply-profile.js"),
-                     ("/uaply-chat.js", "shared/uaply-chat.js"), ("/help/articles.json", "help/articles.json"),
+                     ("/uaply-chat.js", "shared/uaply-chat.js"), ("/uaply-employers.js", "shared/uaply-employers.js"),
+                     ("/help/articles.json", "help/articles.json"),
                      ("/prod-index.html", "prod/index.html")):
         alias.setdefault(url, os.path.join(HERE, rel))
-    import jobs_api, uaply_api, auth_api, chat_api, google_auth, setup_api, billing_api
+    import jobs_api, uaply_api, auth_api, chat_api, google_auth, setup_api, billing_api, employers_api
     uaply_api.init(os.path.basename(root))
+    employers_api.init(os.path.basename(root))                    # Hiring mode: on for the sandbox only
     auth_api.init(os.path.basename(root))
     chat_api.init(os.path.basename(root))
     uaply_api.hide_errors = jobs_api.hide_errors = PUBLIC       # a hosted server never shows visitors raw error text; the owner's own computer still does
@@ -72,6 +74,7 @@ def log_oops(where, e):
 
 MAX_BODY = 40000
 MAX_APPLY_BODY = 1500000
+MAX_COMPANY_BODY = 200000
 
 class H(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **k):
@@ -208,6 +211,11 @@ class H(http.server.SimpleHTTPRequestHandler):
                     return self._google(p)
                 if p == "/api/billing/status":
                     return self._send(200, billing_api.status(auth_api.user_for(self._token())))
+                if p == "/api/employer/me":
+                    return self._send(*employers_api.me(auth_api.user_for(self._token())))
+                if p.startswith("/api/employer/logo/"):
+                    img = employers_api.logo(p[len("/api/employer/logo/"):])
+                    return self._send(200, img[1], img[0]) if img else self._send(404, {"error": "not found"})
                 if p == "/api/chat/config":
                     return self._send(200, dict(chat_api.public_config(), owner=not PUBLIC))      # "owner": this server runs on the owner's own computer, so owner-only hints may be shown
                 if p == "/feedback":
@@ -232,7 +240,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             return self._send(code, out)
         if not api or p not in ("/api/apply", "/api/decision", "/api/auth/signup", "/api/auth/login", "/api/auth/logout",
                                 "/api/auth/delete", "/api/auth/forgot", "/api/auth/reset", "/api/auth/change-password",
-                                "/api/setup/test-mail", "/api/setup/save-mail", "/api/setup/save-google", "/api/setup/save-ats", "/api/setup/remove-ats", "/api/setup/save-stripe", "/api/auth/google/token", "/api/auth/verify", "/api/auth/resend", "/api/chat", "/api/feedback", "/api/billing/checkout", "/api/billing/portal"):
+                                "/api/setup/test-mail", "/api/setup/save-mail", "/api/setup/save-google", "/api/setup/save-ats", "/api/setup/remove-ats", "/api/setup/save-stripe", "/api/auth/google/token", "/api/auth/verify", "/api/auth/resend", "/api/chat", "/api/feedback", "/api/billing/checkout", "/api/billing/portal",
+                                "/api/employer/company", "/api/employer/job", "/api/employer/job/status", "/api/employer/applicant"):
             return self._send(404, {"error": "not found"})
         # Only accept requests made by this site's own pages (blocks cross-site forms and scripts).
         origin = self.headers.get("Origin")
@@ -244,7 +253,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             n = int(self.headers.get("Content-Length") or 0)
             if n <= 0:                                                                     # nothing was sent: a bad request, not a too-large one
                 return self._send(400, {"error": "bad request"})
-            if n > (MAX_APPLY_BODY if p == "/api/apply" else MAX_BODY):                    # an application may carry a resume file (up to 1 MB, sent as text)
+            # an application may carry a resume file (up to 1 MB, sent as text); a company profile may carry its logo (up to 120 KB)
+            if n > (MAX_APPLY_BODY if p == "/api/apply" else MAX_COMPANY_BODY if p == "/api/employer/company" else MAX_BODY):
                 return self._send(413, {"error": "bad size"})
             payload = json.loads(self.rfile.read(n).decode("utf-8"))
             if not isinstance(payload, dict):
@@ -361,6 +371,14 @@ class H(http.server.SimpleHTTPRequestHandler):
                 code, out = billing_api.checkout(auth_api.user_for(self._token()), payload.get("plan"), self._site_base())
             elif p == "/api/billing/portal":
                 code, out = billing_api.portal(auth_api.user_for(self._token()), self._site_base())
+            elif p == "/api/employer/company":
+                code, out = employers_api.save_company(auth_api.user_for(self._token()), payload)
+            elif p == "/api/employer/job":
+                code, out = employers_api.save_job(auth_api.user_for(self._token()), payload)
+            elif p == "/api/employer/job/status":
+                code, out = employers_api.set_status(auth_api.user_for(self._token()), payload)
+            elif p == "/api/employer/applicant":
+                code, out = employers_api.set_stage(auth_api.user_for(self._token()), payload)
             else:
                 code, out = uaply_api.record_decision(payload)
         except Exception as e:
