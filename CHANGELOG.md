@@ -7,10 +7,11 @@ production page and only changes when the owner decides.
 ## Unreleased (sandbox and dev)
 
 ### Post a job from an existing job post (sandbox) — Mohammed
-- **Post a job** now starts with "Start from your existing job post": paste a link, or paste the job text, and UAply fills in
-  the form (title, job type, work style, place, pay, years, education, skills, majors, GPA, graduation dates, sponsorship,
-  who can apply, benefits, relocation, summary, description). Filled fields are marked "From your post"; "Fill it in myself"
-  skips straight to the form.
+- **Post a job** shows two options on one page. Option 1, at the top: "Start from your existing job post": paste a link, or
+  paste the job text, and UAply fills in the form (title, job type, work style, place, pay, years, education, skills, majors,
+  GPA, graduation dates, sponsorship, who can apply, benefits, relocation, summary, description). Option 2, right below: the
+  form to fill in yourself. Filled fields are marked "From your post", and anything the post did not say is listed as still
+  needed. Career pages that show a Greenhouse job (?gh_jid=) are read too, and a slow site gives up after 12 seconds.
 - Links are read from the standard job-posting block career sites carry for Google Jobs, and from the public Greenhouse, Lever,
   Ashby and SmartRecruiters feeds. LinkedIn, Indeed, ZipRecruiter, Glassdoor, Handshake, Monster and Hiring Cafe are never
   read (their terms forbid it or they need a login); the screen asks for the pasted text instead.

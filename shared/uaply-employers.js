@@ -43,7 +43,6 @@ function patch(s){
    Greenhouse, Lever, Ashby and SmartRecruiters, then the posting's own words. Every rule is a plain pattern on the text;
    nothing is guessed that the posting does not say, and the employer checks every field before publishing. */
 var IMP=(function(){
-  var SKILLS=("Excel|Microsoft Office|Word|PowerPoint|Google Sheets|Outlook|SQL|Python|R|Java|JavaScript|TypeScript|C\\+\\+|C#|\\.NET|Go|Rust|Swift|Kotlin|PHP|Ruby|HTML|CSS|React|Angular|Vue|Node\\.js|Node|Django|Flask|Spring|AWS|Azure|Google Cloud|GCP|Docker|Kubernetes|Terraform|Linux|Git|REST|GraphQL|PostgreSQL|MySQL|MongoDB|Snowflake|Tableau|Power BI|Looker|Spark|Hadoop|Machine learning|Deep learning|PyTorch|TensorFlow|Statistics|Data analysis|Data visualization|ETL|Testing|QA|CI/CD|Agile|Scrum|Jira|Figma|Sketch|Adobe Creative Suite|Photoshop|Illustrator|InDesign|Premiere Pro|After Effects|Canva|UX research|User research|Prototyping|Wireframing|Design systems|SEO|SEM|Google Analytics|Google Ads|Social media|Content writing|Copywriting|Email marketing|HubSpot|Salesforce|CRM|Marketing|Sales|Lead generation|Customer service|Account management|Negotiation|Public speaking|Communication|Writing|Editing|Research|Project management|Product management|Roadmapping|Operations|Logistics|Supply chain|Inventory|Procurement|Scheduling|Budgeting|Forecasting|Financial modeling|Financial analysis|Accounting|Bookkeeping|QuickBooks|GAAP|Auditing|Tax|Payroll|Valuation|Underwriting|Risk management|Compliance|Bloomberg|Legal research|Contract drafting|Litigation|Paralegal|Patient care|EMR|Epic|CPR|BLS|Phlebotomy|Nursing|Pharmacy|Clinical research|Lab techniques|PCR|Microscopy|Chemistry|Biology|AutoCAD|SolidWorks|CAD|MATLAB|LabVIEW|PLC|Electrical design|Mechanical design|Civil 3D|Revit|GIS|Teaching|Tutoring|Curriculum development|Classroom management|Lesson planning|Spanish|French|Mandarin|Bilingual|Leadership|Teamwork|Problem solving|Time management|Attention to detail|Hiring|Recruiting|Training|Cash handling|Food safety|Retail|Merchandising|Event planning|Photography|Video editing|Journalism|Public relations").split("|");
   var STATES={},US=REGIONS.US,CAP=REGIONS.CA;
   US.concat(CAP).forEach(function(r){STATES[r[1].toLowerCase()]=r[0]});
   var CODES=US.map(function(r){return r[0]}).concat(CAP.map(function(r){return r[0]}));
@@ -63,12 +62,33 @@ var IMP=(function(){
   function money(v){v=String(v).replace(/[$,\s]/g,"");var k=/k$/i.test(v);v=parseFloat(v);return isFinite(v)?(k?v*1000:v):0}
   function yearly(n,unit){unit=String(unit||"").toLowerCase();if(/hour|hr/.test(unit))return Math.round(n*2080);if(/week/.test(unit))return Math.round(n*52);if(/month/.test(unit))return Math.round(n*12);if(!unit&&n>0&&n<250)return Math.round(n*2080);return Math.round(n)}
   function wordAt(t,i,len){var b=i>0?t.charAt(i-1):" ",a=t.charAt(i+len)||" ";return !/[A-Za-z0-9]/.test(b)&&!/[A-Za-z0-9+#]/.test(a)}
+  /* skills, in three tiers. TOOLS are names written with capitals in every post (matched exactly, so "rest" is not REST
+     and "excel at" is not Excel); PHRASES are skills written in plain words; GENERAL are broad skills that only fill spare slots */
+  var TOOLS=("Excel|Microsoft Office|PowerPoint|Google Sheets|Outlook|SQL|Python|Java|JavaScript|TypeScript|C\\+\\+|C#|\\.NET|Golang|Rust|Swift|Kotlin|Scala|PHP|Ruby|Rails|HTML|CSS|React Native|React|Angular|Vue|Node\\.js|Django|Flask|Spring Boot|AWS|Azure|Google Cloud|GCP|Docker|Kubernetes|Terraform|Linux|Git|REST|GraphQL|PostgreSQL|MySQL|MongoDB|Redis|Kafka|Elasticsearch|Snowflake|Databricks|BigQuery|Redshift|Airflow|dbt|Tableau|Power BI|Looker|Spark|Hadoop|PyTorch|TensorFlow|Android|iOS|Flutter|Unity|Unreal|Objective-C|Selenium|Cypress|Jenkins|CI/CD|Jira|Figma|Sketch|Adobe Creative Suite|Photoshop|Illustrator|InDesign|Premiere Pro|After Effects|Canva|Google Analytics|Google Ads|HubSpot|Salesforce|SAP|NetSuite|Zendesk|Shopify|WordPress|Webflow|QuickBooks|GAAP|Bloomberg|Epic|EMR|CPR|BLS|PCR|AutoCAD|SolidWorks|CAD|MATLAB|LabVIEW|PLC|Civil 3D|Revit|GIS|SEO|SEM|ETL|CRM|Microsoft Word|Spanish|French|Mandarin").split("|");
+  var PHRASES=("machine learning|deep learning|data analysis|data visualization|statistics|user research|UX research|prototyping|wireframing|design systems|financial modeling|financial analysis|email marketing|content writing|copywriting|social media|lead generation|account management|customer service|project management|product management|supply chain|risk management|legal research|contract drafting|litigation|patient care|clinical research|lab techniques|phlebotomy|lesson planning|curriculum development|classroom management|event planning|video editing|photography|journalism|public relations|cash handling|food safety|merchandising|bookkeeping|payroll|auditing|accounting|underwriting|valuation|agile|scrum|automated testing|unit testing|bilingual").split("|");
+  var GENERAL=("communication|leadership|teamwork|problem solving|time management|attention to detail|research|writing|sales|marketing|operations|negotiation|public speaking|scheduling|budgeting|forecasting|logistics|inventory|procurement|teaching|tutoring|compliance").split("|");
+  function nice(s){return s.replace(/\\/g,"").replace(/^[a-z]/,function(c){return c.toUpperCase()})}
+  /* the hiring boilerplate most posts end with (equal opportunity, privacy, benefits, pay ranges): never a skill source */
+  var BOILER=/equal (?:employment )?opportunity|\bEEO\b|affirmative action|reasonable accommodation|disabilit|protected veteran|privacy (?:policy|notice)|background check|e-?verify|recruiting scam|fraudulent|arrest (?:or|and) conviction|pay transparency|salary range|compensation (?:range|package)|benefits (?:include|package)|we offer|our benefits|medical, dental|401\s?\(?k|parental leave|paid time off/i;
+  function reqPart(t){var m=t.search(/\b(?:requirements|qualifications|what you(?:'ll| will)? (?:need|bring)|what we(?:'re| are) looking for|about you|you (?:have|bring|might be a fit)|who you are|skills (?:and|&) experience|minimum qualifications|basic qualifications)\b/i);return m<0?"":t.slice(m,m+3000)}
   function findSkills(t){
-    var hits=[];SKILLS.forEach(function(s){var re=new RegExp(s.replace(/ /g,"\\s+"),"ig"),m,n=0,first=-1;while((m=re.exec(t))){if(wordAt(t,m.index,m[0].length)){n++;if(first<0)first=m.index}if(re.lastIndex===m.index)re.lastIndex++}
-      if(n){var name=s.replace(/\\/g,"");if(name==="R"&&n<2)return;hits.push({s:name,n:n,i:first})}});
-    hits=hits.filter(function(h){return !(h.s==="Node"&&hits.some(function(x){return x.s==="Node.js"}))&&!(h.s==="Word"&&!/microsoft word|\bword\b(?:,| and) excel/i.test(t))&&!(h.s==="Go"&&!/\bgolang\b|\bgo\b(?:,| and| or) (?:python|java|rust)/i.test(t))&&!(h.s==="Communication"&&hits.length>8)});
-    hits.sort(function(a,b){return b.n-a.n||a.i-b.i});
-    return hits.slice(0,6).map(function(h){return h.s});
+    var body=t.split("\n").filter(function(l){return !BOILER.test(l)}).join("\n"),req=reqPart(body),hits=[];
+    function scan(list,tier,flags){
+      list.forEach(function(s){
+        var re=new RegExp(s.replace(/ /g,"\\s+"),flags),m,n=0,inReq=false,first=-1;
+        while((m=re.exec(body))){if(wordAt(body,m.index,m[0].length)){n++;if(first<0)first=m.index}if(re.lastIndex===m.index)re.lastIndex++}
+        if(!n)return;
+        if(req){var r2=new RegExp(s.replace(/ /g,"\\s+"),flags.replace("g",""));inReq=r2.test(req)}
+        hits.push({s:nice(s),tier:tier,score:n+(inReq?3:0),i:first});
+      });
+    }
+    scan(TOOLS,0,"g");scan(PHRASES,1,"gi");scan(GENERAL,2,"gi");
+    hits=hits.filter(function(h){return !(h.s==="React"&&hits.some(function(x){return x.s==="React Native"}))});
+    hits.sort(function(a,b){return a.tier-b.tier||b.score-a.score||a.i-b.i});
+    var picked=hits.filter(function(h){return h.tier<2}).slice(0,6);
+    hits.filter(function(h){return h.tier===2&&h.score>=3}).forEach(function(h){if(picked.length<6)picked.push(h)});
+    if(!picked.length)picked=hits.slice(0,3);
+    return picked.slice(0,6).map(function(h){return h.s});
   }
   function findLoc(t){
     var m=t.match(/\b(?:location|based in|office in|located in)\s*:?\s*([A-Z][A-Za-z.'-]+(?:[ -][A-Z][A-Za-z.'-]+){0,3}),\s*([A-Z]{2}|[A-Z][a-z]+(?: [A-Z][a-z]+){0,2})\b/);
@@ -76,6 +96,8 @@ var IMP=(function(){
     if(!all.length)while((x=re.exec(t))&&all.length<20)all.push(x);
     for(var i=0;i<all.length;i++){
       var city=all[i][1].replace(/^(?:in|at|near)\s+/i,""),r=all[i][2],code=CODES.indexOf(r)>-1?r:STATES[r.toLowerCase()];
+      /* "San Francisco, New York" is a list of two cities, not San Francisco in New York state */
+      if(code&&/^(?:New York|Washington)$/.test(r)){var mm=METROS.filter(function(x){return x[0].test(city)})[0];if(mm&&mm[2]!==code)return {city:mm[1],region:mm[2],country:mm[3]||"US"}}
       if(code&&!/^(Inc|LLC|Ltd|Corp|Remote|Hybrid)$/i.test(city))return {city:city,region:code,country:CAP.some(function(p){return p[0]===code})?"CA":"US"};
     }
     /* a big city or metro area named on its own ("San Francisco Bay Area", "NYC") */
@@ -214,6 +236,11 @@ var IMP=(function(){
     var p;try{p=new URL(u)}catch(e){return null}
     var h=p.hostname.toLowerCase(),s=p.pathname.split("/").filter(Boolean),q=p.searchParams;
     if(/(^|\.)greenhouse\.io$/.test(h)){var board=q.get("for")||s[0],id=q.get("token")||s[s.indexOf("jobs")+1];if(board&&/^\d+$/.test(id||""))return {kind:"Greenhouse",api:"https://boards-api.greenhouse.io/v1/boards/"+encodeURIComponent(board)+"/jobs/"+id+"?pay_transparency=true",read:fromGreenhouse}}
+    /* a company careers page that shows a Greenhouse job (?gh_jid=123): the board is usually the company's own name */
+    if(/^\d+$/.test(q.get("gh_jid")||"")){
+      var parts=h.replace(/^www\./,"").split("."),name=parts.length>2&&/^(careers|jobs|job|work|join|about|apply)$/.test(parts[0])?parts[1]:parts[0];
+      var guesses=[name,name.replace(/(careers?|jobs|hq|inc|corp)$/,""),name.replace(/^(careers?|jobs|join|work(?:at)?)/,"")].filter(function(g,i,a){return g&&a.indexOf(g)===i});
+      return {kind:"Greenhouse",apis:guesses.map(function(g){return "https://boards-api.greenhouse.io/v1/boards/"+encodeURIComponent(g)+"/jobs/"+q.get("gh_jid")+"?pay_transparency=true"}),read:fromGreenhouse}}
     if(h==="jobs.lever.co"&&s.length>=2)return {kind:"Lever",api:"https://api.lever.co/v0/postings/"+encodeURIComponent(s[0])+"/"+encodeURIComponent(s[1]),read:fromLever};
     if(h==="jobs.ashbyhq.com"&&s.length>=2)return {kind:"Ashby",api:"https://api.ashbyhq.com/posting-api/job-board/"+encodeURIComponent(s[0])+"?includeCompensation=true",read:function(j,url){var job=(j.jobs||[]).filter(function(x){return x.id===s[1]})[0];if(!job)throw new Error("That job was not found on this Ashby board.");return fromAshby(job,url)}};
     if(h==="jobs.smartrecruiters.com"&&s.length>=2){var sid=(s[1].match(/^\d+/)||[])[0];if(sid)return {kind:"SmartRecruiters",api:"https://api.smartrecruiters.com/v1/companies/"+encodeURIComponent(s[0])+"/postings/"+sid,read:fromSmartRecruiters}}
@@ -283,6 +310,8 @@ var CSS=[
 "#hub .impok{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 16px;border-radius:14px;background:var(--yes-bg);color:var(--ink);font-size:14px}#hub .impok b{color:var(--yes)}",
 "#hub .chipok,#hub .f.filled>label:first-child::after,#hub .f.filled>.l::after{display:inline-block;margin-left:8px;font:600 10.5px var(--mono);padding:2px 7px;border-radius:99px;background:var(--yes-bg);color:var(--yes);vertical-align:middle}#hub .f.filled>label:first-child::after,#hub .f.filled>.l::after{content:'From your post'}",
 "#hub .f.filled{border-left:3px solid var(--yes);padding-left:9px}",
+"#hub .optn{display:inline-block;margin-bottom:6px;font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}",
+"#hub .orline{display:flex;align-items:center;gap:12px;color:var(--muted);font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase}#hub .orline::before,#hub .orline::after{content:'';flex:1;height:1px;background:var(--line)}",
 "#hub .h-banner{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 16px;border-radius:14px;background:var(--mid-bg);color:var(--mid);font-weight:600;font-size:14px}",
 "@media (max-width:1100px){#hub .pform{grid-template-columns:minmax(0,1fr)}#hub .pside{position:static;order:-1}}",
 "@media (max-width:860px){#hub .hub{grid-template-columns:minmax(0,1fr)}#hub .hnav{position:static;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;padding:8px;border-radius:14px}#hub .hnav button.hco{display:none}#hub .hnav button{flex:none}#hub .hnav button.post{margin-top:0}#hub .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}#hub .promise{grid-template-columns:minmax(0,1fr)}}",
@@ -503,7 +532,7 @@ function apply(w,host){
     if(!H.company&&v!=="company"&&v!=="billing")v="welcome";
     var inner=v==="welcome"?welcome():v==="overview"?overview():v==="jobs"?jobsView():v==="post"?postView():v==="applicants"?appsView():v==="company"?companyView():billingView();
     hub.innerHTML=shell(inner);
-    if(v==="post"){if(hub.querySelector("#impBox"))wireImport();else wirePost()}
+    if(v==="post"){if(hub.querySelector("#impBox"))wireImport();wirePost()}
     if(v==="company")wireCompany();
     hub.scrollTop=0;
   }
@@ -539,26 +568,24 @@ function apply(w,host){
   /* ---- post or edit a job ---- */
   function blankJob(){var c=H.company||{};return {role:"",type:"job",mode:"",country:c.country||"US",city:c.city||"",region:c.region||"",sal:[0,0],comm:false,yrs:0,edu:"Bachelor",skills:[],majors:[],gpa:0,grad:["",""],auth:"any",sponsor:"",start:"",reloc:false,perks:[],blurb:"",desc:"",url:"",manager:{name:"",title:"",email:"",linkedin:""},show_manager:true}}
   function F(id,label,inner,o){o=o||{};return '<div class="f'+(o.full?" full":"")+'"><'+(o.group?'span class="l"':'label for="'+id+'"')+'>'+label+(o.req?' <span class="req" aria-hidden="true">*</span>':'')+'</'+(o.group?'span':'label')+'>'+inner+(o.hint?'<small>'+o.hint+'</small>':'')+'<small class="err" id="'+id+'-err" role="alert"></small></div>'}
-  /* step 1 of a new post: start from the job post they already have */
-  function importView(){
+  /* option 1, above the form: start from the job post they already have */
+  function importBox(){
     var t=H.impTab||"link";
-    return '<div><h1>Post a job</h1><p class="lead">Already posted this job somewhere? Start from it and UAply fills in the form for you. You check it and publish.</p></div>'+
-      '<div class="box imp" id="impBox"><h2>Start from your existing job post</h2>'+
+    return '<div class="box imp" id="impBox"><div><span class="optn">Option 1 · fastest</span><h2>Start from your existing job post</h2><p class="note" style="margin-top:4px">Paste the link to the job (or its text) and UAply fills in the form below. You check it and publish.</p></div>'+
       '<div class="seg" role="radiogroup" aria-label="How to bring in your job"><label><input type="radio" name="impTab" value="link"'+(t==="link"?" checked":"")+'> Paste a link</label><label><input type="radio" name="impTab" value="text"'+(t==="text"?" checked":"")+'> Paste the job text</label></div>'+
       '<div id="impLinkWrap"'+(t==="link"?"":" hidden")+' class="f"><label for="impUrl">Link to the job</label><div class="h-row" style="flex-wrap:nowrap"><input type="url" id="impUrl" inputmode="url" maxlength="600" placeholder="https://yourcompany.com/careers/marketing-coordinator" value="'+esc(H.impUrl||"")+'" style="flex:1;min-width:0"><button type="button" class="btn" data-act="impLink">Fill it in for me</button></div>'+
         '<small>Works with your careers page, Greenhouse, Lever, Ashby, SmartRecruiters, Workday and most job sites. LinkedIn, Indeed, ZipRecruiter, Glassdoor and Handshake don\'t let other sites read their pages: use Paste the job text for those.</small></div>'+
       '<div id="impTextWrap"'+(t==="text"?"":" hidden")+' class="f"><label for="impText">Job text</label><textarea id="impText" rows="9" maxlength="30000" placeholder="Open your job post, select all of it (title, location, pay, description, requirements, benefits), copy, and paste it here.">'+esc(H.impText||"")+'</textarea><div><button type="button" class="btn" data-act="impText">Fill it in for me</button></div></div>'+
-      '<p class="msg" id="impMsg" role="status" aria-live="polite"></p>'+
-      '<div class="h-row" style="justify-content:flex-start;border-top:1px solid var(--line);padding-top:12px"><span class="note">No post yet, or rather type it?</span><button type="button" class="btn ghost" data-act="manual">Fill it in myself</button></div></div>';
+      '<p class="msg" id="impMsg" role="status" aria-live="polite"></p></div>'+
+      '<div class="orline" id="manualStart"><span>Option 2 · or fill it in yourself below</span></div>';
   }
   function postView(){
     var j=H.edit||blankJob(),editing=!!(H.edit&&H.edit.id);
-    if(!editing&&!H.manual)return importView();
     var yrs=[[0,"No minimum"]];for(var i=1;i<=15;i++)yrs.push([i,i+"+ years"]);
     var gpa=j.gpa?(+j.gpa).toFixed(2):"";
-    var got=H.filled||{},n=Object.keys(got).length,need=[["mode","work style"],["sal","pay range"],["skills","skills"],["blurb","one-line summary"]].filter(function(x){return !got[x[0]]}).map(function(x){return x[1]});
-    return '<div><h1>'+(editing?"Edit job":"Post a job")+'</h1><p class="lead">One page. Each section is matched to what job seekers fill in, so the right people see your job and their match score is fair.</p></div>'+
-    (H.filled&&!editing?'<div class="impok" role="status"><div><b>✓ Filled '+n+' field'+(n===1?"":"s")+' from '+esc(H.impFrom||"your post")+'.</b> Fields marked <span class="chipok">From your post</span> came from it. Check them, then fill in the rest.'+(need.length?' <b>Still needed:</b> '+esc(need.join(", "))+'.':'')+'</div><button type="button" class="btn ghost sm" data-act="reimport">Start over</button></div>':'')+
+    var got=H.filled||{},n=Object.keys(got).length,need=[["mode","work style"],["city","city and state (the post names no US or Canada location)"],["sal","pay range"],["skills","skills"],["blurb","one-line summary"]].filter(function(x){return !got[x[0]]&&!(x[0]==="city"&&j.mode==="remote")}).map(function(x){return x[1]});
+    return '<div><h1>'+(editing?"Edit job":"Post a job")+'</h1><p class="lead">'+(editing?'One page. Each section is matched to what job seekers fill in, so the right people see your job and their match score is fair.':'Bring in a job you already posted, or fill it in yourself. Each section is matched to what job seekers fill in.')+'</p></div>'+
+    (editing?'':H.filled?'<div class="impok" role="status"><div><b>✓ Filled '+n+' field'+(n===1?"":"s")+' from '+esc(H.impFrom||"your post")+'.</b> Fields marked <span class="chipok">From your post</span> came from it. Check them, then fill in the rest.'+(need.length?' <b>Still needed:</b> '+esc(need.join(", "))+'.':'')+'</div><button type="button" class="btn ghost sm" data-act="reimport">Use a different link</button></div>':importBox())+
     '<form id="pForm" class="pform" novalidate><div style="display:flex;flex-direction:column;gap:16px;min-width:0">'+
     '<fieldset><legend>The role</legend><p class="match">Matched to the job seeker\'s <b>target titles</b>, <b>opportunity types</b>, <b>work style</b>, <b>city and commute distance</b> and <b>willingness to relocate</b>.</p>'+
       F("jRole","Job title",'<input type="text" id="jRole" maxlength="120" value="'+esc(j.role)+'" placeholder="Marketing Coordinator">',{req:1,full:1})+
@@ -655,12 +682,18 @@ function apply(w,host){
     box.addEventListener("input",function(e){if(e.target.id==="impUrl")H.impUrl=e.target.value;if(e.target.id==="impText")H.impText=e.target.value});
   }
   function impSay(m,kind){var e=hub.querySelector("#impMsg");if(e){e.textContent=m||"";e.className="msg"+(kind?" "+kind:"")}}
-  function toText(m){H.impTab="text";render();impSay(m,"bad");var t=hub.querySelector("#impText");if(t)t.focus()}
+  function toText(m){       /* switch to "Paste the job text" in place, so nothing typed in the form below is lost */
+    H.impTab="text";var box=hub.querySelector("#impBox");if(!box)return;
+    var r=box.querySelector('input[name="impTab"][value="text"]');if(r)r.checked=true;
+    box.querySelector("#impLinkWrap").hidden=true;box.querySelector("#impTextWrap").hidden=false;
+    impSay(m,"bad");var t=box.querySelector("#impText");if(t)t.focus();
+  }
   function jobFromFields(fd){
     var j=blankJob();
     ["role","type","mode","country","city","region","edu","auth","sponsor","start","blurb","desc","url"].forEach(function(k){if(fd[k]!=null&&fd[k]!=="")j[k]=fd[k]});
     if(fd.sal_min)j.sal=[fd.sal_min,fd.sal_max];if(fd.yrs!=null)j.yrs=fd.yrs;if(fd.skills)j.skills=fd.skills.slice(0,6);if(fd.majors)j.majors=fd.majors.slice(0,6);
     if(fd.gpa)j.gpa=+fd.gpa;if(fd.grad_from||fd.grad_to)j.grad=[fd.grad_from||"",fd.grad_to||""];if(fd.perks)j.perks=fd.perks.slice();if(fd.comm)j.comm=true;if(fd.reloc)j.reloc=true;
+    if(!fd.city){j.city="";j.region=""}       /* the post names no US or Canada place: leave it empty rather than show the company's own city as if it came from the post */
     if(j.region&&!REGIONS[j.country||"US"].some(function(r){return r[0]===j.region}))j.region="";
     return j;
   }
@@ -693,10 +726,17 @@ function apply(w,host){
       });
     }
     if(!feed){viaServer();return}
-    w.fetch(feed.api).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}).then(function(j){done();useResult(feed.read(j,url),feed.kind)}).catch(function(e){
-      if(/not found/i.test(e.message||"")){done();impSay(e.message,"bad");return}
-      viaServer();
-    });
+    var apis=feed.apis||[feed.api];
+    (function tryNext(i){       /* the job's public feed answers the browser directly; a career page may need a second guess at the board name */
+      if(i>=apis.length){viaServer();return}
+      var ctl=w.AbortController?new w.AbortController():null,timer=ctl&&setTimeout(function(){ctl.abort()},12000);   /* a slow job site gives up after 12 seconds instead of hanging */
+      w.fetch(apis[i],ctl?{signal:ctl.signal}:{}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}).then(function(j){clearTimeout(timer);done();useResult(feed.read(j,url),feed.kind)}).catch(function(e){
+        clearTimeout(timer);
+        if(/not found on this/i.test(e.message||"")){done();impSay(e.message,"bad");return}
+        if(e.name==="AbortError"){done();impSay(feed.kind+" took too long to answer. Try again, or paste the job text instead.","bad");return}
+        tryNext(i+1);
+      });
+    })(0);
   }
   function showErr(field,msg){
     hub.querySelectorAll("[aria-invalid=true]").forEach(function(x){x.removeAttribute("aria-invalid")});hub.querySelectorAll(".err").forEach(function(x){x.textContent=""});
