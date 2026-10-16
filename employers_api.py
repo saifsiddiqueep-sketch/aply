@@ -421,6 +421,131 @@ def feed_jobs():
     return out
 
 
+# ---------- reading an existing job post from a link (the "Start from your existing job post" box) ----------
+# sites whose terms forbid other sites reading their pages, or that need a login: the employer pastes the job text instead
+NO_READ = {"linkedin.com": "LinkedIn", "indeed.com": "Indeed", "ziprecruiter.com": "ZipRecruiter", "glassdoor.com": "Glassdoor",
+           "joinhandshake.com": "Handshake", "handshake.com": "Handshake", "monster.com": "Monster", "hiring.cafe": "Hiring Cafe"}
+IMPORT_MAX = 3 * 1024 * 1024
+_imports = {}          # account id -> times of recent imports (a light limit so this is not a general web proxy)
+
+
+def _public_host(host):
+    """True when every address the name resolves to is on the public internet (no localhost, private or cloud-metadata ranges)."""
+    import ipaddress
+    import socket
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except OSError:
+        return False
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0].split("%")[0])
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
+            return False
+    return bool(infos)
+
+
+def _fetch(url):
+    """(error, final url, html) for one public web page."""
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+
+    class Safe(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            p = urllib.parse.urlparse(newurl)
+            if p.scheme not in ("http", "https") or not p.hostname or not _public_host(p.hostname) or _no_read(p.hostname):
+                return None
+            return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+    opener = urllib.request.build_opener(Safe)
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; UAplyImport/1.0; reads one job post an employer asked to import)",
+                                               "Accept": "text/html,application/xhtml+xml"})
+    try:
+        with opener.open(req, timeout=12) as r:
+            if "html" not in (r.headers.get("Content-Type") or "html"):
+                return "That link is not a web page.", url, ""
+            raw = r.read(IMPORT_MAX + 1)
+            if len(raw) > IMPORT_MAX:
+                return "That page is too large to read.", url, ""
+            charset = r.headers.get_content_charset() or "utf-8"
+            return "", r.geturl(), raw.decode(charset, "replace")
+    except urllib.error.HTTPError as e:
+        return ("That page needs a login, or the site does not let other sites read it." if e.code in (401, 403, 429, 999)
+                else "That page could not be opened (error %d)." % e.code), url, ""
+    except Exception:
+        return "That page could not be opened. Check the link, or paste the job text instead.", url, ""
+
+
+def _no_read(host):
+    """The site's name when its pages may not be read by UAply ('' otherwise)."""
+    host = (host or "").lower()
+    return next((name for h, name in NO_READ.items() if host == h or host.endswith("." + h)), "")
+
+
+def _job_postings(node, out):
+    if isinstance(node, list):
+        for x in node:
+            _job_postings(x, out)
+    elif isinstance(node, dict):
+        t = node.get("@type")
+        if t == "JobPosting" or (isinstance(t, list) and "JobPosting" in t):
+            out.append(node)
+        for k in ("@graph", "itemListElement", "mainEntity", "item"):
+            if k in node:
+                _job_postings(node[k], out)
+
+
+def extract_page(raw):
+    """{jsonld, title, text} from a job page: its schema.org JobPosting block (the one Google Jobs reads), its title and visible text."""
+    import html as htmlmod
+    posts = []
+    for block in re.findall(r"<script[^>]+type=[\"']application/ld\+json[\"'][^>]*>(.*?)</script>", raw, re.S | re.I):
+        try:
+            _job_postings(json.loads(block.strip()), posts)
+        except ValueError:
+            continue
+    m = re.search(r"<meta[^>]+property=[\"']og:title[\"'][^>]+content=[\"']([^\"']+)", raw, re.I) or re.search(r"<title[^>]*>(.*?)</title>", raw, re.S | re.I)
+    body = re.sub(r"<(script|style|noscript|svg|head|nav|footer)\b[\s\S]*?</\1>", " ", raw, flags=re.I)
+    body = re.sub(r"<(br|/p|/li|/h\d|/div|/tr|/section)\b[^>]*>", "\n", body, flags=re.I)
+    text = htmlmod.unescape(re.sub(r"<[^>]+>", " ", body))
+    text = re.sub(r"[ \t ]+", " ", text)
+    text = re.sub(r"\s*\n\s*", "\n", text).strip()[:30000]
+    post = posts[0] if posts else None
+    if post and isinstance(post.get("description"), str):
+        post = dict(post, description=post["description"][:30000])
+    return {"jsonld": post, "title": htmlmod.unescape(m.group(1)).strip()[:200] if m else "", "text": text}
+
+
+def import_page(user, url):
+    """POST /api/employer/import {url}: read one public job page the employer points to. Signed-in employers only, a few a minute."""
+    bad = _signed_in(user, need_verified=False)
+    if bad:
+        return bad
+    import urllib.parse
+    url = _s(url, 600)
+    p = urllib.parse.urlparse(url)
+    if p.scheme not in ("http", "https") or not p.hostname:
+        return 400, {"error": "Paste the full link to the job, starting with https://"}
+    site = _no_read(p.hostname)
+    if site:
+        return 422, {"error": "%s doesn't let other sites read its pages. Open your post there, select all of it, copy, and paste it here." % site, "code": "no_read"}
+    if not _public_host(p.hostname):
+        return 400, {"error": "That link does not point to a public website."}
+    now = time.time()
+    with _lock:
+        recent = [t for t in _imports.get(user["id"], []) if now - t < 60]
+        if len(recent) >= 8:
+            return 429, {"error": "Too many links at once. Wait a minute and try again."}
+        _imports[user["id"]] = recent + [now]
+    err, final, raw = _fetch(url)
+    if err:
+        return 422, {"error": err, "code": "fetch"}
+    out = extract_page(raw)
+    if not out["jsonld"] and len(out["text"]) < 200:
+        return 422, {"error": "That page has almost no text we can read (it may load the job with a script). Paste the job text instead.", "code": "empty"}
+    return 200, dict(out, url=final)
+
+
 def manager_for(job_id):
     """{name, title, email, linkedin} of the hiring manager the employer named for this posting, or None. For the server code that
     sends the Plus/Pro "Message the hiring manager" note with an application; never sent to a browser."""

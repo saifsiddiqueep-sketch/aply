@@ -114,6 +114,20 @@ t("reopening puts it back", {j["id"]: j for j in employers_api.feed_jobs()}[jid]
 employers_api.set_status(EMP, {"id": remote["id"], "status": "deleted"})
 t("a deleted posting leaves the feed", remote["id"] in {j["id"] for j in employers_api.feed_jobs()}, False)
 
+# ---- reading an existing job post from a link (no network needed for these) ----
+t("importing needs a signed-in account", employers_api.import_page(None, "https://example.com/job")[0], 401)
+t("LinkedIn links are not read (its terms forbid it); the employer pastes the text", employers_api.import_page(EMP, "https://www.linkedin.com/jobs/view/1")[1].get("code"), "no_read")
+t("Indeed links are not read either", employers_api.import_page(EMP, "https://www.indeed.com/viewjob?jk=1")[1].get("code"), "no_read")
+t("links to this computer are refused", employers_api.import_page(EMP, "http://127.0.0.1:8766/")[0], 400)
+t("links to cloud metadata addresses are refused", employers_api.import_page(EMP, "http://169.254.169.254/latest/meta-data")[0], 400)
+t("only web links are accepted", employers_api.import_page(EMP, "file:///etc/passwd")[0], 400)
+PAGE = ('<html><head><title>Analyst | Acme</title><script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","name":"Acme"},'
+        '{"@type":"JobPosting","title":"Junior Analyst","description":"<p>You will build reports.</p>","jobLocation":{"address":{"addressLocality":"Philadelphia","addressRegion":"PA"}}}]}'
+        '</script><style>.x{}</style></head><body><nav>Menu</nav><h1>Junior Analyst</h1><p>You will build weekly reports.</p><script>var a=1</script></body></html>')
+page = employers_api.extract_page(PAGE)
+t("the job-posting block is found inside a @graph", (page["jsonld"] or {}).get("title"), "Junior Analyst")
+t("page text keeps the words and drops scripts, styles and menus", ("You will build weekly reports." in page["text"], "var a" in page["text"], "Menu" in page["text"]), (True, False, False))
+
 # ---- kept on disk ----
 employers_api.init("sandbox")
 t("company and postings survive a restart", (employers_api.me(EMP)[1]["company"]["name"], len(employers_api.me(EMP)[1]["jobs"])), ("Northwind Freight", 1))

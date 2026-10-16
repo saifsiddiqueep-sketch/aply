@@ -38,6 +38,191 @@ function patch(s){
   return s;
 }
 
+/* ---------- reading an existing job post (a link or pasted text) into the Post a job form ----------
+   Sources, best first: the schema.org JobPosting block most career sites carry for Google Jobs, the public job feeds of
+   Greenhouse, Lever, Ashby and SmartRecruiters, then the posting's own words. Every rule is a plain pattern on the text;
+   nothing is guessed that the posting does not say, and the employer checks every field before publishing. */
+var IMP=(function(){
+  var SKILLS=("Excel|Microsoft Office|Word|PowerPoint|Google Sheets|Outlook|SQL|Python|R|Java|JavaScript|TypeScript|C\\+\\+|C#|\\.NET|Go|Rust|Swift|Kotlin|PHP|Ruby|HTML|CSS|React|Angular|Vue|Node\\.js|Node|Django|Flask|Spring|AWS|Azure|Google Cloud|GCP|Docker|Kubernetes|Terraform|Linux|Git|REST|GraphQL|PostgreSQL|MySQL|MongoDB|Snowflake|Tableau|Power BI|Looker|Spark|Hadoop|Machine learning|Deep learning|PyTorch|TensorFlow|Statistics|Data analysis|Data visualization|ETL|Testing|QA|CI/CD|Agile|Scrum|Jira|Figma|Sketch|Adobe Creative Suite|Photoshop|Illustrator|InDesign|Premiere Pro|After Effects|Canva|UX research|User research|Prototyping|Wireframing|Design systems|SEO|SEM|Google Analytics|Google Ads|Social media|Content writing|Copywriting|Email marketing|HubSpot|Salesforce|CRM|Marketing|Sales|Lead generation|Customer service|Account management|Negotiation|Public speaking|Communication|Writing|Editing|Research|Project management|Product management|Roadmapping|Operations|Logistics|Supply chain|Inventory|Procurement|Scheduling|Budgeting|Forecasting|Financial modeling|Financial analysis|Accounting|Bookkeeping|QuickBooks|GAAP|Auditing|Tax|Payroll|Valuation|Underwriting|Risk management|Compliance|Bloomberg|Legal research|Contract drafting|Litigation|Paralegal|Patient care|EMR|Epic|CPR|BLS|Phlebotomy|Nursing|Pharmacy|Clinical research|Lab techniques|PCR|Microscopy|Chemistry|Biology|AutoCAD|SolidWorks|CAD|MATLAB|LabVIEW|PLC|Electrical design|Mechanical design|Civil 3D|Revit|GIS|Teaching|Tutoring|Curriculum development|Classroom management|Lesson planning|Spanish|French|Mandarin|Bilingual|Leadership|Teamwork|Problem solving|Time management|Attention to detail|Hiring|Recruiting|Training|Cash handling|Food safety|Retail|Merchandising|Event planning|Photography|Video editing|Journalism|Public relations").split("|");
+  var STATES={},US=REGIONS.US,CAP=REGIONS.CA;
+  US.concat(CAP).forEach(function(r){STATES[r[1].toLowerCase()]=r[0]});
+  var CODES=US.map(function(r){return r[0]}).concat(CAP.map(function(r){return r[0]}));
+  var MONTHS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,spring:5,summer:8,fall:12,autumn:12,winter:12};
+  var PERK_RES=[["health",/health(?:care)? (?:insurance|coverage|benefits|plans?)|medical (?:insurance|coverage|benefits|plans?)|medical,? dental/i],["dental",/\bdental\b/i],["vision",/\bvision (?:insurance|coverage|benefits|care|plans?)\b|dental,? (?:and |& )?vision/i],["k401",/401\s?\(?k\)?|\bRRSP\b/i],["match",/401\s?\(?k\)?[^.]{0,80}match|(?:employer|company) match|matching contributions?/i],["loan",/student loan/i],["stock",/stock options?|equity (?:grants?|compensation|package)|\bRSUs?\b|\bESPP\b|stock purchase/i],["pto",/\bPTO\b|paid time off|paid vacation|unlimited (?:vacation|time off)|vacation days/i],["maternity",/paid (?:maternity|parental)|maternity leave|parental leave/i],["paternity",/paid (?:paternity|parental)|paternity leave|parental leave/i],["tuition",/tuition (?:assistance|reimbursement|support)|education(?:al)? (?:assistance|reimbursement)/i]];
+  var COMM=/commission[- ]only|100% commission|straight commission|commission[- ]based (?:pay|compensation|position|role|only)|no base (?:salary|pay)|1099 commission/i;
+  /* sites whose terms forbid other sites reading their pages, or that need a login: the employer pastes the text instead */
+  var NO_READ=[["linkedin.com","LinkedIn"],["indeed.com","Indeed"],["ziprecruiter.com","ZipRecruiter"],["glassdoor.com","Glassdoor"],["joinhandshake.com","Handshake"],["handshake.com","Handshake"],["monster.com","Monster"],["hiring.cafe","Hiring Cafe"]];
+  function blocked(host){host=String(host||"").toLowerCase();for(var i=0;i<NO_READ.length;i++){var h=NO_READ[i][0];if(host===h||host.slice(-h.length-1)==="."+h)return NO_READ[i][1]}return ""}
+  function clean(s){return String(s==null?"":s).replace(/ /g," ").replace(/[ \t]+/g," ").replace(/ *\n */g,"\n").replace(/\n{3,}/g,"\n\n").trim()}
+  function htmlText(h){
+    h=String(h||"");
+    if(typeof DOMParser!=="undefined"){var dd=new DOMParser().parseFromString("<div>"+h.replace(/<(br|\/p|\/li|\/h\d|\/div|\/tr)\b[^>]*>/gi,"$&\n")+"</div>","text/html");dd.querySelectorAll("script,style,noscript").forEach(function(e){e.remove()});return clean(dd.body.textContent)}
+    return clean(h.replace(/<(script|style|noscript)[\s\S]*?<\/\1>/gi," ").replace(/<(br|\/p|\/li|\/h\d|\/div)\b[^>]*>/gi,"\n").replace(/<[^>]+>/g," ").replace(/&nbsp;/g," ").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&#39;|&apos;/g,"'").replace(/&quot;/g,'"'));
+  }
+  function decodeEntities(s){return String(s||"").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,"&")}
+  function money(v){v=String(v).replace(/[$,\s]/g,"");var k=/k$/i.test(v);v=parseFloat(v);return isFinite(v)?(k?v*1000:v):0}
+  function yearly(n,unit){unit=String(unit||"").toLowerCase();if(/hour|hr/.test(unit))return Math.round(n*2080);if(/week/.test(unit))return Math.round(n*52);if(/month/.test(unit))return Math.round(n*12);if(!unit&&n>0&&n<250)return Math.round(n*2080);return Math.round(n)}
+  function wordAt(t,i,len){var b=i>0?t.charAt(i-1):" ",a=t.charAt(i+len)||" ";return !/[A-Za-z0-9]/.test(b)&&!/[A-Za-z0-9+#]/.test(a)}
+  function findSkills(t){
+    var hits=[];SKILLS.forEach(function(s){var re=new RegExp(s.replace(/ /g,"\\s+"),"ig"),m,n=0,first=-1;while((m=re.exec(t))){if(wordAt(t,m.index,m[0].length)){n++;if(first<0)first=m.index}if(re.lastIndex===m.index)re.lastIndex++}
+      if(n){var name=s.replace(/\\/g,"");if(name==="R"&&n<2)return;hits.push({s:name,n:n,i:first})}});
+    hits=hits.filter(function(h){return !(h.s==="Node"&&hits.some(function(x){return x.s==="Node.js"}))&&!(h.s==="Word"&&!/microsoft word|\bword\b(?:,| and) excel/i.test(t))&&!(h.s==="Go"&&!/\bgolang\b|\bgo\b(?:,| and| or) (?:python|java|rust)/i.test(t))&&!(h.s==="Communication"&&hits.length>8)});
+    hits.sort(function(a,b){return b.n-a.n||a.i-b.i});
+    return hits.slice(0,6).map(function(h){return h.s});
+  }
+  function findLoc(t){
+    var m=t.match(/\b(?:location|based in|office in|located in)\s*:?\s*([A-Z][A-Za-z.'-]+(?:[ -][A-Z][A-Za-z.'-]+){0,3}),\s*([A-Z]{2}|[A-Z][a-z]+(?: [A-Z][a-z]+){0,2})\b/);
+    var all=m?[m]:[],re=/\b([A-Z][A-Za-z.'-]+(?:[ -][A-Z][A-Za-z.'-]+){0,3}),\s*([A-Z]{2}|[A-Z][a-z]+(?: [A-Z][a-z]+){0,2})\b/g,x;
+    if(!all.length)while((x=re.exec(t))&&all.length<20)all.push(x);
+    for(var i=0;i<all.length;i++){
+      var city=all[i][1].replace(/^(?:in|at|near)\s+/i,""),r=all[i][2],code=CODES.indexOf(r)>-1?r:STATES[r.toLowerCase()];
+      if(code&&!/^(Inc|LLC|Ltd|Corp|Remote|Hybrid)$/i.test(city))return {city:city,region:code,country:CAP.some(function(p){return p[0]===code})?"CA":"US"};
+    }
+    /* a big city or metro area named on its own ("San Francisco Bay Area", "NYC") */
+    for(var k=0;k<METROS.length;k++){if(METROS[k][0].test(t))return {city:METROS[k][1],region:METROS[k][2],country:METROS[k][3]||"US"}}
+    return null;
+  }
+  var METROS=[[/\bbay area\b|\bsan francisco\b/i,"San Francisco","CA"],[/\bnew york city\b|\bnyc\b|\bnew york,? ny\b|\bmanhattan\b|\bbrooklyn\b/i,"New York","NY"],[/\bphiladelphia\b/i,"Philadelphia","PA"],[/\blos angeles\b/i,"Los Angeles","CA"],[/\bchicago\b/i,"Chicago","IL"],[/\bboston\b/i,"Boston","MA"],[/\bseattle\b/i,"Seattle","WA"],[/\baustin\b/i,"Austin","TX"],[/\bdallas\b/i,"Dallas","TX"],[/\bhouston\b/i,"Houston","TX"],[/\batlanta\b/i,"Atlanta","GA"],[/\bdenver\b/i,"Denver","CO"],[/\bwashington,? d\.?c\.?|\bwashington dc\b/i,"Washington","DC"],[/\bmiami\b/i,"Miami","FL"],[/\bpittsburgh\b/i,"Pittsburgh","PA"],[/\bsan diego\b/i,"San Diego","CA"],[/\bsan jose\b/i,"San Jose","CA"],[/\bpalo alto\b/i,"Palo Alto","CA"],[/\bmountain view\b/i,"Mountain View","CA"],[/\bmenlo park\b/i,"Menlo Park","CA"],[/\bminneapolis\b/i,"Minneapolis","MN"],[/\bdetroit\b/i,"Detroit","MI"],[/\bcharlotte\b/i,"Charlotte","NC"],[/\braleigh\b/i,"Raleigh","NC"],[/\bnashville\b/i,"Nashville","TN"],[/\bphoenix\b/i,"Phoenix","AZ"],[/\bportland,? or\b/i,"Portland","OR"],[/\bsalt lake city\b/i,"Salt Lake City","UT"],[/\bbaltimore\b/i,"Baltimore","MD"],[/\bnewark\b/i,"Newark","NJ"],[/\bjersey city\b/i,"Jersey City","NJ"],[/\bcolumbus,? oh/i,"Columbus","OH"],[/\bcleveland\b/i,"Cleveland","OH"],[/\bindianapolis\b/i,"Indianapolis","IN"],[/\bst\.? louis\b/i,"St. Louis","MO"],[/\bkansas city\b/i,"Kansas City","MO"],[/\borlando\b/i,"Orlando","FL"],[/\btampa\b/i,"Tampa","FL"],[/\blas vegas\b/i,"Las Vegas","NV"],[/\btoronto\b/i,"Toronto","ON","CA"],[/\bvancouver,? bc|\bvancouver\b(?!,? wa)/i,"Vancouver","BC","CA"],[/\bmontr[eé]al\b/i,"Montreal","QC","CA"],[/\bcalgary\b/i,"Calgary","AB","CA"],[/\bottawa\b/i,"Ottawa","ON","CA"],[/\bwaterloo,? on/i,"Waterloo","ON","CA"]];
+  function findMode(t,hint){
+    hint=String(hint||"").toLowerCase();
+    if(/hybrid/.test(hint)||/\bhybrid\b/i.test(t))return "hybrid";
+    if(/remote|telecommute/.test(hint)||/\b(?:fully remote|100% remote|remote[- ]first|remote (?:position|role|job|opportunity)|work from home|this (?:role|position|job) is remote|location:\s*remote)\b/i.test(t))return "remote";
+    if(/on-?site|office/.test(hint)||/\b(?:on[- ]?site|in[- ]office|in person|in-person)\b/i.test(t))return "onsite";
+    return "";
+  }
+  function findType(t,emp,title){
+    var e=String(emp||"").toLowerCase().replace(/[^a-z]/g,"");
+    if(/co-?op\b/i.test(title||"")||/\bco-?op (?:position|program|role|term)\b/i.test(t))return "coop";
+    if(/intern/.test(e)||/\bintern(?:ship)?\b/i.test(title||""))return "internship";
+    if(/parttime/.test(e)||/\bpart[- ]time\b/i.test(title||""))return "parttime";
+    if(/fulltime/.test(e))return "job";
+    if(/\binternship\b/i.test(t))return "internship";
+    if(/\bpart[- ]time\b/i.test(t)&&!/\bfull[- ]time\b/i.test(t))return "parttime";
+    return "job";
+  }
+  function findPay(t){
+    var re=/\$\s?(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)\s?([kK])?\s*(?:-|–|—|to)\s*\$?\s?(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)\s?([kK])?(?:\s*(?:USD|CAD))?\s*(?:\/|per|an|a)?\s*(hour|hr|year|yr|annually|annum|month|week)?/i,m=t.match(re);
+    if(!m)return null;
+    var lo=money(m[1]+(m[2]||"")),hi=money(m[3]+(m[4]||""));if(!(lo>0&&hi>=lo))return null;
+    var unit=m[5]||(/per hour|hourly|\/hr|an hour/i.test(t.slice(Math.max(0,m.index-40),m.index+m[0].length+40))?"hour":"");
+    return [yearly(lo,unit),yearly(hi,unit)];
+  }
+  function findYears(t,type){
+    var m=t.match(/(?:minimum of |at least |)(\d{1,2})\s*\+?\s*(?:(?:-|–|to)\s*\d{1,2}\s*)?(?:years?|yrs?)(?:'s)?(?:\s+of)?(?:\s+[\w-]+){0,4}?\s+(?:experience|exp\b)/i);
+    if(m)return Math.min(15,+m[1]);
+    return type==="internship"||type==="coop"?0:null;
+  }
+  function findEdu(t){
+    var L=[["Doctorate",/\b(?:ph\.?d|doctorate|doctoral)\b/i],["Master",/\b(?:master'?s|m\.?s\.?|mba|m\.?a\.?)\s*(?:degree|in|of)\b|\bmaster'?s\b|\bmba\b/i],["Bachelor",/\bbachelor'?s|\bb\.?[as]\.?\s+(?:degree|in)\b|\b4-year degree|\bfour-year degree|\bundergraduate degree/i],["Associate",/\bassociate'?s? degree\b/i],["High school",/\bhigh school\b|\bGED\b/i]];
+    var req=t.match(/([^.\n]{0,80})\b(?:required|minimum|must have)\b([^.\n]{0,40})/i),found=[];
+    L.forEach(function(l,i){if(l[1].test(t))found.push(i)});
+    if(!found.length)return "";
+    if(req){var seg=req[0];for(var i=L.length-1;i>=0;i--)if(L[i][1].test(seg))return L[i][0]}
+    return L[Math.max.apply(null,found)][0];   /* the lowest level the post mentions */
+  }
+  function findMajors(t){
+    var m=t.match(/(?:degree|major(?:ing)?|studying|coursework|pursuing (?:a |an )?(?:bachelor'?s|master'?s|degree)?)\s+(?:in|of)\s+([^.;:\n()]{3,160})/i);if(!m)return [];
+    return m[1].split(/,|\/|\bor\b|\band\b/i).map(function(x){return x.replace(/\b(?:a |an |the |related (?:fields?|disciplines?|areas?)|similar|equivalent|field|or|degree|preferred|required|etc)\b/gi,"").replace(/\s+/g," ").trim()})
+      .filter(function(x){return x.length>=3&&x.length<=50&&x.split(" ").length<=5&&/^[A-Z]/.test(x)}).slice(0,6);
+  }
+  function findGpa(t){var m=t.match(/(\d\.\d{1,2})\s*(?:\/\s*4\.0+\s*)?(?:or (?:higher|above|better)|\+)?\s*(?:cumulative |overall )?GPA/i)||t.match(/GPA\s*(?:of|:)?\s*(?:at least |minimum(?: of)? |of at least )?(\d\.\d{1,2})/i);var g=m?+m[1]:0;return g>0&&g<=4?g:0}
+  function ym(s,end){var m=String(s).match(/([A-Za-z]+)?\s*(20\d\d)/);if(!m)return "";var mo=m[1]?MONTHS[m[1].slice(0,3).toLowerCase()]||MONTHS[m[1].toLowerCase()]:0;mo=mo||(end?12:1);return m[2]+"-"+(mo<10?"0":"")+mo}
+  function findGrad(t){
+    var W="(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|spring|summer|fall|autumn|winter)?\\s*20\\d\\d";
+    var m=t.match(new RegExp("graduat\\w*\\s+(?:date\\s+)?(?:between|from|in|by|of)?\\s*("+W+")(?:\\s*(?:-|–|and|to|through)\\s*("+W+"))?","i"))||t.match(/class of (20\d\d)(?:\s*(?:or|and|-|–)\s*(20\d\d))?/i);
+    if(!m)return ["",""];
+    return [ym(m[1],false),ym(m[2]||m[1],true)];
+  }
+  function findSponsor(t){
+    if(/(?:unable to|cannot|can ?not|will not|won'?t|does not|do not|not able to|is not able to)\s+(?:currently\s+)?(?:provide|offer|support)?\s*(?:visa\s+|immigration\s+)?sponsor|without (?:the need for )?(?:current or future |now or in the future )?(?:visa |employment )?sponsorship|\bno (?:visa )?sponsorship|sponsorship (?:is )?not (?:available|provided|offered)/i.test(t))return "no";
+    if(/(?:visa\s+)?sponsorship (?:is )?(?:available|provided|offered)|(?:will|can|able to) (?:provide |offer )?(?:visa )?sponsor|we sponsor/i.test(t))return "yes";
+    return "";
+  }
+  function findAuth(t){return /must be (?:a )?(?:U\.?S\.?|united states) citizen|(?:U\.?S\.?|united states) citizenship (?:is )?required|security clearance|citizens? (?:or|and) (?:lawful )?permanent residents? only|canadian citizens?(?: or permanent residents?)? only/i.test(t)?"citizen":""}
+  function findStart(t){if(/start(?:ing)?(?: date)?\s*:?\s*(?:immediately|asap|as soon as possible|right away)|immediate start/i.test(t))return "now";if(/start(?:ing)?\s+(?:date\s*:?\s*)?(?:is\s+)?flexible/i.test(t))return "flex";return ""}
+  function findTitle(t){var m=t.match(/(?:job title|position title|title|position|role)\s*:\s*([^\n]{3,90})/i);if(m)return m[1].trim();var lines=t.split("\n").map(function(x){return x.trim()}).filter(Boolean);for(var i=0;i<Math.min(6,lines.length);i++){if(lines[i].length>=4&&lines[i].length<=80&&!/^(about|job description|description|overview|apply|share|save|back)\b/i.test(lines[i])&&!/[.!?]$/.test(lines[i]))return lines[i]}return ""}
+  /* the one-line card summary: a sentence about the role itself, not the company's "About us" intro */
+  function blurbOf(t){
+    var s=t.replace(/([.!?])\s+/g,"$1\n").split("\n").map(function(x){return x.replace(/^(?:[A-Z][A-Z&'.-]+\s+){1,4}(?=[A-Z][a-z])/,"").trim()}).filter(function(x){return x.length>=30&&x.length<=220&&/[a-z]/.test(x)});
+    var best="",score=-99;
+    s.forEach(function(x,i){
+      var v=0;
+      if(/\b(?:you will|you'll|we(?:'re| are) looking|responsible for|join (?:our|the)|in this role|as (?:a|an|our) [A-Za-z ]{3,40},? you|this role|the role)\b/i.test(x))v+=3;
+      if(/^about\b|\b(?:is building|was founded|our mission|we are a|is a leading|founded in|we believe|equal opportunity|accommodation|referr(?:ed|al)|on your behalf|please (?:contact|apply|note|submit)|privacy|e-?verify|background check)\b/i.test(x))v-=4;
+      if(/^[-•*]/.test(x))v-=1;
+      v-=i*0.02;
+      if(v>score){score=v;best=x}
+    });
+    return best.replace(/^[-•*]\s*/,"").slice(0,220);
+  }
+  /* turn any source into the Post a job fields; base holds what a structured source already knows */
+  function fill(text,base,url){
+    base=base||{};text=clean(text||"");var f={},got={};
+    function put(k,v){if(v!==""&&v!=null&&!(Array.isArray(v)&&!v.length)){f[k]=v;got[k]=1}}
+    var title=String(base.title||findTitle(text)).replace(/\s+/g," ").trim();put("role",title.slice(0,120));
+    var type=findType(text,base.employmentType,title);f.type=type;if(base.employmentType||/intern|co-?op|part[- ]time/i.test(title+" "+text.slice(0,600)))got.type=1;
+    var loc=base.city&&base.region?{city:base.city,region:base.region,country:base.country||"US"}:findLoc((base.locationText?base.locationText+"\n":"")+text);
+    if(loc){put("city",loc.city);put("region",loc.region);put("country",loc.country)}
+    else if(base.country){put("country",base.country)}
+    put("mode",findMode(text,base.workplace));
+    var pay=base.pay||findPay(text);if(pay){f.sal_min=pay[0];f.sal_max=pay[1];got.sal=1}
+    var y=base.years!=null?base.years:findYears(text,type);if(y!=null){f.yrs=y;got.yrs=1}
+    put("edu",base.edu||findEdu(text));
+    put("skills",findSkills(text));put("majors",findMajors(text));
+    var g=findGpa(text);if(g){f.gpa=String(g);got.gpa=1}
+    var gr=findGrad(text);if(gr[0]||gr[1]){f.grad_from=gr[0];f.grad_to=gr[1];got.grad=1}
+    put("sponsor",findSponsor(text));put("auth",findAuth(text));put("start",findStart(text));
+    if(/relocation (?:assistance|package|support|stipend|bonus|is provided|available)/i.test(text)){f.reloc=true;got.reloc=1}
+    if(COMM.test(text)){f.comm=true;got.comm=1}
+    var perks=PERK_RES.filter(function(p){return p[1].test(text)}).map(function(p){return p[0]});put("perks",perks);
+    put("blurb",blurbOf(text));put("desc",text.slice(0,5000));
+    if(/^https:\/\//.test(url||""))put("url",url.slice(0,300));
+    return {fields:f,got:got,org:base.org||""};
+  }
+  /* schema.org JobPosting (the block career sites add for Google Jobs) */
+  function fromJsonLd(j,url){
+    var a=(Array.isArray(j.jobLocation)?j.jobLocation[0]:j.jobLocation)||{},ad=a.address||{},b={},bs=j.baseSalary||{},v=bs.value||{};
+    b.title=j.title||j.name||"";b.employmentType=Array.isArray(j.employmentType)?j.employmentType.join(" "):j.employmentType;
+    b.org=(j.hiringOrganization&&j.hiringOrganization.name)||"";
+    var c=String(ad.addressCountry&&ad.addressCountry.name||ad.addressCountry||"").toUpperCase();b.country=/^(CA|CAN|CANADA)$/.test(c)?"CA":(/^(US|USA|UNITED STATES)/.test(c)?"US":"");
+    var r=String(ad.addressRegion||""),code=CODES.indexOf(r.toUpperCase())>-1?r.toUpperCase():STATES[r.toLowerCase()];
+    if(ad.addressLocality&&code){b.city=ad.addressLocality;b.region=code;b.country=b.country||(CAP.some(function(p){return p[0]===code})?"CA":"US")}
+    b.workplace=(j.jobLocationType||"")+" "+(j.applicantLocationRequirements?"remote":"");
+    if(b.city&&!/telecommute/i.test(b.workplace))b.workplace+=" onsite";     /* Google's rule: a job with an address and no TELECOMMUTE is on-site (the text can still say hybrid) */
+    var lo=+(v.minValue!=null?v.minValue:v.value),hi=+(v.maxValue!=null?v.maxValue:v.value);if(lo>0&&hi>=lo)b.pay=[yearly(lo,v.unitText||bs.unitText||"YEAR"),yearly(hi,v.unitText||bs.unitText||"YEAR")];
+    var er=j.experienceRequirements;if(er&&er.monthsOfExperience)b.years=Math.min(15,Math.round(+er.monthsOfExperience/12));
+    var ed=j.educationRequirements,cc=String(ed&&(ed.credentialCategory||ed)||"").toLowerCase();
+    b.edu=/doctor|phd/.test(cc)?"Doctorate":/master|postgraduate/.test(cc)?"Master":/bachelor/.test(cc)?"Bachelor":/associate/.test(cc)?"Associate":/high school/.test(cc)?"High school":"";
+    var text=htmlText(decodeEntities(j.description||""))+"\n"+[j.qualifications,j.responsibilities,j.skills,j.jobBenefits,j.incentiveCompensation].filter(function(x){return typeof x==="string"}).map(htmlText).join("\n");
+    return fill(text,b,j.url||url);
+  }
+  function fromGreenhouse(j,url){var where=[j.location&&j.location.name].concat((j.offices||[]).map(function(o){return o.name})).filter(Boolean).join(" | ");
+    return fill(htmlText(decodeEntities(j.content||"")),{title:j.title,locationText:where,workplace:where,
+    pay:(j.pay_input_ranges&&j.pay_input_ranges[0])?[Math.round(j.pay_input_ranges[0].min_cents/100),Math.round(j.pay_input_ranges[0].max_cents/100)]:null},j.absolute_url||url)}
+  function fromLever(j,url){var sr=j.salaryRange||{},t=[j.descriptionPlain||htmlText(j.description)].concat((j.lists||[]).map(function(l){return l.text+"\n"+htmlText(l.content)})).concat([j.additionalPlain||htmlText(j.additional)]).join("\n");
+    return fill(t,{title:j.text,employmentType:j.categories&&j.categories.commitment,locationText:j.categories&&j.categories.location,workplace:j.workplaceType,
+      pay:sr.min&&sr.max?[yearly(sr.min,/hour/.test(sr.interval||"")?"hour":"year"),yearly(sr.max,/hour/.test(sr.interval||"")?"hour":"year")]:null},j.hostedUrl||url)}
+  function fromAshby(j,url){var ad=(j.address&&j.address.postalAddress)||{},comp=((j.compensation&&j.compensation.summaryComponents)||[]).filter(function(c){return /salary/i.test(c.compensationType||"")})[0],b={title:j.title,employmentType:j.employmentType,locationText:j.location,workplace:(j.workplaceType||"")+(j.isRemote?" remote":"")};
+    var code=CODES.indexOf(String(ad.addressRegion||"").toUpperCase())>-1?String(ad.addressRegion).toUpperCase():STATES[String(ad.addressRegion||"").toLowerCase()];if(ad.addressLocality&&code){b.city=ad.addressLocality;b.region=code;b.country=CAP.some(function(p){return p[0]===code})?"CA":"US"}
+    if(comp&&comp.minValue&&comp.maxValue)b.pay=[yearly(comp.minValue,/hour/i.test(comp.interval||"")?"hour":"year"),yearly(comp.maxValue,/hour/i.test(comp.interval||"")?"hour":"year")];
+    return fill(j.descriptionPlain||htmlText(j.descriptionHtml),b,j.jobUrl||url)}
+  function fromSmartRecruiters(j,url){var l=j.location||{},sec=((j.jobAd||{}).sections)||{},t=["companyDescription","jobDescription","qualifications","additionalInformation"].map(function(k){return sec[k]?(sec[k].title||"")+"\n"+htmlText(sec[k].text):""}).join("\n");
+    var code=CODES.indexOf(String(l.region||"").toUpperCase())>-1?String(l.region).toUpperCase():STATES[String(l.region||"").toLowerCase()];
+    return fill(t,{title:j.name,employmentType:j.typeOfEmployment&&j.typeOfEmployment.label,city:code?l.city:"",region:code||"",country:/^ca$/i.test(l.country||"")?"CA":"US",workplace:l.remote?"remote":(l.hybrid?"hybrid":"")},url)}
+  /* public job feeds that answer browsers directly, so a link works even on the copy with no server */
+  function feedFor(u){
+    var p;try{p=new URL(u)}catch(e){return null}
+    var h=p.hostname.toLowerCase(),s=p.pathname.split("/").filter(Boolean),q=p.searchParams;
+    if(/(^|\.)greenhouse\.io$/.test(h)){var board=q.get("for")||s[0],id=q.get("token")||s[s.indexOf("jobs")+1];if(board&&/^\d+$/.test(id||""))return {kind:"Greenhouse",api:"https://boards-api.greenhouse.io/v1/boards/"+encodeURIComponent(board)+"/jobs/"+id+"?pay_transparency=true",read:fromGreenhouse}}
+    if(h==="jobs.lever.co"&&s.length>=2)return {kind:"Lever",api:"https://api.lever.co/v0/postings/"+encodeURIComponent(s[0])+"/"+encodeURIComponent(s[1]),read:fromLever};
+    if(h==="jobs.ashbyhq.com"&&s.length>=2)return {kind:"Ashby",api:"https://api.ashbyhq.com/posting-api/job-board/"+encodeURIComponent(s[0])+"?includeCompensation=true",read:function(j,url){var job=(j.jobs||[]).filter(function(x){return x.id===s[1]})[0];if(!job)throw new Error("That job was not found on this Ashby board.");return fromAshby(job,url)}};
+    if(h==="jobs.smartrecruiters.com"&&s.length>=2){var sid=(s[1].match(/^\d+/)||[])[0];if(sid)return {kind:"SmartRecruiters",api:"https://api.smartrecruiters.com/v1/companies/"+encodeURIComponent(s[0])+"/postings/"+sid,read:fromSmartRecruiters}}
+    return null;
+  }
+  return {fromText:function(t,url){return fill(t,{},url)},fromJsonLd:fromJsonLd,feedFor:feedFor,blocked:blocked,htmlText:htmlText};
+})();
+window.UAplyJobImport=IMP;
+
 var CSS=[
 /* header pill, Fiverr-style */
 ".modesw{margin-left:auto;display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:6px 15px;border-radius:999px;border:1.5px solid color-mix(in srgb,var(--accent) 45%,var(--line));background:var(--surface);color:var(--ink);font:700 13.5px var(--body);cursor:pointer;white-space:nowrap}",
@@ -54,7 +239,8 @@ var CSS=[
 /* the hub */
 "#hub .hub{display:grid;grid-template-columns:230px minmax(0,1fr);gap:20px;align-items:start;padding-bottom:40px}",
 "#hub .hnav{position:sticky;top:0;display:flex;flex-direction:column;gap:4px;padding:14px;border:1px solid var(--line);border-radius:18px;background:var(--surface)}",
-"#hub .hco{display:flex;gap:10px;align-items:center;padding:4px 4px 12px;margin-bottom:6px;border-bottom:1px solid var(--line);min-width:0}#hub .hco b{display:block;font:800 15px/1.2 var(--display);overflow-wrap:anywhere}#hub .hco small{color:var(--muted);font-size:12px}",
+"#hub .hnav button.hco{display:flex;gap:10px;align-items:center;justify-content:flex-start;padding:6px 6px 12px;margin-bottom:6px;border-bottom:1px solid var(--line);border-radius:12px 12px 0 0;min-width:0;text-align:left}#hub .hco b{display:block;font:800 15px/1.2 var(--display);overflow-wrap:anywhere}#hub .hco small{display:block;color:var(--muted);font-size:12px;font-weight:500}",
+".brand[role=link]:focus-visible{outline:3px solid var(--accent);outline-offset:4px;border-radius:10px}",
 "#hub .hlogo{width:42px;height:42px;flex:none;border-radius:11px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--accent-ink);font:800 18px var(--display);overflow:hidden}#hub .hlogo img{width:100%;height:100%;object-fit:contain;background:#fff}",
 "#hub .hnav button{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;min-height:42px;padding:8px 12px;border:0;border-radius:11px;background:none;color:var(--ink);font:600 14.5px var(--body);cursor:pointer}",
 "#hub .hnav button:hover{background:color-mix(in srgb,var(--accent) 8%,transparent)}#hub .hnav button[aria-current=page]{background:color-mix(in srgb,var(--accent) 14%,var(--surface));color:var(--accent)}",
@@ -62,7 +248,7 @@ var CSS=[
 "#hub .hmain{display:flex;flex-direction:column;gap:18px;min-width:0}",
 "#hub h1{margin:0;font:800 28px/1.15 var(--display);letter-spacing:-.02em;text-wrap:balance}#hub h2{margin:0;font:800 18px/1.2 var(--display)}#hub .lead{margin:4px 0 0;color:var(--muted);max-width:68ch}",
 "#hub .box{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px 20px;display:flex;flex-direction:column;gap:14px;min-width:0}",
-"#hub .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}",
+"#hub .h-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}",
 "#hub .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}#hub .tile{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px}#hub .tile b{display:block;font:800 28px/1.1 var(--display);font-variant-numeric:tabular-nums}#hub .tile small{color:var(--muted);font-size:12.5px}",
 "#hub .steps{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}#hub .steps li{display:flex;gap:10px;align-items:center}#hub .steps .ck{width:24px;height:24px;flex:none;border-radius:50%;display:grid;place-items:center;font:700 12px var(--mono);border:1.5px solid var(--line);color:var(--muted)}#hub .steps .ck.on{background:var(--yes-bg);color:var(--yes);border-color:transparent}#hub .steps button{margin-left:auto}",
 "#hub table{width:100%;border-collapse:collapse;font-size:14px}#hub th{text-align:left;font:600 11.5px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line)}#hub td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}#hub tr:last-child td{border-bottom:0}#hub .tw{overflow-x:auto}",
@@ -91,11 +277,15 @@ var CSS=[
 "#hub .mp{font:800 15px var(--display);padding:4px 10px;border-radius:99px}#hub .mp.yes{background:var(--yes-bg);color:var(--yes)}#hub .mp.mid{background:var(--mid-bg);color:var(--mid)}#hub .mp.no{background:var(--no-bg);color:var(--no)}",
 "#hub .app .body{grid-column:2/-1;display:flex;flex-direction:column;gap:8px}#hub .kv{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13.5px}#hub .kv span{color:var(--muted)}#hub .flag{font:600 12px var(--body);padding:3px 9px;border-radius:99px}#hub .flag.ok{background:var(--yes-bg);color:var(--yes)}#hub .flag.bad{background:var(--no-bg);color:var(--no)}#hub .flag.unk{background:var(--mid-bg);color:var(--mid)}",
 "#hub .app a{color:var(--accent);font-weight:600}#hub .note{color:var(--muted);font-size:13px;margin:0}",
-"#hub .empty{text-align:center;padding:30px 16px;color:var(--muted)}#hub .empty b{display:block;color:var(--ink);font:800 18px var(--display);margin-bottom:4px}",
+"#hub .h-empty{text-align:center;padding:30px 16px;color:var(--muted)}#hub .h-empty b{display:block;color:var(--ink);font:800 18px var(--display);margin-bottom:4px}",
 "#hub .msg{min-height:1.4em;margin:0;font-weight:600;font-size:14px}#hub .msg.bad{color:var(--no)}#hub .msg.good{color:var(--yes)}",
-"#hub .banner{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 16px;border-radius:14px;background:var(--mid-bg);color:var(--mid);font-weight:600;font-size:14px}",
+"#hub .imp{border:2px solid color-mix(in srgb,var(--accent) 35%,var(--line))}#hub .imp .f{gap:8px}#hub .imp input[type=url],#hub .imp textarea{width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit}#hub .imp textarea{resize:vertical}",
+"#hub .impok{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 16px;border-radius:14px;background:var(--yes-bg);color:var(--ink);font-size:14px}#hub .impok b{color:var(--yes)}",
+"#hub .chipok,#hub .f.filled>label:first-child::after,#hub .f.filled>.l::after{display:inline-block;margin-left:8px;font:600 10.5px var(--mono);padding:2px 7px;border-radius:99px;background:var(--yes-bg);color:var(--yes);vertical-align:middle}#hub .f.filled>label:first-child::after,#hub .f.filled>.l::after{content:'From your post'}",
+"#hub .f.filled{border-left:3px solid var(--yes);padding-left:9px}",
+"#hub .h-banner{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 16px;border-radius:14px;background:var(--mid-bg);color:var(--mid);font-weight:600;font-size:14px}",
 "@media (max-width:1100px){#hub .pform{grid-template-columns:minmax(0,1fr)}#hub .pside{position:static;order:-1}}",
-"@media (max-width:860px){#hub .hub{grid-template-columns:minmax(0,1fr)}#hub .hnav{position:static;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;padding:8px;border-radius:14px}#hub .hco{display:none}#hub .hnav button{flex:none}#hub .hnav button.post{margin-top:0}#hub .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}#hub .promise{grid-template-columns:minmax(0,1fr)}}",
+"@media (max-width:860px){#hub .hub{grid-template-columns:minmax(0,1fr)}#hub .hnav{position:static;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;padding:8px;border-radius:14px}#hub .hnav button.hco{display:none}#hub .hnav button{flex:none}#hub .hnav button.post{margin-top:0}#hub .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}#hub .promise{grid-template-columns:minmax(0,1fr)}}",
 "@media (max-width:560px){#hub fieldset{grid-template-columns:minmax(0,1fr)}#hub .perks{grid-template-columns:minmax(0,1fr)}#hub .app{grid-template-columns:auto minmax(0,1fr)}#hub .app .mp{grid-column:2;justify-self:start}}"
 ].join("\n");
 
@@ -171,6 +361,18 @@ function apply(w,host){
   var sw=d.createElement("button");sw.type="button";sw.id="modeSw";sw.className="modesw";bar.insertBefore(sw,hdr);
   var tag=d.createElement("span");tag.className="modetag";tag.textContent="Hiring";tag.hidden=true;
   var brand=bar.querySelector(".brand");if(brand)brand.appendChild(tag);
+  /* the UAply logo goes home: the job search swipe page (leaving Hiring if it is open) */
+  function goHome(){
+    if(d.body.classList.contains("hire"))setMode(false,true);
+    var nb=d.getElementById("nb-svc");
+    if(nb){nb.click();var it=d.querySelector('.nwrap[data-k=svc] .nitem[aria-checked="true"]')||d.querySelector(".nwrap[data-k=svc] .nitem");if(it)it.click()}
+    var mn=d.querySelector("main");if(mn)mn.scrollTop=0;
+  }
+  if(brand){
+    brand.setAttribute("role","link");brand.tabIndex=0;brand.title="UAply home: jobs";brand.style.cursor="pointer";
+    brand.addEventListener("click",goHome);
+    brand.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();goHome()}});
+  }
   var hub=d.createElement("section");hub.id="hub";hub.hidden=true;hub.setAttribute("aria-label","Hiring");bar.parentNode.insertBefore(hub,bar.nextSibling);
   var MODE_K=KEY+".mode";
   function paintSwitch(hire){
@@ -281,27 +483,27 @@ function apply(w,host){
   function shell(inner){
     var c=H.company,n=counts();
     var nav=[["overview","Overview",""],["jobs","Jobs",H.jobs.length||""],["applicants","Applicants",n.apps||""],["company","Company",""],["billing","Billing",""]];
-    return '<div class="hub"><nav class="hnav" aria-label="Hiring sections"><div class="hco">'+logoBox(c)+'<div><b>'+esc(c?c.name:"Your company")+'</b><small>'+(c?esc(c.industry||"Employer"):"Not set up yet")+'</small></div></div>'+
+    return '<div class="hub"><nav class="hnav" aria-label="Hiring sections"><button type="button" class="hco" data-view="company" title="Company profile">'+logoBox(c)+'<span><b>'+esc(c?c.name:"Your company")+'</b><small>'+(c?esc(c.industry||"Employer"):"Set up your company")+'</small></span></button>'+
       nav.map(function(x){return '<button type="button" data-view="'+x[0]+'"'+(H.view===x[0]?' aria-current="page"':'')+'>'+x[1]+(x[2]!==""?'<span class="n">'+x[2]+'</span>':'')+'</button>'}).join("")+
       '<button type="button" class="post" data-act="new">+ Post a job</button></nav><div class="hmain">'+banner()+inner+'<p class="msg" id="hMsg" role="status" aria-live="polite"></p></div></div>';
   }
   function banner(){
-    if(H.mode==="local")return '<div class="banner"><span>Preview copy: your company and jobs are saved in this browser only, and your jobs appear in this browser\'s own swipe deck. On the UAply server they are published to everyone.</span></div>';
-    if(H.mode==="server"&&!H.verified)return '<div class="banner"><span>Verify your email to publish jobs. Applications are sent to '+esc(H.email)+'.</span><button type="button" class="btn sm" data-act="verify">Verify email</button></div>';
+    if(H.mode==="local")return '<div class="h-banner"><span>Preview copy: your company and jobs are saved in this browser only, and your jobs appear in this browser\'s own swipe deck. On the UAply server they are published to everyone.</span></div>';
+    if(H.mode==="server"&&!H.verified)return '<div class="h-banner"><span>Verify your email to publish jobs. Applications are sent to '+esc(H.email)+'.</span><button type="button" class="btn sm" data-act="verify">Verify email</button></div>';
     return "";
   }
   function say(m,kind){var e=d.getElementById("hMsg");if(e){e.textContent=m||"";e.className="msg"+(kind?" "+kind:"")}}
 
   function render(){
-    if(H.mode==="loading"){hub.innerHTML='<div class="box empty"><b>Loading…</b></div>';return}
+    if(H.mode==="loading"){hub.innerHTML='<div class="box h-empty"><b>Loading…</b></div>';return}
     if(H.mode==="signedout"){hub.innerHTML='<div class="box" style="max-width:640px;margin:24px auto"><h1>Hire on UAply</h1><p class="lead">Post a job in a few minutes and get applicants who already match what you ask for. Every applicant arrives with a match score against your requirements.</p>'+
       '<div class="promise"><div><b>One page to post</b><small>Live preview of the card job seekers see.</small></div><div><b>No surprise bills</b><small>Pricing is TBD. When it starts, you see the price before you publish.</small></div><div><b>Close in one click</b><small>A closed job leaves the feed right away.</small></div></div>'+
-      '<div class="row" style="justify-content:flex-start"><button type="button" class="btn" data-act="signin">Sign in or create an account</button><small class="note">Use the same UAply account you use for job search.</small></div></div>';return}
+      '<div class="h-row" style="justify-content:flex-start"><button type="button" class="btn" data-act="signin">Sign in or create an account</button><small class="note">Use the same UAply account you use for job search.</small></div></div>';return}
     var v=H.view;
     if(!H.company&&v!=="company"&&v!=="billing")v="welcome";
     var inner=v==="welcome"?welcome():v==="overview"?overview():v==="jobs"?jobsView():v==="post"?postView():v==="applicants"?appsView():v==="company"?companyView():billingView();
     hub.innerHTML=shell(inner);
-    if(v==="post")wirePost();
+    if(v==="post"){if(hub.querySelector("#impBox"))wireImport();else wirePost()}
     if(v==="company")wireCompany();
     hub.scrollTop=0;
   }
@@ -312,17 +514,17 @@ function apply(w,host){
   function overview(){
     var n=counts(),c=H.company;
     var steps=[[!!c,"Company profile","company"],[H.jobs.length>0,"First job posted","new"],[H.mode!=="server"||H.verified,"Email verified (applications go there)","verify"]];
-    var h='<div class="row"><div><h1>'+esc(c.name)+'</h1><p class="lead">Your hiring at a glance.</p></div><button type="button" class="btn" data-act="new">+ Post a job</button></div>';
+    var h='<div class="h-row"><div><h1>'+esc(c.name)+'</h1><p class="lead">Your hiring at a glance.</p></div><button type="button" class="btn" data-act="new">+ Post a job</button></div>';
     if(steps.some(function(s){return !s[0]}))h+='<div class="box"><h2>Finish setting up</h2><ul class="steps">'+steps.map(function(s){return '<li><span class="ck'+(s[0]?" on":"")+'">'+(s[0]?"✓":"")+'</span>'+s[1]+(s[0]?'':'<button type="button" class="btn ghost sm" '+(s[2]==="new"?'data-act="new"':s[2]==="verify"?'data-act="verify"':'data-view="company"')+'>Do it</button>')+'</li>'}).join("")+'</ul></div>';
     h+='<div class="tiles"><div class="tile"><b>'+n.open+'</b><small>Open jobs</small></div><div class="tile"><b>'+n.apps+'</b><small>Applicants</small></div><div class="tile"><b>'+n.week+'</b><small>New this week</small></div><div class="tile"><b>'+(n.apps?n.avg+"%":"–")+'</b><small>Average match</small></div></div>';
-    h+='<div class="box"><div class="row"><h2>Your jobs</h2><button type="button" class="linkish" data-view="jobs">See all</button></div>'+jobsTable(H.jobs.slice(0,5))+'</div>';
+    h+='<div class="box"><div class="h-row"><h2>Your jobs</h2><button type="button" class="linkish" data-view="jobs">See all</button></div>'+jobsTable(H.jobs.slice(0,5))+'</div>';
     var recent=H.apps.slice(0,3);
-    h+='<div class="box"><div class="row"><h2>Recent applicants</h2><button type="button" class="linkish" data-view="applicants">See all</button></div>'+(recent.length?'<div class="apps">'+recent.map(appCard).join("")+'</div>':'<p class="note">No applicants yet. When someone swipes right on your job, they show up here with their match score.</p>')+'</div>';
+    h+='<div class="box"><div class="h-row"><h2>Recent applicants</h2><button type="button" class="linkish" data-view="applicants">See all</button></div>'+(recent.length?'<div class="apps">'+recent.map(appCard).join("")+'</div>':'<p class="note">No applicants yet. When someone swipes right on your job, they show up here with their match score.</p>')+'</div>';
     h+='<div class="promise"><div><b>Pay only what you agree to</b><small>Pricing: TBD. One upfront price per job, shown before you publish. No pay-per-click, no auto-renew.</small></div><div><b>Applicants who fit</b><small>Every applicant has a match score, and job seekers can hide jobs they are not eligible for.</small></div><div><b>No ghost jobs</b><small>Pause or close in one click. Closed jobs leave the feed at once.</small></div></div>';
     return h;
   }
   function jobsTable(list){
-    if(!list.length)return '<div class="empty"><b>No jobs yet</b>Post your first job and it appears in the swipe deck right away.<div style="margin-top:12px"><button type="button" class="btn" data-act="new">+ Post a job</button></div></div>';
+    if(!list.length)return '<div class="h-empty"><b>No jobs yet</b>Post your first job and it appears in the swipe deck right away.<div style="margin-top:12px"><button type="button" class="btn" data-act="new">+ Post a job</button></div></div>';
     return '<div class="tw"><table><thead><tr><th>Job</th><th>Status</th><th>Applicants</th><th>Posted</th><th></th></tr></thead><tbody>'+list.map(function(j){
       var na=H.apps.filter(function(a){return a.job===j.id}).length;
       return '<tr><td><b>'+esc(j.role)+'</b><br><small class="note">'+esc(lbl(TYPES,j.type))+' · '+esc(locOf(j))+'</small></td><td><span class="st '+j.status+'">'+cap(j.status)+'</span></td><td>'+(na?'<button type="button" class="linkish" data-act="apps" data-id="'+j.id+'">'+na+'</button>':'0')+'</td><td><small>'+new Date(j.posted*1000).toLocaleDateString()+'</small></td>'+
@@ -332,16 +534,31 @@ function apply(w,host){
     }).join("")+'</tbody></table></div>';
   }
   function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
-  function jobsView(){return '<div class="row"><div><h1>Jobs</h1><p class="lead">Open jobs show in the swipe deck. Paused and closed jobs are hidden from new job seekers right away.</p></div><button type="button" class="btn" data-act="new">+ Post a job</button></div><div class="box">'+jobsTable(H.jobs)+'</div>'}
+  function jobsView(){return '<div class="h-row"><div><h1>Jobs</h1><p class="lead">Open jobs show in the swipe deck. Paused and closed jobs are hidden from new job seekers right away.</p></div><button type="button" class="btn" data-act="new">+ Post a job</button></div><div class="box">'+jobsTable(H.jobs)+'</div>'}
 
   /* ---- post or edit a job ---- */
   function blankJob(){var c=H.company||{};return {role:"",type:"job",mode:"",country:c.country||"US",city:c.city||"",region:c.region||"",sal:[0,0],comm:false,yrs:0,edu:"Bachelor",skills:[],majors:[],gpa:0,grad:["",""],auth:"any",sponsor:"",start:"",reloc:false,perks:[],blurb:"",desc:"",url:"",manager:{name:"",title:"",email:"",linkedin:""},show_manager:true}}
   function F(id,label,inner,o){o=o||{};return '<div class="f'+(o.full?" full":"")+'"><'+(o.group?'span class="l"':'label for="'+id+'"')+'>'+label+(o.req?' <span class="req" aria-hidden="true">*</span>':'')+'</'+(o.group?'span':'label')+'>'+inner+(o.hint?'<small>'+o.hint+'</small>':'')+'<small class="err" id="'+id+'-err" role="alert"></small></div>'}
+  /* step 1 of a new post: start from the job post they already have */
+  function importView(){
+    var t=H.impTab||"link";
+    return '<div><h1>Post a job</h1><p class="lead">Already posted this job somewhere? Start from it and UAply fills in the form for you. You check it and publish.</p></div>'+
+      '<div class="box imp" id="impBox"><h2>Start from your existing job post</h2>'+
+      '<div class="seg" role="radiogroup" aria-label="How to bring in your job"><label><input type="radio" name="impTab" value="link"'+(t==="link"?" checked":"")+'> Paste a link</label><label><input type="radio" name="impTab" value="text"'+(t==="text"?" checked":"")+'> Paste the job text</label></div>'+
+      '<div id="impLinkWrap"'+(t==="link"?"":" hidden")+' class="f"><label for="impUrl">Link to the job</label><div class="h-row" style="flex-wrap:nowrap"><input type="url" id="impUrl" inputmode="url" maxlength="600" placeholder="https://yourcompany.com/careers/marketing-coordinator" value="'+esc(H.impUrl||"")+'" style="flex:1;min-width:0"><button type="button" class="btn" data-act="impLink">Fill it in for me</button></div>'+
+        '<small>Works with your careers page, Greenhouse, Lever, Ashby, SmartRecruiters, Workday and most job sites. LinkedIn, Indeed, ZipRecruiter, Glassdoor and Handshake don\'t let other sites read their pages: use Paste the job text for those.</small></div>'+
+      '<div id="impTextWrap"'+(t==="text"?"":" hidden")+' class="f"><label for="impText">Job text</label><textarea id="impText" rows="9" maxlength="30000" placeholder="Open your job post, select all of it (title, location, pay, description, requirements, benefits), copy, and paste it here.">'+esc(H.impText||"")+'</textarea><div><button type="button" class="btn" data-act="impText">Fill it in for me</button></div></div>'+
+      '<p class="msg" id="impMsg" role="status" aria-live="polite"></p>'+
+      '<div class="h-row" style="justify-content:flex-start;border-top:1px solid var(--line);padding-top:12px"><span class="note">No post yet, or rather type it?</span><button type="button" class="btn ghost" data-act="manual">Fill it in myself</button></div></div>';
+  }
   function postView(){
     var j=H.edit||blankJob(),editing=!!(H.edit&&H.edit.id);
+    if(!editing&&!H.manual)return importView();
     var yrs=[[0,"No minimum"]];for(var i=1;i<=15;i++)yrs.push([i,i+"+ years"]);
     var gpa=j.gpa?(+j.gpa).toFixed(2):"";
+    var got=H.filled||{},n=Object.keys(got).length,need=[["mode","work style"],["sal","pay range"],["skills","skills"],["blurb","one-line summary"]].filter(function(x){return !got[x[0]]}).map(function(x){return x[1]});
     return '<div><h1>'+(editing?"Edit job":"Post a job")+'</h1><p class="lead">One page. Each section is matched to what job seekers fill in, so the right people see your job and their match score is fair.</p></div>'+
+    (H.filled&&!editing?'<div class="impok" role="status"><div><b>✓ Filled '+n+' field'+(n===1?"":"s")+' from '+esc(H.impFrom||"your post")+'.</b> Fields marked <span class="chipok">From your post</span> came from it. Check them, then fill in the rest.'+(need.length?' <b>Still needed:</b> '+esc(need.join(", "))+'.':'')+'</div><button type="button" class="btn ghost sm" data-act="reimport">Start over</button></div>':'')+
     '<form id="pForm" class="pform" novalidate><div style="display:flex;flex-direction:column;gap:16px;min-width:0">'+
     '<fieldset><legend>The role</legend><p class="match">Matched to the job seeker\'s <b>target titles</b>, <b>opportunity types</b>, <b>work style</b>, <b>city and commute distance</b> and <b>willingness to relocate</b>.</p>'+
       F("jRole","Job title",'<input type="text" id="jRole" maxlength="120" value="'+esc(j.role)+'" placeholder="Marketing Coordinator">',{req:1,full:1})+
@@ -421,10 +638,65 @@ function apply(w,host){
       var n=listOf(f.querySelector("#jSkills").value,99,40).length;f.querySelector("#jSkillsN").textContent=n?"("+Math.min(n,6)+" of 6"+(n>6?", only the first 6 are kept":"")+")":"";
     }
     regions();where();counters();preview();
+    if(H.filled){       /* mark what came from their post, so they know what to check */
+      var MAP={role:"#jRole",type:'input[name="jType"]',mode:'input[name="jMode"]',country:'input[name="jCountry"]',city:"#jCity",region:"#jRegion",sal:"#jSalMin",comm:"#jComm",yrs:"#jYrs",edu:"#jEdu",skills:"#jSkills",majors:"#jMajors",gpa:"#jGpa",grad:"#jGradFrom",auth:'input[name="jAuth"]',sponsor:'input[name="jSponsor"]',start:"#jStart",reloc:"#jReloc",perks:".perks",blurb:"#jBlurb",desc:"#jDesc",url:"#jUrl"};
+      Object.keys(H.filled).forEach(function(k){var e=MAP[k]&&f.querySelector(MAP[k]);var box=e&&(e.classList.contains("f")?e:e.closest(".f"));if(box)box.classList.add("filled");if(k==="sal"){var mx=f.querySelector("#jSalMax");if(mx)mx.closest(".f").classList.add("filled")}});
+    }
     var t=null;
     f.addEventListener("input",function(){counters();clearTimeout(t);t=setTimeout(preview,120)});
     f.addEventListener("change",function(e){if(e.target.name==="jCountry")regions();if(e.target.name==="jMode")where();preview()});
     f.addEventListener("submit",function(e){e.preventDefault();submitJob()});
+  }
+  /* ---- step 1: bring in an existing post ---- */
+  function wireImport(){
+    var box=hub.querySelector("#impBox");
+    box.addEventListener("change",function(e){if(e.target.name==="impTab"){H.impTab=e.target.value;box.querySelector("#impLinkWrap").hidden=H.impTab!=="link";box.querySelector("#impTextWrap").hidden=H.impTab!=="text";(box.querySelector(H.impTab==="link"?"#impUrl":"#impText")).focus()}});
+    box.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target.id==="impUrl"){e.preventDefault();runImport("link")}});
+    box.addEventListener("input",function(e){if(e.target.id==="impUrl")H.impUrl=e.target.value;if(e.target.id==="impText")H.impText=e.target.value});
+  }
+  function impSay(m,kind){var e=hub.querySelector("#impMsg");if(e){e.textContent=m||"";e.className="msg"+(kind?" "+kind:"")}}
+  function toText(m){H.impTab="text";render();impSay(m,"bad");var t=hub.querySelector("#impText");if(t)t.focus()}
+  function jobFromFields(fd){
+    var j=blankJob();
+    ["role","type","mode","country","city","region","edu","auth","sponsor","start","blurb","desc","url"].forEach(function(k){if(fd[k]!=null&&fd[k]!=="")j[k]=fd[k]});
+    if(fd.sal_min)j.sal=[fd.sal_min,fd.sal_max];if(fd.yrs!=null)j.yrs=fd.yrs;if(fd.skills)j.skills=fd.skills.slice(0,6);if(fd.majors)j.majors=fd.majors.slice(0,6);
+    if(fd.gpa)j.gpa=+fd.gpa;if(fd.grad_from||fd.grad_to)j.grad=[fd.grad_from||"",fd.grad_to||""];if(fd.perks)j.perks=fd.perks.slice();if(fd.comm)j.comm=true;if(fd.reloc)j.reloc=true;
+    if(j.region&&!REGIONS[j.country||"US"].some(function(r){return r[0]===j.region}))j.region="";
+    return j;
+  }
+  function useResult(res,from){
+    var n=Object.keys(res.got).length;
+    if(n<3){impSay("We could only find "+n+" detail"+(n===1?"":"s")+" in that. Try pasting the full job text, or fill it in yourself.","bad");return}
+    H.edit=jobFromFields(res.fields);H.filled=res.got;H.impFrom=from;H.manual=true;render();
+    say("Filled "+n+" fields from "+from+". Check them, then publish.","good");
+  }
+  function runImport(kind){
+    if(kind==="text"){
+      var txt=(hub.querySelector("#impText")||{}).value||"";
+      if(txt.trim().length<80){impSay("Paste the whole job post: title, location, pay, description and requirements.","bad");return}
+      useResult(IMP.fromText(txt,""),"your pasted text");return;
+    }
+    var url=((hub.querySelector("#impUrl")||{}).value||"").trim();if(url&&!/^https?:\/\//i.test(url))url="https://"+url;
+    var host="";try{host=new URL(url).hostname}catch(e){impSay("Paste the full link to the job, starting with https://","bad");return}
+    var no=IMP.blocked(host);
+    if(no){toText(no+" doesn't let other sites read its pages. Open your post on "+no+", select all of it, copy, and paste it here.");return}
+    impSay("Reading your job post…");
+    var btn=hub.querySelector('[data-act="impLink"]');if(btn)btn.disabled=true;
+    function done(){if(btn)btn.disabled=false}
+    var feed=IMP.feedFor(url);
+    function viaServer(){
+      if(H.mode!=="server"){done();toText("This preview copy can't open that website. Copy the job text from it and paste it here (on the UAply server, links like this are read for you).");return}
+      api("/api/employer/import",{url:url}).then(function(r){done();
+        if(!r.ok){if(r.j.code==="no_read"||r.j.code==="fetch"||r.j.code==="empty"){toText(r.j.error);return}impSay(r.j.error||"That link could not be read.","bad");return}
+        var res=r.j.jsonld?IMP.fromJsonLd(r.j.jsonld,r.j.url||url):IMP.fromText((r.j.title?r.j.title+"\n":"")+r.j.text,r.j.url||url);
+        useResult(res,host.replace(/^www\./,""));
+      });
+    }
+    if(!feed){viaServer();return}
+    w.fetch(feed.api).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}).then(function(j){done();useResult(feed.read(j,url),feed.kind)}).catch(function(e){
+      if(/not found/i.test(e.message||"")){done();impSay(e.message,"bad");return}
+      viaServer();
+    });
   }
   function showErr(field,msg){
     hub.querySelectorAll("[aria-invalid=true]").forEach(function(x){x.removeAttribute("aria-invalid")});hub.querySelectorAll(".err").forEach(function(x){x.textContent=""});
@@ -472,7 +744,7 @@ function apply(w,host){
       (a.headline||a.summary?'<p class="note">'+esc(a.headline||a.summary)+'</p>':'')+
       (a.note?'<p class="note"><b>Their message:</b> '+esc(a.note)+'</p>':'')+
       '<div class="kv">'+(a.email?'<span>Email</span><b>'+esc(a.email)+'</b>':'')+(a.phone?'<span>Phone</span><b>'+esc(a.phone)+'</b>':'')+links.map(function(l){return '<a href="'+esc(l[1])+'" target="_blank" rel="noopener noreferrer">'+l[0]+' ↗</a>'}).join("")+'</div>'+
-      '<div class="row" style="justify-content:flex-start"><label class="note" for="stg-'+esc(a.id)+'">Stage</label><select id="stg-'+esc(a.id)+'" data-stage="'+esc(a.id)+'" style="padding:7px 10px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink)">'+opt(STAGES,a.stage||"new")+'</select>'+
+      '<div class="h-row" style="justify-content:flex-start"><label class="note" for="stg-'+esc(a.id)+'">Stage</label><select id="stg-'+esc(a.id)+'" data-stage="'+esc(a.id)+'" style="padding:7px 10px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink)">'+opt(STAGES,a.stage||"new")+'</select>'+
       '<input type="text" data-pnote="'+esc(a.id)+'" maxlength="1000" value="'+esc(a.private||"")+'" placeholder="Private note (only your team sees it)" aria-label="Private note" style="flex:1;min-width:180px;padding:7px 10px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink)"></div>'+
       '</div></div>';
   }
@@ -480,10 +752,10 @@ function apply(w,host){
     var list=H.apps.filter(function(a){return (H.appJob==="all"||a.job===+H.appJob)&&(!H.mustOnly||meetsAll(a))});
     list.sort(H.sort==="match"?function(a,b){return (b.match||0)-(a.match||0)}:function(a,b){return b.at-a.at});
     return '<div><h1>Applicants</h1><p class="lead">Everyone who swiped right on your jobs, with what they agreed to share. Highest match first.</p></div>'+
-      '<div class="box"><div class="row" style="justify-content:flex-start"><select id="aJob" aria-label="Job" style="padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)">'+opt([["all","All jobs"]].concat(H.jobs.map(function(j){return [String(j.id),j.role]})),String(H.appJob))+'</select>'+
+      '<div class="box"><div class="h-row" style="justify-content:flex-start"><select id="aJob" aria-label="Job" style="padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)">'+opt([["all","All jobs"]].concat(H.jobs.map(function(j){return [String(j.id),j.role]})),String(H.appJob))+'</select>'+
       '<select id="aSort" aria-label="Sort" style="padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)">'+opt([["match","Best match first"],["new","Newest first"]],H.sort)+'</select>'+
       '<label class="ckline"><input type="checkbox" id="aMust"'+(H.mustOnly?" checked":"")+'> Only people who meet every must-have</label></div></div>'+
-      (list.length?'<div class="apps">'+list.map(appCard).join("")+'</div>':'<div class="box empty"><b>No applicants '+(H.apps.length?"match these filters":"yet")+'</b>'+(H.mode==="local"?"To try it, switch to job search and swipe right on your own job.":"When someone swipes right on your job, they show up here.")+'</div>');
+      (list.length?'<div class="apps">'+list.map(appCard).join("")+'</div>':'<div class="box h-empty"><b>No applicants '+(H.apps.length?"match these filters":"yet")+'</b>'+(H.mode==="local"?"To try it, switch to job search and swipe right on your own job.":"When someone swipes right on your job, they show up here.")+'</div>');
   }
   function saveStage(id,stage,note){
     var a=H.apps.filter(function(x){return x.id===id})[0];if(!a)return;
@@ -559,7 +831,7 @@ function apply(w,host){
   /* ---- billing ---- */
   function billingView(){
     return '<div><h1>Billing</h1><p class="lead">Pricing for employers is TBD. Posting is free while UAply is in testing.</p></div>'+
-      '<div class="box"><div class="row"><div><h2>Price to post a job</h2><p class="note">One price per job, shown before you publish.</p></div><span style="font:800 30px var(--display)">TBD</span></div>'+
+      '<div class="box"><div class="h-row"><div><h2>Price to post a job</h2><p class="note">One price per job, shown before you publish.</p></div><span style="font:800 30px var(--display)">TBD</span></div>'+
       '<ul class="steps"><li><span class="ck on">✓</span>You see the exact price on the Publish button before anything is charged.</li><li><span class="ck on">✓</span>You pay once per job on Stripe\'s secure page. UAply never sees or stores your card number.</li><li><span class="ck on">✓</span>No pay-per-click and no automatic renewals: a job never costs more than the price you approved.</li><li><span class="ck on">✓</span>Every receipt is emailed and listed below.</li></ul></div>'+
       '<div class="box"><h2>Receipts</h2><p class="note">No payments yet.</p></div>';
   }
@@ -570,8 +842,12 @@ function apply(w,host){
     var view=b.getAttribute("data-view"),act=b.getAttribute("data-act"),id=b.getAttribute("data-id");
     if(view){if(view==="post"){H.edit=null}H.view=view;render();return}
     if(act==="signin"||act==="verify"){setMode(false,true);hdr.click();return}
-    if(act==="new"){if(!H.company){H.view="company";render();say("Add your company first. It is shown on every job.");return}H.edit=null;H.view="post";render();return}
-    if(act==="edit"){var j=jobById(id);H.edit=JSON.parse(JSON.stringify(j));H.view="post";render();return}
+    if(act==="new"){if(!H.company){H.view="company";render();say("Add your company first. It is shown on every job.");return}H.edit=null;H.manual=false;H.filled=null;H.view="post";render();return}
+    if(act==="edit"){var j=jobById(id);H.edit=JSON.parse(JSON.stringify(j));H.manual=true;H.filled=null;H.view="post";render();return}
+    if(act==="manual"){H.manual=true;H.filled=null;H.edit=null;render();return}
+    if(act==="reimport"){H.manual=false;H.filled=null;H.edit=null;render();return}
+    if(act==="impLink"){runImport("link");return}
+    if(act==="impText"){runImport("text");return}
     if(act==="apps"){H.appJob=String(id);H.view="applicants";render();return}
     if(act==="rmlogo"){H.pendingLogo=null;H.removeLogo=true;var box=hub.querySelector(".logoup .hlogo");if(box)box.textContent=((H.company||{}).name||"?").charAt(0).toUpperCase();b.remove();say("Logo will be removed when you save.");return}
     if(act==="status"||act==="del"){
