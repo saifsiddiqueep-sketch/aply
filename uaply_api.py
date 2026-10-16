@@ -582,9 +582,13 @@ def submit(p, user=None):
         cand["resume_file"] = resume_meta["name"]
     note = (p.get("note") or "").strip()
 
+    if known.get("emp") and known.get("closed"):
+        return 410, {"error": "%s is not taking applications for this job right now." % known.get("co", "This employer")}
     # Never email an address the browser sends: only the recruiter address this server found in the job feed itself.
     claimed = job["contact"] if EMAIL_RE.match(job["contact"] or "") else ""
     contact = claimed if claimed and claimed.lower() == jobs_api.known_contact(job["id"]).lower() else ""
+    if known.get("emp"):
+        contact = known.get("contact") or ""     # a Hiring mode posting: its verified account email, which browsers never receive
     policy = jobs_api.job_policy(job["id"])      # 'direct' (employer opted in), 'link' (employer's own page) or 'unknown' (example)
     hook = jobs_api.known_webhook(job["id"]) if policy == "direct" else None      # the HTTPS address the employer registered, if any
     ats = jobs_api.known_ats(job["id"]) if policy == "direct" else None           # the employer's own hiring system and key, if they connected

@@ -50,11 +50,13 @@ if api:
     # the sandbox and dev pages load these shared files and a copy of the production page; no command-line aliases needed
     for url, rel in (("/uaply-envs.js", "shared/uaply-envs.js"), ("/uaply-nav.js", "shared/uaply-nav.js"),
                      ("/uaply-live.js", "shared/uaply-live.js"), ("/uaply-profile.js", "shared/uaply-profile.js"),
-                     ("/uaply-chat.js", "shared/uaply-chat.js"), ("/help/articles.json", "help/articles.json"),
+                     ("/uaply-chat.js", "shared/uaply-chat.js"), ("/uaply-employers.js", "shared/uaply-employers.js"),
+                     ("/help/articles.json", "help/articles.json"),
                      ("/prod-index.html", "prod/index.html")):
         alias.setdefault(url, os.path.join(HERE, rel))
-    import jobs_api, uaply_api, auth_api, chat_api, google_auth, setup_api, billing_api
+    import jobs_api, uaply_api, auth_api, chat_api, google_auth, setup_api, billing_api, employers_api
     uaply_api.init(os.path.basename(root))
+    employers_api.init(os.path.basename(root))                    # Hiring mode: on for the sandbox only
     auth_api.init(os.path.basename(root))
     chat_api.init(os.path.basename(root))
     uaply_api.hide_errors = jobs_api.hide_errors = PUBLIC       # a hosted server never shows visitors raw error text; the owner's own computer still does
@@ -71,6 +73,7 @@ def log_oops(where, e):
 
 MAX_BODY = 40000
 MAX_APPLY_BODY = 1500000
+MAX_COMPANY_BODY = 200000
 
 # Swipes per visitor per minute. A person swipes a few times a minute; a script hammering the server would otherwise fill its disk and memory.
 SWIPE_LIMITS = {"/api/apply": 40, "/api/decision": 150}
@@ -123,6 +126,19 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
+
+    def _refuse(self, code, body):
+        """Answer a request whose body is not read (or not wanted), then hang up cleanly. Closing a connection while the client's body is still
+        unread makes the system reset it, and the client can lose the answer before reading it (seen on Windows with a garbled Content-Length).
+        So: say "Connection: close", then read away whatever is still arriving for a moment before the server closes."""
+        self._send(code, body, headers=(("Connection", "close"),))
+        try:
+            self.connection.settimeout(0.2)
+            for _ in range(32):                                  # at most about 2 MB, and never longer than the client keeps sending
+                if not self.connection.recv(65536):
+                    break
+        except OSError:
+            pass
 
     def _cookie_value(self, name):
         """One cookie's value from the request ('' if absent). Parsed by hand on purpose: other sites' tools set cookies with quotes and commas in
@@ -229,6 +245,11 @@ class H(http.server.SimpleHTTPRequestHandler):
                     return self._google(p)
                 if p == "/api/billing/status":
                     return self._send(200, billing_api.status(auth_api.user_for(self._token())))
+                if p == "/api/employer/me":
+                    return self._send(*employers_api.me(auth_api.user_for(self._token())))
+                if p.startswith("/api/employer/logo/"):
+                    img = employers_api.logo(p[len("/api/employer/logo/"):])
+                    return self._send(200, img[1], img[0]) if img else self._send(404, {"error": "not found"})
                 if p == "/api/chat/config":
                     return self._send(200, dict(chat_api.public_config(), owner=not PUBLIC))      # "owner": this server runs on the owner's own computer, so owner-only hints may be shown
                 if p == "/feedback":
@@ -248,30 +269,32 @@ class H(http.server.SimpleHTTPRequestHandler):
             except ValueError:
                 n = 0
             if not 0 < n <= 512000:
-                return self._send(400, {"error": "bad size"})
+                return self._refuse(400, {"error": "bad size"})
             code, out = billing_api.webhook(self.rfile.read(n), self.headers.get("Stripe-Signature") or "")
             return self._send(code, out)
         if not api or p not in ("/api/apply", "/api/decision", "/api/auth/signup", "/api/auth/login", "/api/auth/logout",
                                 "/api/auth/delete", "/api/auth/forgot", "/api/auth/reset", "/api/auth/change-password",
-                                "/api/setup/test-mail", "/api/setup/save-mail", "/api/setup/save-google", "/api/setup/save-ats", "/api/setup/remove-ats", "/api/setup/save-stripe", "/api/auth/google/token", "/api/auth/verify", "/api/auth/resend", "/api/chat", "/api/feedback", "/api/billing/checkout", "/api/billing/portal"):
-            return self._send(404, {"error": "not found"})
+                                "/api/setup/test-mail", "/api/setup/save-mail", "/api/setup/save-google", "/api/setup/save-ats", "/api/setup/remove-ats", "/api/setup/save-stripe", "/api/auth/google/token", "/api/auth/verify", "/api/auth/resend", "/api/chat", "/api/feedback", "/api/billing/checkout", "/api/billing/portal",
+                                "/api/employer/company", "/api/employer/job", "/api/employer/job/status", "/api/employer/applicant"):
+            return self._refuse(404, {"error": "not found"})
         # Only accept requests made by this site's own pages (blocks cross-site forms and scripts).
         origin = self.headers.get("Origin")
         host = self.headers.get("Host") or ""
         if origin not in ("http://" + host, "https://" + host) or (PUBLIC and origin != "https://" + host and
                                                                   self.headers.get("X-Forwarded-Proto") == "https"):
-            return self._send(403, {"error": "cross-site request refused"})
+            return self._refuse(403, {"error": "cross-site request refused"})
         try:
             n = int(self.headers.get("Content-Length") or 0)
             if n <= 0:                                                                     # nothing was sent: a bad request, not a too-large one
-                return self._send(400, {"error": "bad request"})
-            if n > (MAX_APPLY_BODY if p == "/api/apply" else MAX_BODY):                    # an application may carry a resume file (up to 1 MB, sent as text)
-                return self._send(413, {"error": "bad size"})
+                return self._refuse(400, {"error": "bad request"})
+            # an application may carry a resume file (up to 1 MB, sent as text); a company profile may carry its logo (up to 120 KB)
+            if n > (MAX_APPLY_BODY if p == "/api/apply" else MAX_COMPANY_BODY if p == "/api/employer/company" else MAX_BODY):
+                return self._refuse(413, {"error": "bad size"})
             payload = json.loads(self.rfile.read(n).decode("utf-8"))
             if not isinstance(payload, dict):
                 raise ValueError("not an object")
-        except Exception:
-            return self._send(400, {"error": "bad request"})
+        except Exception:                                        # a garbled Content-Length, a body that is not JSON, or one that is not an object
+            return self._refuse(400, {"error": "bad request"})
         ip = self.client_address[0]
         if PUBLIC and self.headers.get("X-Forwarded-For"):          # behind the host's proxy: the visitor's own address
             ip = self.headers["X-Forwarded-For"].split(",")[0].strip()[:64] or ip
@@ -384,6 +407,14 @@ class H(http.server.SimpleHTTPRequestHandler):
                 code, out = billing_api.checkout(auth_api.user_for(self._token()), payload.get("plan"), self._site_base())
             elif p == "/api/billing/portal":
                 code, out = billing_api.portal(auth_api.user_for(self._token()), self._site_base())
+            elif p == "/api/employer/company":
+                code, out = employers_api.save_company(auth_api.user_for(self._token()), payload)
+            elif p == "/api/employer/job":
+                code, out = employers_api.save_job(auth_api.user_for(self._token()), payload)
+            elif p == "/api/employer/job/status":
+                code, out = employers_api.set_status(auth_api.user_for(self._token()), payload)
+            elif p == "/api/employer/applicant":
+                code, out = employers_api.set_stage(auth_api.user_for(self._token()), payload)
             else:
                 code, out = uaply_api.record_decision(payload)
         except Exception as e:

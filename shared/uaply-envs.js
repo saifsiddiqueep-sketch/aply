@@ -83,12 +83,15 @@ var FEATURES={
    var d=w.document,deck=d.getElementById("deck"),sx=0,dx=0,t0=0;
    deck.addEventListener("pointerdown",function(e){sx=e.clientX;dx=0;t0=performance.now()},true);
    deck.addEventListener("pointermove",function(e){dx=e.clientX-sx},true);
-   deck.addEventListener("pointerup",function(e){
+   function release(e){
      if(w.__axisY)return;
      var a=Math.abs(dx),v=a/Math.max(1,performance.now()-t0);
      if(a>110||!(a>60||(a>30&&v>0.5)))return;
      e.stopPropagation();d.getElementById(dx>0?"btnYes":"btnNo").click();
-   },true);
+   }
+   deck.addEventListener("pointerup",release,true);
+   /* a phone can cut a sideways swipe short (pointercancel) when the finger drifts: it still counts once it went far enough */
+   deck.addEventListener("pointercancel",release,true);
  }},
  confirm:{name:"Confirm apply",note:"Saving to Applied by swipe, button or → key asks for confirmation first. Passing stays instant.",apply:function(w){
    var d=w.document,ok=false,sx=0,dx=0;
@@ -135,6 +138,15 @@ var FEATURES={
      if(!lock){var ax=Math.abs(e.clientX-sx),ay=Math.abs(e.clientY-sy);if(ax>8||ay>8){lock=ay>ax*1.2?"y":"x";w.__axisY=lock==="y"}}
      if(lock==="y")e.stopPropagation();
    },true);
+   /* iPhone: once a drag is clearly sideways, keep Safari from turning it into a scroll. Otherwise Safari cancels the
+      swipe part-way (pointercancel) and the card snaps back. Up-and-down drags still scroll the card. */
+   var tx=0,ty=0,tlock="";
+   deck.addEventListener("touchstart",function(e){var t=e.touches[0];if(t){tx=t.clientX;ty=t.clientY;tlock=""}},{capture:true,passive:true});
+   deck.addEventListener("touchmove",function(e){
+     var t=e.touches[0];if(!t)return;
+     if(!tlock){var ax=Math.abs(t.clientX-tx),ay=Math.abs(t.clientY-ty);if(ax>6||ay>6)tlock=ay>ax*1.2?"y":"x"}
+     if(tlock==="x"&&e.cancelable&&!(e.target.closest&&e.target.closest("details,input,textarea,select")))e.preventDefault();
+   },{capture:true,passive:false});
  }},
  caps:{name:"Must-have caps",note:"If pay, work style or experience is a clear miss, the match is capped at 45% and the card says why.",patch:function(s){
    s=once(s,"return {pct:Math.round(total),rows:rows,matched:matched};","var pct=Math.round(total);var hard=rows[2].s===0||rows[3].s===0||ex<0.5;if(hard&&pct>45)pct=45;return {pct:pct,rows:rows,matched:matched,capped:hard};");

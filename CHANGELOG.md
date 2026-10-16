@@ -4,8 +4,62 @@ How versions move: work happens in `sandbox`, is tested there, and goes to `dev`
 build: it is what the hosted site and the phone apps run. Each version is tagged on GitHub (Releases). `main` is the original
 production page and only changes when the owner decides.
 
-## Unreleased (in sandbox, not yet in dev)
+## Unreleased (sandbox and dev)
 
+### Paying for Plus and Pro in the sandbox (Stripe, test mode) — Mohammed
+- On the hosted sandbox (no server), **Choose Plus** and **Choose Pro** open Stripe's own secure checkout through Stripe Payment
+  Links in the "UAply sandbox" Stripe account (test mode: card 4242 4242 4242 4242, no real money). After paying, Stripe sends the
+  person back to the sandbox and the plan is switched on, with the payment listed as "Stripe test".
+- On a UAply server the existing Stripe Checkout, webhook and billing portal are used instead. The sandbox Render service now
+  names the two Stripe prices; the secret key and webhook secret are typed into Render, never stored in GitHub.
+
+### Hiring mode for employers (sandbox only for now) — Mohammed
+- A **Switch to hiring** pill in the header (next to the account button) opens the employer hub; **Switch to job search** goes back.
+  Same UAply account for both.
+- **Company profile** once: name, logo upload (PNG, JPEG or WebP, resized for you), industry and number of employees (both
+  dropdowns, required), United States or Canada, state or province, city, website and About the company.
+- **Post a job** on one page with a live preview of the swipe card. Each section says which job seeker fields it is matched to:
+  title, job type, work style, city, relocation help, yearly pay range, commission only, minimum experience and education,
+  skills, preferred majors, minimum GPA, graduation window, who can apply (work authorization), visa sponsorship, start date,
+  benefits, a one-line summary and a full description. **Meet the hiring team**: name, title, email and LinkedIn; the name and
+  title can show on the card, the email and LinkedIn stay on the server for the Plus/Pro "message the hiring manager" option.
+- **Hub**: Overview (open jobs, applicants, new this week, average match), Jobs (edit, pause, close, reopen, delete), Applicants
+  (best match first, must-haves checked, "only people who meet every must-have", stage New to Hired, private notes), Company,
+  Billing. Prices are **TBD**; posting is free while testing.
+- **Job seekers** see employer jobs in the same deck with the logo, "What the company asks for" checked against their own
+  answers, "Meet the hiring team", and About the job and company. A new filter hides jobs they are not eligible for. Paused and
+  closed jobs leave the deck at once and refuse new applications.
+- Applications go to the employer's **verified account email**, never to an address typed into a form; browsers never receive it.
+- The consent screen now shows **once, before the first swipe**; after that every swipe is just a swipe (sandbox only).
+- Removed every mention that UAply is made with or integrated with Claude; the AI disclosure page now credits the founders.
+
+### Profile setup, and what really changes your matches
+- **Profile setup** is now one guided flow, five short steps (About you, Jobs you want, Where and pay, Background and links,
+  Eligibility and extras), saved as you go, the same on phone and desktop. The old Settings, Resume and links, and Preferences
+  screens are folded into it, so the Profile menu has five items instead of seven. On desktop (960px and wider) a live "What
+  employers see" card sits beside the questions.
+- Deleting an account is tucked under "More account options", with a short skippable exit survey (anonymous).
+- **Your answers now do more work.** Your headline, About you and major count as skills a job asks for. Work style: tick nothing
+  and every style scores full points; the new "Hide work styles I did not pick" filter hides the rest. The opportunity types you
+  pick open first in Services. State and ZIP code help find where you live for the distance filter. One completeness score is used
+  everywhere. Optional EEO answers, work authorization and GPA are never used to score, rank or hide jobs.
+- dev now includes the Application profile (phone, links, school, work authorization, opportunity types) so those details reach
+  employers; before, dev sent none of them.
+- Fixed: errors on the Account screen were off-screen; a new profile was pre-filled with a stranger's email; restoring a backup
+  dropped the Application profile answers; the Account screen showed fake Google/Apple/phone sign-in previews next to the real
+  form; the desktop form was capped at half width; password, file and month inputs were unstyled; tap targets under 44px.
+
+### Jobs near you (sandbox only for now)
+- On first open the browser's own "share your location?" prompt appears, with a card above the jobs saying why. If location is
+  blocked in the browser, the card says so once and how to turn it on. The position is rounded to about a mile, kept only on the
+  device and never sent to the server.
+- Nearby in-person jobs score higher (full location points within 25 miles, partial to 60), and cards say "In your area" or
+  "About N miles from you".
+- Filters has a **Commute distance** slider: Remote only, 5 to 100 miles, Any distance. dev keeps the old distance choice.
+- Fixed: in the sandbox, Bottom navigation stopped part-way with "Cannot read properties of undefined (reading 'up')" (the
+  auto-message check read the sign-in state before it existed), which also left out everything that loads after it.
+
+### Swipe right fills in the real application form, swipes that work on phones, email from uaply.net
 Swipe right fills in the employer's real application form, asks only what the person alone can answer (once), and says honestly what happened.
 
 - **Autofill engine** (`autofill.py`). Greenhouse publishes every job's application form (questions, field types, options) through its public Job
@@ -51,6 +105,18 @@ Swipe right fills in the employer's real application form, asks only what the pe
   addresses, which bounced). `UAPLY_CONFIG_FILE=none` now makes every server skip the owner's file; the full run sets it.
 - New tests: `test-autofill.py` (34, real forms saved in `tools/fixtures/`), more in `test-ats-flow.py` (20); `tools/shot-autofill.js` shows the
   whole flow in the sandbox at phone size.
+- **Webflow's jobs are back.** Webflow moved its job board from Greenhouse (404 since October 2026) to Ashby; UAply now reads it there
+  (9 US jobs on October 16).
+- **A refused request always gets its answer.** When the server refuses a request without reading what was sent (a garbled length, too
+  large, cross-site, unknown address), it now says "Connection: close" and reads away the rest before hanging up. Before, Windows could
+  reset the connection first, so about 1 in 200 such requests lost the "bad request" answer (found by the hostile-input test).
+- `tools/feed-health.py` and `tools/daily-checks.py`: the read-only reports behind the scheduled "feed health" and "code checks" bots.
+
+### Combining Mohammed's and Saif's sandbox work
+- Both fixed swiping on iPhones. **Phone swipe** (touch direction lock) decides every swipe in sandbox and dev; Easy swipe and Axis lock,
+  with Mohammed's iPhone fixes, stay on in the sandbox as the fallback when Phone swipe is switched off. dev uses Phone swipe instead of
+  Axis lock, and now also includes Profile setup.
+- The consent screen keeps both fixes: shown once before the first swipe (sandbox), and never shown again because of a problem while applying.
 
 ## 1.0.0-rc.8 (release candidate)
 
@@ -222,7 +288,7 @@ The first release build. Everything below is in `dev`.
   password, delete account. **Sign in with Google** is built and switches on when Google keys are added.
 - Dashboard (Applied, Accepted, Rejected, Interviews), Profile (Settings, Resume and links, Preferences, Filters), Data and
   privacy (backup, restore, delete, and the legal pages).
-- UAply Assistant: help answers from written articles (AI answers when an Anthropic key is set), plus feedback.
+- UAply Assistant: help answers from written articles (AI answers when an AI provider key is set), plus feedback.
 
 ### What is different from sandbox (the release build)
 - No developer bar, no "SANDBOX / TEST MODE" labels, no simulated Google/Apple/email-link/phone sign-in.

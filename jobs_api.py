@@ -53,7 +53,7 @@ SOURCES = [
     ("greenhouse", "dropbox", "Dropbox"),
     ("greenhouse", "duolingo", "Duolingo"),
     ("greenhouse", "squarespace", "Squarespace"),
-    ("greenhouse", "webflow", "Webflow"),
+    ("ashby", "webflow", "Webflow"),              # moved from Greenhouse (404 there since October 2026) to Ashby
     # employers whose own public boards carried internships when checked (October 2026)
     ("greenhouse", "waymo", "Waymo"),
     ("greenhouse", "coinbase", "Coinbase"),
@@ -556,6 +556,12 @@ def ats_connections():
 
 
 def partner_jobs():
+    """Every job an employer gave UAply directly: the partner list plus postings made in Hiring mode (sandbox only)."""
+    import employers_api           # imported here: employers_api imports uaply_api, which imports this module
+    return _file_partner_jobs() + employers_api.feed_jobs()
+
+
+def _file_partner_jobs():
     """Jobs from uaply-partners.json. Each employer must record how it consented. An employer with a contact address
     receives applications directly; without one it is link-out only. partners.example.json is documentation only and is
     never served as jobs."""
@@ -674,7 +680,7 @@ def get_jobs():
     jobs, seen, summary = [], set(), {}
     for pj in partner_jobs():
         seen.add(pj["id"])
-        jobs.append(pj)
+        jobs.append({k: v for k, v in pj.items() if k != "contact"} if pj.get("emp") else pj)    # an employer's account email stays on this server
     summary["Partner employers"] = "%d jobs" % len(jobs)
     for src, (js, status) in zip(sources, results):
         summary[src[2] + ("/" + src[1] if src[0] in MULTI else "")] = "unavailable right now" if hide_errors and status.startswith("error") else status

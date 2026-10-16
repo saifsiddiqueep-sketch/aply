@@ -5,7 +5,7 @@
    "id": "what-is-uaply",
    "title": "What is UAply?",
    "tags": "about app how it works swipe start begin new",
-   "body": "UAply shows you one job at a time. Swipe right (or tap Apply) to apply, swipe left (or tap Pass) to skip. Each card shows a match percentage that compares the job with your profile, so fill in Profile, Settings first to get accurate matches.",
+   "body": "UAply shows you one job at a time. Swipe right (or tap Apply) to apply, swipe left (or tap Pass) to skip. Each card shows a match percentage that compares the job with your profile, so finish Profile setup first to get accurate matches.",
    "go": "prof:settings"
   },
   {
@@ -19,28 +19,28 @@
    "id": "match-score",
    "title": "How is the match percentage worked out?",
    "tags": "match score percent percentage compatibility points why low",
-   "body": "The match is a fixed formula, not a judgment about you. It adds points for skills (30), experience (15), pay (15), job title (15), work style (10), location (10) and education (5). Each card lists the points for every part. The score only orders jobs for you. It never rejects you and never decides anything about hiring. Improve it by completing your profile and target titles.",
+   "body": "The match is a fixed formula, not a judgment about you. It adds points for skills (30), experience (15), pay (15), job title (15), work style (10), location (10) and education (5). Each card lists the points for every part. Skills also count when your headline, About you or major says them, and the card tells you how many came from there. If you tick no work style, every style scores full points. The score only orders jobs for you. It never rejects you and never decides anything about hiring. Improve it by completing your profile and target titles.",
    "go": "prof:settings"
   },
   {
    "id": "profile-setup",
    "title": "How do I set up my profile?",
    "tags": "profile settings name email phone setup fill in details complete readiness",
-   "body": "Open Profile, then Settings. Add your name, email, phone, up to five target titles, years of experience, highest education, skills and your address, then tap Save changes. The bar at the top shows how complete your profile is and what to add next. Your profile is what employers receive when you apply.",
+   "body": "Open Profile, then Profile setup. It is five short steps: About you, Jobs you want, Where and pay, Background and links, and Eligibility and extras. Tap Save and continue on each step; your answers are saved as you go and you can jump between steps any time. The bar at the top shows how complete your profile is. On a computer, a card beside the questions shows what employers will see. Your profile is what employers receive when you apply.",
    "go": "prof:settings"
   },
   {
    "id": "target-titles",
    "title": "What are target titles?",
    "tags": "title titles job title role position target sales hide coding wrong jobs",
-   "body": "Target titles are the job names you want, up to five (for example Account Executive, Inside Sales Representative, Closer). Add them in Profile, Settings. Jobs whose role name matches score higher, and jobs that don't match are hidden so you only see roles you would accept. Common equivalents count, like developer and engineer. To see everything, turn off 'Hide roles that do not match my target titles' in Profile, Filters.",
+   "body": "Target titles are the job names you want, up to five (for example Account Executive, Inside Sales Representative, Closer). Add them in Profile setup, under Jobs you want. Jobs whose role name matches score higher, and jobs that don't match are hidden so you only see roles you would accept. Common equivalents count, like developer and engineer. To see everything, turn off 'Hide roles that do not match my target titles' in Profile, Filters.",
    "go": "prof:settings"
   },
   {
    "id": "skills",
    "title": "Adding skills",
    "tags": "skills skill add typo spelling limit maximum suggestions",
-   "body": "In Profile, Settings, start typing a skill and pick it from the suggestion list to avoid typos. UAply also warns you about likely misspellings. You can add up to 25 skills.",
+   "body": "In Profile setup, under Jobs you want, start typing a skill and pick it from the suggestion list to avoid typos. UAply also warns you about likely misspellings. You can add up to 25 skills. A skill your headline, About you or major already mentions counts too.",
    "go": "prof:settings"
   },
   {
@@ -57,28 +57,31 @@
    "id": "filters",
    "title": "How do filters work?",
    "tags": "filter filters posted date recent 24 hours week month applicants under 10 benefits experience level commission companies keywords minimum match",
-   "body": "Open Profile, then Filters. You can show jobs posted in the past 24 hours, week or month, jobs with under 10 applicants, jobs that mention benefits you pick, experience levels, and a minimum match. You can hide companies or keywords. If your titles are in sales, you can also remove commission-only roles. Some listings don't say everything; turn on 'Hide listings that do not say' to hide those too. Clear all filters resets them.",
+   "body": "Open Profile, then Filters. You can show jobs posted in the past 24 hours, week or month, jobs with under 10 applicants, jobs that mention benefits you pick, experience levels, and a minimum match. You can hide work styles you did not pick, jobs that pay below your minimum, jobs that need more education than you have, companies, and keywords. If your titles are in sales, you can also remove commission-only roles. Some listings don't say everything; turn on 'Hide listings that do not say' to hide those too. Clear all filters resets them.",
    "go": "prof:filters"
   },
   {
    "id": "distance",
    "title": "Where is the distance filter?",
    "tags": "distance miles radius near me close commute location city 10 20 50",
-   "body": "Distance is in Profile, Preferences, and it only appears when you tick Hybrid or On-site under work style, because remote jobs don't need it. Choose 10, 20, 50 or 100 miles from the city in your profile. Distance works for most larger US cities.",
-   "go": "prof:preferences"
+   "body": "Open Profile, then Filters, and drag the Commute distance slider. Far left shows remote jobs only, and far right shows every job. In between you choose how many miles from you in-person jobs can be, from 5 to 100. UAply measures from your device location if you tapped Use my location, otherwise from your city or ZIP code.",
+   "go": "prof:preferences",
+   "release": {
+    "body": "Distance is in Profile setup, under Where and pay, and it only appears when you tick Hybrid or On-site under work style, because remote jobs don't need it. Choose 10, 20, 50 or 100 miles from where you live. UAply finds that from your city and state, or from your ZIP code if it doesn't know the city. Distance works for most larger US cities."
+   }
   },
   {
    "id": "services",
    "title": "Full-time, part-time, internships and Coop",
    "tags": "services full-time part-time internship internships co-op coop job type",
-   "body": "Tap Services at the bottom to switch between Full-time, Part-time, Internships and Coop. Each one has its own stack of jobs.",
+   "body": "Tap Services at the bottom to switch between Full-time, Part-time, Internships and Coop. Each one has its own stack of jobs. The types you tick in Profile setup, under Jobs you want, open first.",
    "go": "svc:job"
   },
   {
    "id": "resume",
    "title": "Adding my resume",
    "tags": "resume cv upload file pdf word link document",
-   "body": "Open Profile, then Preferences. Upload your resume file (PDF, Word or text, up to 1 MB), or add a link to it, such as a Google Drive link anyone can open. The file stays on your device.",
+   "body": "Open Profile, then Profile setup, step 4 (Background and links). Upload your resume file (PDF, Word or text, up to 1 MB), or add a link to it, such as a Google Drive link anyone can open. The file stays on your device, so add the link too if you want employers to be able to open your resume.",
    "go": "prof:preferences"
   },
   {
@@ -92,7 +95,7 @@
    "id": "account",
    "title": "Accounts, signing in and email receipts",
    "tags": "account sign in sign up log in login create password email receipt confirmation google apple",
-   "body": "Tap Sign in at the top right to create an account with your email and a password. You must be 18 or older. Once you are signed in, every swipe right sends a receipt to your email. Google, Apple, phone and email-link sign-in are shown as previews and are not connected yet.",
+   "body": "Tap Sign in at the top right to create an account with your email and a password. You must be 18 or older. Once you are signed in, every swipe right sends a receipt to your email. Google sign-in appears when it has been switched on for this server. Apple, phone and email-link sign-in are not available yet.",
    "go": "prof:account"
   },
   {
@@ -106,14 +109,14 @@
    "id": "delete",
    "title": "Deleting my account or my data",
    "tags": "delete remove account data erase privacy close cancel account",
-   "body": "To delete your account, open Profile, then Account, tap Delete account and enter your password. That also removes your receipts and application records on UAply's server. To erase what is saved on this device, open Profile, then Data and privacy, and use Delete all my data.",
+   "body": "To delete your account, open Profile, then Account, scroll to the bottom and open More account options, then tap Delete my account. You'll be offered a short, anonymous survey (you can skip it), then asked for your password and to confirm. That removes your receipts and application records from UAply's server and can't be undone. To erase what is saved on this device, open Profile, then Data and privacy, and use Delete all my data.",
    "go": "prof:account"
   },
   {
    "id": "voluntary",
    "title": "Voluntary questions (race, gender, veteran, disability)",
    "tags": "voluntary eeo race ethnicity gender veteran disability hispanic self identification demographic why",
-   "body": "Many employers ask these on their forms, so UAply lets you record your answers once in Profile, Settings. Every question is optional and has Prefer not to say. Your answers stay on your device, are never used to score or filter jobs, and are never sent automatically. They only leave your device if you tap Copy my answers and paste them yourself.",
+   "body": "Many employers ask these on their forms, so UAply lets you record your answers once in Profile setup, in the optional section on the last step. Every question is optional and has Prefer not to say. Your answers stay on your device, are never used to score or filter jobs, and are never sent automatically. They only leave your device if you tap Copy my answers and paste them yourself.",
    "go": "prof:settings"
   },
   {
@@ -127,10 +130,10 @@
    "id": "message-manager",
    "title": "Messaging the hiring manager",
    "tags": "message hiring manager recruiter note cover letter personalized plus pro",
-   "body": "On Plus and Pro, you can turn on 'Message the hiring manager' in Profile, Preferences. It adds a short message, filled in from your profile and the job, to each application. It is off until you turn it on, and it only goes to employers that accept applications through UAply.",
+   "body": "On Plus and Pro, you can turn on 'Message the hiring manager' in Profile setup, on the last step. It adds a short message, filled in from your profile and the job, to each application. It is off until you turn it on, and it only goes to employers that accept applications through UAply.",
    "go": "prof:preferences",
    "release": {
-    "body": "In Profile, Preferences you can turn on 'Message the hiring manager'. It adds a short message, filled in from your profile and the job, to each application. It is off until you turn it on, and it only goes to employers that accept applications through UAply."
+    "body": "In Profile setup, on the last step, you can turn on 'Message the hiring manager'. It adds a short message, filled in from your profile and the job, to each application. It is off until you turn it on, and it only goes to employers that accept applications through UAply."
    }
   },
   {

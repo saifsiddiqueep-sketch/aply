@@ -59,6 +59,7 @@ run "applications go straight into employers' hiring systems (Greenhouse, Lever)
 run "swipe right to apply instantly, end to end" python tools/test-ats-flow.py
 run "paid plans: Stripe checkout, signed webhook, limits" python tools/test-billing.py
 run "autofill: real employers' forms answered from the profile, questions asked once" python tools/test-autofill.py
+run "Hiring mode: company, postings, feed, applicants (sandbox only)" python tools/test-employers.py
 
 step "Accounts, applying, reset and setup (back end)"
 run "sandbox reset/setup/accounts" python tools/test-reset.py 18766

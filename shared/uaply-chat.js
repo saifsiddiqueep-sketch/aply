@@ -1,6 +1,6 @@
 /* "chat" experiment: UAply Assistant, for the sandbox and dev instances (never loaded by prod).
    A chat button opens a support assistant that answers from UAply's help articles (chat_api.py). With an API key
-   on the server the answers are written by AI (Claude) and the panel says so; without one it says the answers come
+   on the server the answers are written by AI and the panel says so; without one it says the answers come
    from the help articles. Every answer names its source and asks whether it helped.
    Feedback is collected one question at a time (rating, then one follow-up chosen by the rating, then an optional
    email for a reply), and a one-tap rating appears after the third application in a visit, at most every 14 days.
@@ -104,7 +104,8 @@ function apply(w,host){
   }
   function goTo(dest){
     var parts=String(dest||"").split(":"),nb=d.getElementById("nb-"+parts[0]);if(!nb)return;
-    nb.click();var it=d.querySelector('.nwrap[data-k='+parts[0]+'] .nitem[data-v="'+parts[1]+'"]');if(it)it.click();
+    nb.click();var it=d.querySelector('.nwrap[data-k='+parts[0]+'] .nitem[data-v="'+parts[1]+'"]');
+    if(it)it.click();else if(parts[0]==="prof"&&w.__uaplyOpenProf)w.__uaplyOpenProf(parts[1]);   /* "preferences" and "resume" now live inside Profile setup */
     if(w.innerWidth<=520)close();
   }
   function post(path,body){
@@ -118,7 +119,7 @@ function apply(w,host){
     p.querySelector("#uaChatTag").textContent=CFG.ai?"AI":"AUTOMATED";
     p.querySelector("#uaChatTag").title=CFG.ai?"Answers are written by AI":"Answers come from UAply's help articles";
     p.querySelector("#uaChatFt").textContent=CFG.ai
-      ?"AI-written answers (Claude, by Anthropic) can be wrong. Don't share passwords or sensitive details."
+      ?"AI-written answers can be wrong. Don't share passwords or sensitive details."
       :"Automated answers from UAply's help articles. Don't share passwords or sensitive details.";
   }
   function greet(){
