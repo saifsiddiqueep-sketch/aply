@@ -20,12 +20,66 @@ var CRIT_TOP2=`function critHTML(m){
 }
 `;
 
+/* the swipe, rebuilt for phones. Touch is handled with touch events and a direction lock: the first few pixels decide whether the
+   person means sideways (swipe) or up and down (scroll the card), and once it is sideways the browser is told not to scroll, so
+   Safari can no longer take a curved thumb swipe over and cancel it. A swipe counts at 18% of the card's width (at most 80px) or as a
+   quick flick. Mouse and pen keep pointer events. Replaces bindDrag in index.html. */
+var GLIDE=`window.__uaplyGlide=true;
+function bindDrag(card){
+  var sx=0,sy=0,dx=0,dy=0,lock="",drag=false,trail=[];
+  function need(){return Math.min(80,Math.max(56,card.offsetWidth*0.18))}
+  function start(x,y){if(busy)return false;drag=true;lock="";sx=x;sy=y;dx=0;dy=0;trail=[[performance.now(),x]];card.style.transition="none";return true}
+  /* the finger's speed over its last tenth of a second (px per ms); 0 if it paused before lifting */
+  function speed(){
+    var n=trail.length,now=performance.now();if(n<2||now-trail[n-1][0]>120)return 0;
+    var i=n-1;while(i>0&&trail[n-1][0]-trail[i-1][0]<=100)i--;
+    var dt=trail[n-1][0]-trail[i][0];return dt>0?(trail[n-1][1]-trail[i][1])/dt:0;
+  }
+  function move(x,y,e){
+    if(!drag)return;
+    dx=x-sx;dy=y-sy;
+    trail.push([performance.now(),x]);if(trail.length>12)trail.shift();
+    if(!lock){var ax=Math.abs(dx),ay=Math.abs(dy);if(ax<6&&ay<6)return;lock=ax>=ay*0.6?"x":"y"}
+    if(lock!=="x")return;
+    if(e&&e.cancelable)e.preventDefault();
+    setDrag(card,dx);
+  }
+  function end(){
+    if(!drag)return;
+    drag=false;card.style.transition="";
+    var v=speed(),flick=Math.abs(v)>0.4&&Math.abs(dx)>28&&(v>0)===(dx>0);
+    if(lock==="x"&&(Math.abs(dx)>need()||flick))decide(dx>0?"applied":"passed");
+    else clearCardStyle(card);
+    dx=0;lock="";trail=[];
+  }
+  function cancel(){if(!drag)return;drag=false;lock="";card.style.transition="";clearCardStyle(card)}
+  card.addEventListener("touchstart",function(e){if(e.touches.length!==1){cancel();return}var t=e.touches[0];start(t.clientX,t.clientY)},{passive:true});
+  card.addEventListener("touchmove",function(e){if(e.touches.length!==1)return;var t=e.touches[0];move(t.clientX,t.clientY,e)},{passive:false});
+  card.addEventListener("touchend",end);
+  card.addEventListener("touchcancel",cancel);
+  card.addEventListener("pointerdown",function(e){
+    if(e.pointerType==="touch")return;
+    if(e.pointerType==="mouse"&&e.button!==0)return;
+    if(start(e.clientX,e.clientY)){try{card.setPointerCapture(e.pointerId)}catch(x){}}
+  });
+  card.addEventListener("pointermove",function(e){if(e.pointerType!=="touch")move(e.clientX,e.clientY,null)});
+  card.addEventListener("pointerup",function(e){if(e.pointerType!=="touch")end()});
+  card.addEventListener("pointercancel",function(e){if(e.pointerType!=="touch")cancel()});
+}
+`;
+
 var ALIAS_NORM=`var ALIAS={js:"javascript",ts:"typescript",py:"python",postgres:"postgresql",psql:"postgresql",reactjs:"react","react.js":"react",nodejs:"node","node.js":"node",k8s:"kubernetes",tf:"terraform",ml:"machine learning","ux research":"user research"};
 function norm(s){var k=String(s).trim().toLowerCase();return ALIAS.hasOwnProperty(k)?ALIAS[k]:k}
 function locHit(a,b){a=norm(a);b=norm(b);if(!b)return false;var i=a.indexOf(b);while(i>-1){var pre=i===0||!/[a-z0-9]/.test(a.charAt(i-1));var post=i+b.length>=a.length||!/[a-z0-9]/.test(a.charAt(i+b.length));if(pre&&post)return true;i=a.indexOf(b,i+1)}return false}`;
 
 var FEATURES={
+ glide:{name:"Phone swipe",note:"Swipes work the way thumbs move: a curved or quick swipe counts, a vertical drag scrolls the card instead, and the browser can no longer cancel a swipe halfway. Replaces Easy swipe and Axis lock.",patch:function(s){
+   var a=s.indexOf("function bindDrag(card){"),b=s.indexOf("function decide(dir){");
+   if(a<0||b<0)throw new Error("bindDrag not found");
+   return s.slice(0,a)+GLIDE+s.slice(b);
+ }},
  easy:{name:"Easy swipe",note:"Swipe commits at 60px, or a quick 30px flick, instead of 110px.",apply:function(w){
+   if(w.__uaplyGlide)return;                                   /* Phone swipe already does this, better */
    var d=w.document,deck=d.getElementById("deck"),sx=0,dx=0,t0=0;
    deck.addEventListener("pointerdown",function(e){sx=e.clientX;dx=0;t0=performance.now()},true);
    deck.addEventListener("pointermove",function(e){dx=e.clientX-sx},true);
@@ -64,7 +118,7 @@ var FEATURES={
    deck.addEventListener("pointerdown",function(e){sx=e.clientX;dx=0},true);
    deck.addEventListener("pointermove",function(e){dx=e.clientX-sx},true);
    deck.addEventListener("pointerup",function(e){
-     if(w.__axisY||dx<=110)return;
+     if(w.__axisY||dx<=110||(w.__uaplyGlide&&e.pointerType==="touch"))return;   /* with Phone swipe, a touch swipe is decided there */
      e.stopPropagation();
      var c=d.querySelector(".card.top");
      if(c){c.style.transition="";c.style.transform="";c.style.background="";c.style.borderColor="";c.style.boxShadow="";c.querySelectorAll(".stamp").forEach(function(s){s.style.opacity=0})}
@@ -73,6 +127,7 @@ var FEATURES={
    },true);
  }},
  axis:{name:"Axis lock",note:"A mostly vertical drag scrolls the card and never swipes it; a sideways drag swipes.",apply:function(w){
+   if(w.__uaplyGlide)return;                                   /* Phone swipe has its own direction lock */
    var d=w.document,deck=d.getElementById("deck"),sx=0,sy=0,lock="";
    w.__axisY=false;
    deck.addEventListener("pointerdown",function(e){sx=e.clientX;sy=e.clientY;lock="";w.__axisY=false},true);
@@ -151,7 +206,7 @@ var FEATURES={
  }}
 };
 FEATURES.chat={name:"Assistant and feedback",note:"A Help button (bottom right) opens UAply Assistant: answers from UAply's help articles (written by AI when an API key is set on the server, and labeled AI or Automated either way), one-question-at-a-time feedback, problem reports, a way to reach a person, and a one-tap rating after the third application in a visit. Needs this server's back end.",apply:function(w,host){window.UAplyChat.apply(w,host)}};
-var ORDER=["easy","confirm","axis","caps","smart","top2","nav","profile","live","kit","submit","fit","guide","notice","tap","dates","hint","anim","a11y","backend","chat"];   /* chat last: it wraps the apply hook set by kit */
+var ORDER=["glide","easy","confirm","axis","caps","smart","top2","nav","profile","live","kit","submit","fit","guide","notice","tap","dates","hint","anim","a11y","backend","chat"];   /* chat last: it wraps the apply hook set by kit */
 
 function build(on,key){
   return fetch("prod-index.html",{cache:"no-store"}).then(function(r){return r.text()}).then(function(src){

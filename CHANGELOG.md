@@ -36,6 +36,19 @@ Swipe right fills in the employer's real application form, asks only what the pe
 - **Email from your own domain.** The Connect email box on `/setup` now takes Brevo (sends from an address such as uaplytechnologies@uaply.net with Brevo's
   SMTP login and key) as well as a Gmail App Password, and says what to check in Brevo when it refuses the login (including blocked IP addresses).
 - `tools/shot-real-apply.js`: one complete application in the sandbox, signed in as a real address, to an employer that receives applications by email.
+- **Swiping on phones** (new "Phone swipe" feature, on in sandbox and dev). On a phone a thumb curves; the card left vertical moves to the
+  browser, which then treated curved swipes as scrolls and cancelled them, so swipes "worked here and there". Touch now uses a direction
+  lock: the first few pixels decide sideways (a swipe; the browser may no longer scroll) or up and down (scroll the card, never a swipe).
+  A swipe counts at 18% of the card's width (at most 80px) or as a quick flick, instead of a fixed 110px. Mouse and pen are unchanged.
+- **Nothing covers a button.** The round help button sat on the corner of Profile in the bottom menu on big phones, and the message after a
+  swipe covered the menu (or Pass, Undo and Apply on a small phone) for up to 12 seconds. Both now sit just above the menu on every screen
+  size, and taps pass through the message except on its own button.
+- `tools/ui-phone.js` (in the full run at 440x956 and 375x667): every menu item tapped by a real touch, no control covered at its center or
+  corners on 18 screens, and 7 kinds of swipe (straight, a quick flick, curved thumb swipes, a slow drag, plus a scroll, a nudge and a tap
+  that must not swipe). Before the fix, 0 of the 6 real swipes worked at phone size.
+- **The test run can no longer use the owner's real settings.** It set its own settings on top of uaply-config.json instead of replacing it,
+  so once real email was connected, two runs sent a few real emails (two test emails to the owner and some codes to made-up example.com
+  addresses, which bounced). `UAPLY_CONFIG_FILE=none` now makes every server skip the owner's file; the full run sets it.
 - New tests: `test-autofill.py` (34, real forms saved in `tools/fixtures/`), more in `test-ats-flow.py` (20); `tools/shot-autofill.js` shows the
   whole flow in the sandbox at phone size.
 

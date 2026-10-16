@@ -23,6 +23,8 @@ wait_port() { for _ in $(seq 1 60); do curl -s -o /dev/null "http://127.0.0.1:$1
 # a config that switches the real-jobs feed on and nothing else (so the run never uses your own keys)
 FEEDS='{"feeds":["greenhouse","lever","ashby"],"delivery":"test","smtp":{},"google":{},"owner_copy":"","anthropic_api_key":""}'
 unset ANTHROPIC_API_KEY
+# never read uaply-config.json (your real email login, keys and copy address): every server and test below uses only its own settings
+export UAPLY_CONFIG_FILE=none
 
 step "Static checks (syntax of every script, Python lint, JSON, legal pages, release flags, hosted builds)"
 run "node check.js" node check.js
@@ -77,6 +79,8 @@ run "sandbox: every profile checklist item lands on its field" env W=390 H=844 P
 run "sandbox: hostile text in every form never runs, and the owner's inbox escapes it" env W=390 H=844 PORT=18766 node tools/cdp.js tools/ui-inject.js
 run "dev: hostile text in every form never runs, and the owner's inbox escapes it" env W=390 H=844 PORT=18767 node tools/cdp.js tools/ui-inject.js
 run "sandbox: the setup page's script runs, and Connect email switches between Brevo and Gmail" env PORT=18766 node tools/cdp.js tools/ui-setup.js
+run "dev on a big iPhone (440x956): every menu item tapped by touch, nothing covers a button, 7 kinds of real swipes" env W=440 H=956 PORT=18767 node tools/cdp.js tools/ui-phone.js
+run "dev on a small iPhone (375x667): the same" env W=375 H=667 PORT=18767 node tools/cdp.js tools/ui-phone.js
 
 step "Google sign-in (against a stand-in Google)"
 PIDS="$PIDS $(start python tools/mock-google.py 8790)"

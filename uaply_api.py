@@ -39,6 +39,7 @@ from email.message import EmailMessage
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(ROOT, "data")
 CONFIG_PATH = os.path.join(ROOT, "uaply-config.json")
+REAL_CONFIG_PATH = CONFIG_PATH                             # the owner's own settings file (tests may point CONFIG_PATH at a temporary one)
 import ats_api
 import autofill
 import jobs_api
@@ -62,8 +63,9 @@ def config():
     without a file in the repository), then SUPPORT_EMAIL if set."""
     cfg = {"delivery": "test", "daily_limit": 20, "smtp": {}}
     try:
-        with open(CONFIG_PATH, encoding="utf-8") as f:
-            cfg.update(json.load(f))
+        if not (os.environ.get("UAPLY_CONFIG_FILE") == "none" and CONFIG_PATH == REAL_CONFIG_PATH):   # the test run never uses the owner's real email or keys
+            with open(CONFIG_PATH, encoding="utf-8") as f:
+                cfg.update(json.load(f))
     except Exception:
         pass
     try:

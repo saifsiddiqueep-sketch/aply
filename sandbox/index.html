@@ -49,7 +49,7 @@ iframe{border:1px solid var(--line);border-radius:14px;background:var(--bg);widt
 <script src="uaply-envs.js"></script>
 <script>
 (function(){
-var KEY="hireswipe.sandbox.v1",E=window.UAplyEnv,on={nav:true,profile:true,live:true,kit:true,submit:true,smart:true,fit:true,anim:true,guide:true,tap:true,dates:true,hint:true,chat:true};
+var KEY="hireswipe.sandbox.v1",E=window.UAplyEnv,on={glide:true,nav:true,profile:true,live:true,kit:true,submit:true,smart:true,fit:true,anim:true,guide:true,tap:true,dates:true,hint:true,chat:true};
 var frame=document.getElementById("app"),noteEl=document.getElementById("note"),logEl=document.getElementById("log");
 function load(){logEl.classList.remove("on");logEl.innerHTML="";E.run(frame,on,KEY,function(err){if(err)noteEl.textContent="Problem: "+err})}
 function paint(n){document.querySelectorAll("#feats button").forEach(function(b){b.setAttribute("aria-pressed",on[b.dataset.k]?"true":"false")});if(n)noteEl.textContent=n}

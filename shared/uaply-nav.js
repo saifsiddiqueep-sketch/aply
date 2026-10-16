@@ -65,7 +65,7 @@ var CSS=`
 .nitem:hover,.nitem:focus-visible{background:var(--bg)}
 .nitem[aria-checked="true"]{color:var(--accent);background:var(--bg)}
 .nitem .c{font:500 12px var(--mono);color:var(--muted)}
-.toast{bottom:calc(88px + env(safe-area-inset-bottom,0px))}
+.toast{bottom:var(--above-nav,calc(88px + env(safe-area-inset-bottom,0px)));pointer-events:none}.toast button{pointer-events:auto}
 body{padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
 #pane-track .stats{grid-template-columns:repeat(4,1fr)}
 #pane-track .row{flex-wrap:wrap}
@@ -181,6 +181,10 @@ function apply(w,host){
     nav.appendChild(wrap);
   });
   main.after(nav);
+  /* the message after a swipe and the help button sit just above this bar on every screen size, so they never cover a menu button */
+  function aboveNav(){var r=nav.getBoundingClientRect();if(!r.height)return;d.documentElement.style.setProperty("--above-nav",(Math.max(0,Math.round(w.innerHeight-r.top))+10)+"px")}
+  aboveNav();w.addEventListener("resize",aboveNav);d.addEventListener("scroll",aboveNav,{passive:true,capture:true});
+  if(w.ResizeObserver)new w.ResizeObserver(aboveNav).observe(d.body);
   /* fine print: always one tap away (App Store and Google Play also expect a reachable privacy policy) */
   var lp=(host&&host.defaultView&&host.defaultView.location.pathname)||"/",LB=/\/(sandbox|dev)\/$/.test(lp)?"../legal/":"legal/";
   var legalbar=d.createElement("div");legalbar.id="legalbar";

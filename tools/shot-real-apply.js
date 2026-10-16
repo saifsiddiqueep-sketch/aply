@@ -68,6 +68,13 @@ module.exports = async ({ ev, sleep, nav, shot, logs }) => {
   await pick("nb-svc", "Internships"); await sleep(1200);                                  // the test posting is an internship
   const top = await ev("(()=>{const c=" + F + ".querySelector('.card.top');return c?c.innerText.split(String.fromCharCode(10)).filter(x=>x.trim()).join(' | '):'(none)'})()");
   check("the deck shows the test employer's posting with Apply instantly", /UAply Test Employer/.test(top) && /Apply instantly/i.test(top), top.slice(0, 140));
+  if (process.env.ROLE) {                               // a particular posting: pass the ones before it
+    for (let i = 0; i < 6; i++) {
+      const t = await ev("(()=>{const c=" + F + ".querySelector('.card.top');return c?c.innerText:''})()");
+      if (t.includes(process.env.ROLE) || !t) break;
+      await ev(F + ".getElementById('btnNo').click()"); await sleep(900);
+    }
+  }
   await snap("real-2-the-job");
 
   // 4. swipe right

@@ -47,11 +47,11 @@ function build(src, out, title, edits) {
 }
 
 build("sandbox/index.html", "share/sandbox.html", "UAply Sandbox", [
-  ["on={nav:true,profile:true,live:true,kit:true,submit:true,", "on={nav:true,profile:true,"],
+  ["on={glide:true,nav:true,profile:true,live:true,kit:true,submit:true,", "on={glide:true,nav:true,profile:true,"],
   ["Experiment freely. Reads a copy of index.html (prod); prod is never changed.", "Experiment freely. Hosted copy: example jobs only, and your swipes stay in your own browser."],
 ]);
 build("dev/index.html", "share/dev.html", "UAply", [
-  ['var PROMOTED=["nav","live","kit","submit",', 'var PROMOTED=["nav",'],
+  ['var PROMOTED=["glide","nav","live","kit","submit",', 'var PROMOTED=["glide","nav",'],
   // the hosted copy has no server, so it must say so instead of posing as the real app
   ['<div class="bar" id="devbar" hidden><span class="badge">DEV</span><span id="what">Release candidate</span></div>',
    '<div class="bar" id="devbar"><span class="badge">PREVIEW</span><span id="what">Static preview: example jobs only. Accounts and real jobs run on the UAply server.</span></div>'],

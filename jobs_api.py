@@ -481,8 +481,9 @@ def _cfg():
     """uaply-config.json, with UAPLY_CONFIG_JSON from the environment on top (same rule as uaply_api.config)."""
     cfg = {}
     try:
-        with open(os.path.join(ROOT, "uaply-config.json"), encoding="utf-8") as f:
-            cfg.update(json.load(f))
+        if os.environ.get("UAPLY_CONFIG_FILE") != "none":      # same rule as uaply_api.config
+            with open(os.path.join(ROOT, "uaply-config.json"), encoding="utf-8") as f:
+                cfg.update(json.load(f))
     except Exception:
         pass
     try:
