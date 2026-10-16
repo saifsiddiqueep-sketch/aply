@@ -1320,7 +1320,7 @@ function apply(w,host){
     var fit=skills.length?"My experience with "+skills.join(", ")+" lines up with what the role asks for":"My background lines up well with what the role asks for";
     var yrs=p.years?", and I bring "+p.years+" year"+(+p.years===1?"":"s")+" of experience":"";
     var who=p.title?"I'm a "+p.title+(p.loc?" based in "+p.loc:"")+". ":(p.loc?"I'm based in "+p.loc+". ":"");
-    var sum=sumv?sumv.split(/(?<=[.!?])\s/)[0].slice(0,200)+" ":"";
+    var sum=sumv?sumv.replace(/([.!?])\s/,"$1\u0001").split("\u0001")[0].slice(0,200)+" ":"";   /* no lookbehind: iPhones before iOS 16.4 cannot parse it */
     var where=job.mode==="remote"?"remote":(job.loc||"your team");
     var sign=[name,p.email||"",phoneOf(),linkOf("linkedin")].filter(Boolean).join("\n");
     return "Hi "+job.co+" hiring team,\n\nI just applied for the "+job.role+" role. "+who+sum+fit+yrs+". I'd be glad to work "+(where==="remote"?"remotely":"with "+where)+" and can talk whenever suits you.\n\nThank you for your time,\n"+sign;

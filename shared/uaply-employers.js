@@ -54,7 +54,8 @@ var CSS=[
 /* the hub */
 "#hub .hub{display:grid;grid-template-columns:230px minmax(0,1fr);gap:20px;align-items:start;padding-bottom:40px}",
 "#hub .hnav{position:sticky;top:0;display:flex;flex-direction:column;gap:4px;padding:14px;border:1px solid var(--line);border-radius:18px;background:var(--surface)}",
-"#hub .hco{display:flex;gap:10px;align-items:center;padding:4px 4px 12px;margin-bottom:6px;border-bottom:1px solid var(--line);min-width:0}#hub .hco b{display:block;font:800 15px/1.2 var(--display);overflow-wrap:anywhere}#hub .hco small{color:var(--muted);font-size:12px}",
+"#hub .hnav button.hco{display:flex;gap:10px;align-items:center;justify-content:flex-start;padding:6px 6px 12px;margin-bottom:6px;border-bottom:1px solid var(--line);border-radius:12px 12px 0 0;min-width:0;text-align:left}#hub .hco b{display:block;font:800 15px/1.2 var(--display);overflow-wrap:anywhere}#hub .hco small{display:block;color:var(--muted);font-size:12px;font-weight:500}",
+".brand[role=link]:focus-visible{outline:3px solid var(--accent);outline-offset:4px;border-radius:10px}",
 "#hub .hlogo{width:42px;height:42px;flex:none;border-radius:11px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--accent-ink);font:800 18px var(--display);overflow:hidden}#hub .hlogo img{width:100%;height:100%;object-fit:contain;background:#fff}",
 "#hub .hnav button{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;min-height:42px;padding:8px 12px;border:0;border-radius:11px;background:none;color:var(--ink);font:600 14.5px var(--body);cursor:pointer}",
 "#hub .hnav button:hover{background:color-mix(in srgb,var(--accent) 8%,transparent)}#hub .hnav button[aria-current=page]{background:color-mix(in srgb,var(--accent) 14%,var(--surface));color:var(--accent)}",
@@ -62,7 +63,7 @@ var CSS=[
 "#hub .hmain{display:flex;flex-direction:column;gap:18px;min-width:0}",
 "#hub h1{margin:0;font:800 28px/1.15 var(--display);letter-spacing:-.02em;text-wrap:balance}#hub h2{margin:0;font:800 18px/1.2 var(--display)}#hub .lead{margin:4px 0 0;color:var(--muted);max-width:68ch}",
 "#hub .box{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px 20px;display:flex;flex-direction:column;gap:14px;min-width:0}",
-"#hub .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}",
+"#hub .h-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}",
 "#hub .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}#hub .tile{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px}#hub .tile b{display:block;font:800 28px/1.1 var(--display);font-variant-numeric:tabular-nums}#hub .tile small{color:var(--muted);font-size:12.5px}",
 "#hub .steps{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}#hub .steps li{display:flex;gap:10px;align-items:center}#hub .steps .ck{width:24px;height:24px;flex:none;border-radius:50%;display:grid;place-items:center;font:700 12px var(--mono);border:1.5px solid var(--line);color:var(--muted)}#hub .steps .ck.on{background:var(--yes-bg);color:var(--yes);border-color:transparent}#hub .steps button{margin-left:auto}",
 "#hub table{width:100%;border-collapse:collapse;font-size:14px}#hub th{text-align:left;font:600 11.5px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line)}#hub td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}#hub tr:last-child td{border-bottom:0}#hub .tw{overflow-x:auto}",
@@ -91,11 +92,11 @@ var CSS=[
 "#hub .mp{font:800 15px var(--display);padding:4px 10px;border-radius:99px}#hub .mp.yes{background:var(--yes-bg);color:var(--yes)}#hub .mp.mid{background:var(--mid-bg);color:var(--mid)}#hub .mp.no{background:var(--no-bg);color:var(--no)}",
 "#hub .app .body{grid-column:2/-1;display:flex;flex-direction:column;gap:8px}#hub .kv{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13.5px}#hub .kv span{color:var(--muted)}#hub .flag{font:600 12px var(--body);padding:3px 9px;border-radius:99px}#hub .flag.ok{background:var(--yes-bg);color:var(--yes)}#hub .flag.bad{background:var(--no-bg);color:var(--no)}#hub .flag.unk{background:var(--mid-bg);color:var(--mid)}",
 "#hub .app a{color:var(--accent);font-weight:600}#hub .note{color:var(--muted);font-size:13px;margin:0}",
-"#hub .empty{text-align:center;padding:30px 16px;color:var(--muted)}#hub .empty b{display:block;color:var(--ink);font:800 18px var(--display);margin-bottom:4px}",
+"#hub .h-empty{text-align:center;padding:30px 16px;color:var(--muted)}#hub .h-empty b{display:block;color:var(--ink);font:800 18px var(--display);margin-bottom:4px}",
 "#hub .msg{min-height:1.4em;margin:0;font-weight:600;font-size:14px}#hub .msg.bad{color:var(--no)}#hub .msg.good{color:var(--yes)}",
-"#hub .banner{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 16px;border-radius:14px;background:var(--mid-bg);color:var(--mid);font-weight:600;font-size:14px}",
+"#hub .h-banner{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 16px;border-radius:14px;background:var(--mid-bg);color:var(--mid);font-weight:600;font-size:14px}",
 "@media (max-width:1100px){#hub .pform{grid-template-columns:minmax(0,1fr)}#hub .pside{position:static;order:-1}}",
-"@media (max-width:860px){#hub .hub{grid-template-columns:minmax(0,1fr)}#hub .hnav{position:static;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;padding:8px;border-radius:14px}#hub .hco{display:none}#hub .hnav button{flex:none}#hub .hnav button.post{margin-top:0}#hub .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}#hub .promise{grid-template-columns:minmax(0,1fr)}}",
+"@media (max-width:860px){#hub .hub{grid-template-columns:minmax(0,1fr)}#hub .hnav{position:static;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;padding:8px;border-radius:14px}#hub .hnav button.hco{display:none}#hub .hnav button{flex:none}#hub .hnav button.post{margin-top:0}#hub .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}#hub .promise{grid-template-columns:minmax(0,1fr)}}",
 "@media (max-width:560px){#hub fieldset{grid-template-columns:minmax(0,1fr)}#hub .perks{grid-template-columns:minmax(0,1fr)}#hub .app{grid-template-columns:auto minmax(0,1fr)}#hub .app .mp{grid-column:2;justify-self:start}}"
 ].join("\n");
 
@@ -171,6 +172,18 @@ function apply(w,host){
   var sw=d.createElement("button");sw.type="button";sw.id="modeSw";sw.className="modesw";bar.insertBefore(sw,hdr);
   var tag=d.createElement("span");tag.className="modetag";tag.textContent="Hiring";tag.hidden=true;
   var brand=bar.querySelector(".brand");if(brand)brand.appendChild(tag);
+  /* the UAply logo goes home: the job search swipe page (leaving Hiring if it is open) */
+  function goHome(){
+    if(d.body.classList.contains("hire"))setMode(false,true);
+    var nb=d.getElementById("nb-svc");
+    if(nb){nb.click();var it=d.querySelector('.nwrap[data-k=svc] .nitem[aria-checked="true"]')||d.querySelector(".nwrap[data-k=svc] .nitem");if(it)it.click()}
+    var mn=d.querySelector("main");if(mn)mn.scrollTop=0;
+  }
+  if(brand){
+    brand.setAttribute("role","link");brand.tabIndex=0;brand.title="UAply home: jobs";brand.style.cursor="pointer";
+    brand.addEventListener("click",goHome);
+    brand.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();goHome()}});
+  }
   var hub=d.createElement("section");hub.id="hub";hub.hidden=true;hub.setAttribute("aria-label","Hiring");bar.parentNode.insertBefore(hub,bar.nextSibling);
   var MODE_K=KEY+".mode";
   function paintSwitch(hire){
@@ -281,22 +294,22 @@ function apply(w,host){
   function shell(inner){
     var c=H.company,n=counts();
     var nav=[["overview","Overview",""],["jobs","Jobs",H.jobs.length||""],["applicants","Applicants",n.apps||""],["company","Company",""],["billing","Billing",""]];
-    return '<div class="hub"><nav class="hnav" aria-label="Hiring sections"><div class="hco">'+logoBox(c)+'<div><b>'+esc(c?c.name:"Your company")+'</b><small>'+(c?esc(c.industry||"Employer"):"Not set up yet")+'</small></div></div>'+
+    return '<div class="hub"><nav class="hnav" aria-label="Hiring sections"><button type="button" class="hco" data-view="company" title="Company profile">'+logoBox(c)+'<span><b>'+esc(c?c.name:"Your company")+'</b><small>'+(c?esc(c.industry||"Employer"):"Set up your company")+'</small></span></button>'+
       nav.map(function(x){return '<button type="button" data-view="'+x[0]+'"'+(H.view===x[0]?' aria-current="page"':'')+'>'+x[1]+(x[2]!==""?'<span class="n">'+x[2]+'</span>':'')+'</button>'}).join("")+
       '<button type="button" class="post" data-act="new">+ Post a job</button></nav><div class="hmain">'+banner()+inner+'<p class="msg" id="hMsg" role="status" aria-live="polite"></p></div></div>';
   }
   function banner(){
-    if(H.mode==="local")return '<div class="banner"><span>Preview copy: your company and jobs are saved in this browser only, and your jobs appear in this browser\'s own swipe deck. On the UAply server they are published to everyone.</span></div>';
-    if(H.mode==="server"&&!H.verified)return '<div class="banner"><span>Verify your email to publish jobs. Applications are sent to '+esc(H.email)+'.</span><button type="button" class="btn sm" data-act="verify">Verify email</button></div>';
+    if(H.mode==="local")return '<div class="h-banner"><span>Preview copy: your company and jobs are saved in this browser only, and your jobs appear in this browser\'s own swipe deck. On the UAply server they are published to everyone.</span></div>';
+    if(H.mode==="server"&&!H.verified)return '<div class="h-banner"><span>Verify your email to publish jobs. Applications are sent to '+esc(H.email)+'.</span><button type="button" class="btn sm" data-act="verify">Verify email</button></div>';
     return "";
   }
   function say(m,kind){var e=d.getElementById("hMsg");if(e){e.textContent=m||"";e.className="msg"+(kind?" "+kind:"")}}
 
   function render(){
-    if(H.mode==="loading"){hub.innerHTML='<div class="box empty"><b>Loading…</b></div>';return}
+    if(H.mode==="loading"){hub.innerHTML='<div class="box h-empty"><b>Loading…</b></div>';return}
     if(H.mode==="signedout"){hub.innerHTML='<div class="box" style="max-width:640px;margin:24px auto"><h1>Hire on UAply</h1><p class="lead">Post a job in a few minutes and get applicants who already match what you ask for. Every applicant arrives with a match score against your requirements.</p>'+
       '<div class="promise"><div><b>One page to post</b><small>Live preview of the card job seekers see.</small></div><div><b>No surprise bills</b><small>Pricing is TBD. When it starts, you see the price before you publish.</small></div><div><b>Close in one click</b><small>A closed job leaves the feed right away.</small></div></div>'+
-      '<div class="row" style="justify-content:flex-start"><button type="button" class="btn" data-act="signin">Sign in or create an account</button><small class="note">Use the same UAply account you use for job search.</small></div></div>';return}
+      '<div class="h-row" style="justify-content:flex-start"><button type="button" class="btn" data-act="signin">Sign in or create an account</button><small class="note">Use the same UAply account you use for job search.</small></div></div>';return}
     var v=H.view;
     if(!H.company&&v!=="company"&&v!=="billing")v="welcome";
     var inner=v==="welcome"?welcome():v==="overview"?overview():v==="jobs"?jobsView():v==="post"?postView():v==="applicants"?appsView():v==="company"?companyView():billingView();
@@ -312,17 +325,17 @@ function apply(w,host){
   function overview(){
     var n=counts(),c=H.company;
     var steps=[[!!c,"Company profile","company"],[H.jobs.length>0,"First job posted","new"],[H.mode!=="server"||H.verified,"Email verified (applications go there)","verify"]];
-    var h='<div class="row"><div><h1>'+esc(c.name)+'</h1><p class="lead">Your hiring at a glance.</p></div><button type="button" class="btn" data-act="new">+ Post a job</button></div>';
+    var h='<div class="h-row"><div><h1>'+esc(c.name)+'</h1><p class="lead">Your hiring at a glance.</p></div><button type="button" class="btn" data-act="new">+ Post a job</button></div>';
     if(steps.some(function(s){return !s[0]}))h+='<div class="box"><h2>Finish setting up</h2><ul class="steps">'+steps.map(function(s){return '<li><span class="ck'+(s[0]?" on":"")+'">'+(s[0]?"✓":"")+'</span>'+s[1]+(s[0]?'':'<button type="button" class="btn ghost sm" '+(s[2]==="new"?'data-act="new"':s[2]==="verify"?'data-act="verify"':'data-view="company"')+'>Do it</button>')+'</li>'}).join("")+'</ul></div>';
     h+='<div class="tiles"><div class="tile"><b>'+n.open+'</b><small>Open jobs</small></div><div class="tile"><b>'+n.apps+'</b><small>Applicants</small></div><div class="tile"><b>'+n.week+'</b><small>New this week</small></div><div class="tile"><b>'+(n.apps?n.avg+"%":"–")+'</b><small>Average match</small></div></div>';
-    h+='<div class="box"><div class="row"><h2>Your jobs</h2><button type="button" class="linkish" data-view="jobs">See all</button></div>'+jobsTable(H.jobs.slice(0,5))+'</div>';
+    h+='<div class="box"><div class="h-row"><h2>Your jobs</h2><button type="button" class="linkish" data-view="jobs">See all</button></div>'+jobsTable(H.jobs.slice(0,5))+'</div>';
     var recent=H.apps.slice(0,3);
-    h+='<div class="box"><div class="row"><h2>Recent applicants</h2><button type="button" class="linkish" data-view="applicants">See all</button></div>'+(recent.length?'<div class="apps">'+recent.map(appCard).join("")+'</div>':'<p class="note">No applicants yet. When someone swipes right on your job, they show up here with their match score.</p>')+'</div>';
+    h+='<div class="box"><div class="h-row"><h2>Recent applicants</h2><button type="button" class="linkish" data-view="applicants">See all</button></div>'+(recent.length?'<div class="apps">'+recent.map(appCard).join("")+'</div>':'<p class="note">No applicants yet. When someone swipes right on your job, they show up here with their match score.</p>')+'</div>';
     h+='<div class="promise"><div><b>Pay only what you agree to</b><small>Pricing: TBD. One upfront price per job, shown before you publish. No pay-per-click, no auto-renew.</small></div><div><b>Applicants who fit</b><small>Every applicant has a match score, and job seekers can hide jobs they are not eligible for.</small></div><div><b>No ghost jobs</b><small>Pause or close in one click. Closed jobs leave the feed at once.</small></div></div>';
     return h;
   }
   function jobsTable(list){
-    if(!list.length)return '<div class="empty"><b>No jobs yet</b>Post your first job and it appears in the swipe deck right away.<div style="margin-top:12px"><button type="button" class="btn" data-act="new">+ Post a job</button></div></div>';
+    if(!list.length)return '<div class="h-empty"><b>No jobs yet</b>Post your first job and it appears in the swipe deck right away.<div style="margin-top:12px"><button type="button" class="btn" data-act="new">+ Post a job</button></div></div>';
     return '<div class="tw"><table><thead><tr><th>Job</th><th>Status</th><th>Applicants</th><th>Posted</th><th></th></tr></thead><tbody>'+list.map(function(j){
       var na=H.apps.filter(function(a){return a.job===j.id}).length;
       return '<tr><td><b>'+esc(j.role)+'</b><br><small class="note">'+esc(lbl(TYPES,j.type))+' · '+esc(locOf(j))+'</small></td><td><span class="st '+j.status+'">'+cap(j.status)+'</span></td><td>'+(na?'<button type="button" class="linkish" data-act="apps" data-id="'+j.id+'">'+na+'</button>':'0')+'</td><td><small>'+new Date(j.posted*1000).toLocaleDateString()+'</small></td>'+
@@ -332,7 +345,7 @@ function apply(w,host){
     }).join("")+'</tbody></table></div>';
   }
   function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
-  function jobsView(){return '<div class="row"><div><h1>Jobs</h1><p class="lead">Open jobs show in the swipe deck. Paused and closed jobs are hidden from new job seekers right away.</p></div><button type="button" class="btn" data-act="new">+ Post a job</button></div><div class="box">'+jobsTable(H.jobs)+'</div>'}
+  function jobsView(){return '<div class="h-row"><div><h1>Jobs</h1><p class="lead">Open jobs show in the swipe deck. Paused and closed jobs are hidden from new job seekers right away.</p></div><button type="button" class="btn" data-act="new">+ Post a job</button></div><div class="box">'+jobsTable(H.jobs)+'</div>'}
 
   /* ---- post or edit a job ---- */
   function blankJob(){var c=H.company||{};return {role:"",type:"job",mode:"",country:c.country||"US",city:c.city||"",region:c.region||"",sal:[0,0],comm:false,yrs:0,edu:"Bachelor",skills:[],majors:[],gpa:0,grad:["",""],auth:"any",sponsor:"",start:"",reloc:false,perks:[],blurb:"",desc:"",url:"",manager:{name:"",title:"",email:"",linkedin:""},show_manager:true}}
@@ -472,7 +485,7 @@ function apply(w,host){
       (a.headline||a.summary?'<p class="note">'+esc(a.headline||a.summary)+'</p>':'')+
       (a.note?'<p class="note"><b>Their message:</b> '+esc(a.note)+'</p>':'')+
       '<div class="kv">'+(a.email?'<span>Email</span><b>'+esc(a.email)+'</b>':'')+(a.phone?'<span>Phone</span><b>'+esc(a.phone)+'</b>':'')+links.map(function(l){return '<a href="'+esc(l[1])+'" target="_blank" rel="noopener noreferrer">'+l[0]+' ↗</a>'}).join("")+'</div>'+
-      '<div class="row" style="justify-content:flex-start"><label class="note" for="stg-'+esc(a.id)+'">Stage</label><select id="stg-'+esc(a.id)+'" data-stage="'+esc(a.id)+'" style="padding:7px 10px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink)">'+opt(STAGES,a.stage||"new")+'</select>'+
+      '<div class="h-row" style="justify-content:flex-start"><label class="note" for="stg-'+esc(a.id)+'">Stage</label><select id="stg-'+esc(a.id)+'" data-stage="'+esc(a.id)+'" style="padding:7px 10px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink)">'+opt(STAGES,a.stage||"new")+'</select>'+
       '<input type="text" data-pnote="'+esc(a.id)+'" maxlength="1000" value="'+esc(a.private||"")+'" placeholder="Private note (only your team sees it)" aria-label="Private note" style="flex:1;min-width:180px;padding:7px 10px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink)"></div>'+
       '</div></div>';
   }
@@ -480,10 +493,10 @@ function apply(w,host){
     var list=H.apps.filter(function(a){return (H.appJob==="all"||a.job===+H.appJob)&&(!H.mustOnly||meetsAll(a))});
     list.sort(H.sort==="match"?function(a,b){return (b.match||0)-(a.match||0)}:function(a,b){return b.at-a.at});
     return '<div><h1>Applicants</h1><p class="lead">Everyone who swiped right on your jobs, with what they agreed to share. Highest match first.</p></div>'+
-      '<div class="box"><div class="row" style="justify-content:flex-start"><select id="aJob" aria-label="Job" style="padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)">'+opt([["all","All jobs"]].concat(H.jobs.map(function(j){return [String(j.id),j.role]})),String(H.appJob))+'</select>'+
+      '<div class="box"><div class="h-row" style="justify-content:flex-start"><select id="aJob" aria-label="Job" style="padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)">'+opt([["all","All jobs"]].concat(H.jobs.map(function(j){return [String(j.id),j.role]})),String(H.appJob))+'</select>'+
       '<select id="aSort" aria-label="Sort" style="padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)">'+opt([["match","Best match first"],["new","Newest first"]],H.sort)+'</select>'+
       '<label class="ckline"><input type="checkbox" id="aMust"'+(H.mustOnly?" checked":"")+'> Only people who meet every must-have</label></div></div>'+
-      (list.length?'<div class="apps">'+list.map(appCard).join("")+'</div>':'<div class="box empty"><b>No applicants '+(H.apps.length?"match these filters":"yet")+'</b>'+(H.mode==="local"?"To try it, switch to job search and swipe right on your own job.":"When someone swipes right on your job, they show up here.")+'</div>');
+      (list.length?'<div class="apps">'+list.map(appCard).join("")+'</div>':'<div class="box h-empty"><b>No applicants '+(H.apps.length?"match these filters":"yet")+'</b>'+(H.mode==="local"?"To try it, switch to job search and swipe right on your own job.":"When someone swipes right on your job, they show up here.")+'</div>');
   }
   function saveStage(id,stage,note){
     var a=H.apps.filter(function(x){return x.id===id})[0];if(!a)return;
@@ -559,7 +572,7 @@ function apply(w,host){
   /* ---- billing ---- */
   function billingView(){
     return '<div><h1>Billing</h1><p class="lead">Pricing for employers is TBD. Posting is free while UAply is in testing.</p></div>'+
-      '<div class="box"><div class="row"><div><h2>Price to post a job</h2><p class="note">One price per job, shown before you publish.</p></div><span style="font:800 30px var(--display)">TBD</span></div>'+
+      '<div class="box"><div class="h-row"><div><h2>Price to post a job</h2><p class="note">One price per job, shown before you publish.</p></div><span style="font:800 30px var(--display)">TBD</span></div>'+
       '<ul class="steps"><li><span class="ck on">✓</span>You see the exact price on the Publish button before anything is charged.</li><li><span class="ck on">✓</span>You pay once per job on Stripe\'s secure page. UAply never sees or stores your card number.</li><li><span class="ck on">✓</span>No pay-per-click and no automatic renewals: a job never costs more than the price you approved.</li><li><span class="ck on">✓</span>Every receipt is emailed and listed below.</li></ul></div>'+
       '<div class="box"><h2>Receipts</h2><p class="note">No payments yet.</p></div>';
   }
