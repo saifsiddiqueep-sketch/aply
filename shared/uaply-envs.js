@@ -29,12 +29,15 @@ var FEATURES={
    var d=w.document,deck=d.getElementById("deck"),sx=0,dx=0,t0=0;
    deck.addEventListener("pointerdown",function(e){sx=e.clientX;dx=0;t0=performance.now()},true);
    deck.addEventListener("pointermove",function(e){dx=e.clientX-sx},true);
-   deck.addEventListener("pointerup",function(e){
+   function release(e){
      if(w.__axisY)return;
      var a=Math.abs(dx),v=a/Math.max(1,performance.now()-t0);
      if(a>110||!(a>60||(a>30&&v>0.5)))return;
      e.stopPropagation();d.getElementById(dx>0?"btnYes":"btnNo").click();
-   },true);
+   }
+   deck.addEventListener("pointerup",release,true);
+   /* a phone can cut a sideways swipe short (pointercancel) when the finger drifts: it still counts once it went far enough */
+   deck.addEventListener("pointercancel",release,true);
  }},
  confirm:{name:"Confirm apply",note:"Saving to Applied by swipe, button or → key asks for confirmation first. Passing stays instant.",apply:function(w){
    var d=w.document,ok=false,sx=0,dx=0;

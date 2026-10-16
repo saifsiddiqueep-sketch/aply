@@ -30,6 +30,7 @@ function darkBlocks(html) {
 
 function build(src, out, title, edits, extra) {
   let h = read(src);
+  const viewport = (h.match(/<meta name="viewport" content="([^"]*)"/i) || [])[1] || "width=device-width,initial-scale=1";
   h = h.replace(/(<script src="uaply-[a-z]+\.js"><\/script>\s*)+/, () => inline + (extra || "") + "\n");
   if (!h.includes("__PROD_SRC")) throw new Error("script tags not found in " + src);
   h = h.replace(/<title>[^<]*<\/title>/, "<title>" + title + "</title>");
@@ -43,15 +44,16 @@ function build(src, out, title, edits, extra) {
   if (process.argv.includes("--full")) {   // a complete page for ordinary web hosting (GitHub Pages)
     const full = out.replace(/\.html$/, ".full.html");
     // the icon links belong in <head>; the head was stripped above, so put them back there (in <body> some browsers show a plain globe)
-    const iconTags = h.match(/<link rel="(?:icon|apple-touch-icon)"[^>]*>\s*/g) || [];
+    // so are the "add to Home Screen as an app" tags: phones read them only from <head>
+    const iconTags = h.match(/<link rel="(?:icon|apple-touch-icon)"[^>]*>\s*|<meta name="(?:apple-mobile-web-app-[a-z-]+|mobile-web-app-capable|theme-color)"[^>]*>\s*/g) || [];
     const bodyHtml = iconTags.reduce((s, t) => s.replace(t, ""), h);
-    fs.writeFileSync(full, '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' + iconTags.map((t) => t.trim()).join("") + '</head><body>\n' + bodyHtml + "\n</body></html>\n");
+    fs.writeFileSync(full, '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="' + viewport + '">' + iconTags.map((t) => t.trim()).join("") + '</head><body>\n' + bodyHtml + "\n</body></html>\n");
     console.log("wrote", full);
   }
 }
 
 build("sandbox/index.html", "share/sandbox.html", "UAply Sandbox", [
-  ["on={nav:true,profile:true,live:true,kit:true,submit:true,", "on={nav:true,profile:true,"],
+  ["on={easy:true,axis:true,nav:true,profile:true,live:true,kit:true,submit:true,", "on={easy:true,axis:true,nav:true,profile:true,"],
   ["Experiment freely. Reads a copy of index.html (prod); prod is never changed.", "Experiment freely. Hosted copy: example jobs only, and your swipes stay in your own browser."],
 ], "\n<script>" + safe(employers) + "</script>");
 build("dev/index.html", "share/dev.html", "UAply", [
