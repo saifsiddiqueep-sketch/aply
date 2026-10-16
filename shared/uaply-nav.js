@@ -239,6 +239,8 @@ function apply(w,host){
   var d=w.document,A=w.__uaply;
   if(!A)throw new Error("app hooks missing");
   var OPTS=(host&&host.defaultView&&host.defaultView.UAplyOpts)||{};   /* e.g. dev sets hideServiceCounts */
+  /* sandbox without a server: Stripe Payment Links (test mode) per plan, {starter:url, pro:url}. Only buy.stripe.com links are used */
+  var PAYLINK={};(function(l){l=l&&typeof l==="object"?l:{};["starter","pro"].forEach(function(k){if(/^https:\/\/buy\.stripe\.com\/[A-Za-z0-9_]+$/.test(l[k]||""))PAYLINK[k]=l[k]})})(OPTS.stripeLinks);
   var REL=!!OPTS.release;   /* release build: no test controls, no simulated sign-in, no sample data, no paid plans */
   var SRV={up:false,user:null,mode:"test"};   /* declared early: the plan and auto-message checks read it while the screens are built */
   var NEAR=!!OPTS.nearMe;   /* sandbox only for now: ask for device location, commute slider in Filters, nearby jobs score higher */
@@ -1295,6 +1297,13 @@ function apply(w,host){
     var q=null;try{q=new w.URLSearchParams(w.top.location.search)}catch(e){return}
     var b=q.get("billing");if(!b)return;
     try{w.top.history.replaceState(null,"",w.top.location.pathname)}catch(e){}
+    var pk=q.get("plan");
+    if(b==="success"&&pk!=="trial"&&PLANS[pk]&&PAYLINK[pk]){   /* hosted sandbox: a Stripe Payment Link sent the person back after paying */
+      acct.plan=pk;acct.since=Date.now();acct.renews=acct.since+30*DAY;acct.canceled=false;
+      acct.pay.push({at:acct.since,plan:pk,amt:PLANS[pk].price,stripe:true});saveA();
+      setTimeout(function(){sub.prof="plan";cur="prof";go("prof");renderAcct("plan");msg("Payment received by Stripe (test mode). "+PLANS[pk].name+" is active.")},300);
+      return;
+    }
     setTimeout(function(){sub.prof="plan";cur="prof";go("prof");renderAcct("plan");msg(b==="success"?"Thank you! Your plan is being activated; it shows here in a few seconds.":b==="cancel"?"Checkout canceled. Nothing was charged.":"Billing updated.");
       var n=0,t=setInterval(function(){loadBilling();if(++n>=5)clearInterval(t)},2000)},300);
   })();
@@ -1383,10 +1392,10 @@ function apply(w,host){
       Object.keys(PLANS).forEach(function(k){
         var p=PLANS[k],cur=acct.plan===k;
         h+='<div class="plan" data-cur="'+cur+'"><b>'+p.name+'</b><span class="pr">'+(p.price?"$"+p.price.toFixed(2)+'<small>/month</small>':"$0")+'</span><ul>'+p.perks.map(function(x){return '<li>'+E(x)+'</li>'}).join("")+'</ul>'+
-          (k==="trial"?(cur?'<small>Your current plan</small>':''):(cur?(acct.canceled?'<button type="button" class="btn" data-a="resub">Resume subscription</button>':'<button type="button" class="btn ghost" data-a="cancel">Cancel plan</button>'):'<button type="button" class="btn" data-plan="'+k+'">'+(acct.plan==="trial"?"Choose ":"Switch to ")+p.name+' (test)</button>'))+'</div>';
+          (k==="trial"?(cur?'<small>Your current plan</small>':''):(cur?(acct.canceled?'<button type="button" class="btn" data-a="resub">Resume subscription</button>':'<button type="button" class="btn ghost" data-a="cancel">Cancel plan</button>'):'<button type="button" class="btn" data-plan="'+k+'">'+(acct.plan==="trial"?"Choose ":"Switch to ")+p.name+(PAYLINK[k]?'':' (test)')+'</button>'))+'</div>';
       });
-      h+='</div><p class="note">In the live app, paid plans open a secure checkout from a payment provider. UAply never sees or stores card numbers. In the sandbox, choosing a plan only records a test payment.</p>'+
-        '<h3>Payments</h3>'+(acct.pay.length?acct.pay.slice().reverse().map(function(p){return '<div class="todo"><span>'+new Date(p.at).toLocaleDateString()+' · '+E(PLANS[p.plan]?PLANS[p.plan].name:"Plan")+'</span><span>$'+(+p.amt||0).toFixed(2)+' (test)</span></div>'}).join(""):'<p class="note">No payments yet.</p>')+
+      h+='</div><p class="note">'+(PAYLINK.starter?'Choose opens Stripe\'s secure checkout page. It is in test mode: use the card 4242 4242 4242 4242 with any future date and any 3 digits, and no real money moves. UAply never sees or stores card numbers.':'In the live app, paid plans open a secure checkout from a payment provider. UAply never sees or stores card numbers. In the sandbox, choosing a plan only records a test payment.')+'</p>'+
+        '<h3>Payments</h3>'+(acct.pay.length?acct.pay.slice().reverse().map(function(p){return '<div class="todo"><span>'+new Date(p.at).toLocaleDateString()+' · '+E(PLANS[p.plan]?PLANS[p.plan].name:"Plan")+'</span><span>$'+(+p.amt||0).toFixed(2)+(p.stripe?' (Stripe test)':' (test)')+'</span></div>'}).join(""):'<p class="note">No payments yet.</p>')+
         '<h3>Sandbox controls</h3><label class="toggle"><input type="checkbox" id="aEnf"'+(acct.enforce?" checked":"")+'> Enforce plan limits (shows the paywall when the weekly limit runs out)</label><div class="acts"><button type="button" class="btn ghost" data-a="rtrial">Go back to Free</button></div>';
     }else{
       h+='<h3 style="font-size:15px">Back up</h3><p class="note" style="margin:0">Your profile, applications and details in one file you keep.</p><div class="acts"><button type="button" class="btn" data-a="exp">Download backup (JSON)</button><button type="button" class="btn ghost" data-csv="1">Applications (CSV)</button></div>'+
@@ -1418,6 +1427,13 @@ function apply(w,host){
     if(e.target.closest("[data-csv]"))return exportCsv();
     if(pb){
       var k=pb.getAttribute("data-plan");if(!PLANS[k]||k==="trial")return;
+      if(PAYLINK[k]){                       /* hosted sandbox: pay on Stripe's own page; it sends the person back here when done */
+        var u=PAYLINK[k],em=(d.getElementById("pEmail")||{}).value||"";
+        if(/^[^@\s]{1,64}@[^@\s]+\.[A-Za-z]{2,}$/.test(em))u+="?prefilled_email="+encodeURIComponent(em);
+        msg("Opening Stripe's secure checkout…");
+        try{w.top.location.href=u}catch(x){w.location.href=u}
+        return;
+      }
       acct.plan=k;acct.since=Date.now();acct.renews=acct.since+30*DAY;acct.canceled=false;acct.pay.push({at:acct.since,plan:k,amt:PLANS[k].price});
       saveA();renderAcct("plan");msg(PLANS[k].name+" is active (test payment recorded).");return;
     }

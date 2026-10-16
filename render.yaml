@@ -55,6 +55,14 @@ services:
         sync: false
       - key: UAPLY_CONFIG_JSON
         sync: false
+      - key: STRIPE_SECRET_KEY        # test mode only on sandbox: sk_test_... from the "UAply sandbox" Stripe account
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET    # whsec_... of the webhook endpoint https://<sandbox host>/api/billing/webhook
+        sync: false
+      - key: STRIPE_PRICE_PLUS        # UAply Plus, $9.99 a month (test mode)
+        value: price_1URCnQ3W5nziA1EGPUIlUvqL
+      - key: STRIPE_PRICE_PRO         # UAply Pro, $19.99 a month (test mode)
+        value: price_1URCo23W5nziA1EGMxedtAzb
     disk:
       name: uaply-sandbox-data
       mountPath: /var/data
