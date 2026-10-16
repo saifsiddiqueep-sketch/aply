@@ -31,7 +31,7 @@ production page and only changes when the owner decides.
   closed jobs leave the deck at once and refuse new applications.
 - Applications go to the employer's **verified account email**, never to an address typed into a form; browsers never receive it.
 - The consent screen now shows **once, before the first swipe**; after that every swipe is just a swipe (sandbox only).
-- Removed every mention that UAply is made with or integrated with Claude; the AI disclosure page now credits the founders.
+- Removed coding-tool credits from the app, docs and legal pages; the AI disclosure page now credits the founders, Mohammed and Saif.
 
 ### Profile setup, and what really changes your matches
 - **Profile setup** is now one guided flow, five short steps (About you, Jobs you want, Where and pay, Background and links,
