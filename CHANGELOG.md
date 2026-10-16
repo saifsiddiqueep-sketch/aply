@@ -33,6 +33,9 @@ Swipe right fills in the employer's real application form, asks only what the pe
   only real applications, not hand-offs.
 - **Fixed earlier in this round**: the first-application agreement reappearing on every swipe; the browser test runner always reporting success
   (now it fails on any failed check, and each check has a 10-minute limit); three stale test expectations that the old runner had hidden.
+- **Email from your own domain.** The Connect email box on `/setup` now takes Brevo (sends from an address such as uaplytechnologies@uaply.net with Brevo's
+  SMTP login and key) as well as a Gmail App Password, and says what to check in Brevo when it refuses the login (including blocked IP addresses).
+- `tools/shot-real-apply.js`: one complete application in the sandbox, signed in as a real address, to an employer that receives applications by email.
 - New tests: `test-autofill.py` (34, real forms saved in `tools/fixtures/`), more in `test-ats-flow.py` (20); `tools/shot-autofill.js` shows the
   whole flow in the sandbox at phone size.
 

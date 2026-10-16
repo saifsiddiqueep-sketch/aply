@@ -188,16 +188,28 @@ def save_stripe(payload):
     return 200, {"ok": True, "saved": True, "message": "Saved. Plus and Pro can now be bought in Profile, Plan" + ("" if cfg["stripe"]["webhook_secret"] else "; add the webhook signing secret so plans switch on after payment") + "."}
 
 
+BREVO_KEY_RE = re.compile(r"^xsmtpsib-[A-Za-z0-9-]{20,200}$")
+
+
 def save_mail(payload):
-    """The "Connect Gmail" form: save the sending Gmail address and its App Password into the git-ignored uaply-config.json on this
-    computer, then send a test email. The password is never echoed back and never goes anywhere except Gmail's own server.
-    Returns (status, body)."""
+    """The "Connect email" form: save how UAply sends email into the git-ignored uaply-config.json on this computer, then send a test.
+    Gmail: the Gmail address and its App Password. Brevo: the address mail comes from (one whose domain Brevo has verified, such as
+    an @uaply.net address), Brevo's SMTP login and an SMTP key. The password or key is never echoed back and never goes anywhere
+    except that provider's own mail server. Returns (status, body)."""
+    provider = "brevo" if payload.get("provider") == "brevo" else "gmail"
     addr = payload.get("email") if isinstance(payload.get("email"), str) else ""
     pw = "".join((payload.get("password") if isinstance(payload.get("password"), str) else "").split())      # Google shows it in groups of four
+    login = (payload.get("login") if isinstance(payload.get("login"), str) else "").strip()
     copy_to = payload.get("copy_to") if isinstance(payload.get("copy_to"), str) else ""
     if not uaply_api.EMAIL_RE.match(addr.strip()):
-        return 400, {"ok": False, "message": "Enter the Gmail address that will send UAply's email."}
-    if not (12 <= len(pw) <= 64) or not pw.isalnum():
+        return 400, {"ok": False, "message": ("Enter the address UAply's email comes from, such as uaplytechnologies@uaply.net." if provider == "brevo"
+                                              else "Enter the Gmail address that will send UAply's email.")}
+    if provider == "brevo":
+        if not uaply_api.EMAIL_RE.match(login):
+            return 400, {"ok": False, "message": "Enter the SMTP login from Brevo (SMTP & API, SMTP tab). It looks like an email address ending in @smtp-brevo.com."}
+        if not BREVO_KEY_RE.match(pw):
+            return 400, {"ok": False, "message": "That does not look like a Brevo SMTP key. In Brevo, open SMTP & API, SMTP tab, and generate a new SMTP key (it starts with xsmtpsib-)."}
+    elif not (12 <= len(pw) <= 64) or not pw.isalnum():
         return 400, {"ok": False, "message": "That does not look like a Gmail App Password (16 letters, shown in four groups). Create one at myaccount.google.com/apppasswords."}
     if copy_to.strip() and not uaply_api.EMAIL_RE.match(copy_to.strip()):
         return 400, {"ok": False, "message": "The address for copies is not a valid email."}
@@ -207,7 +219,10 @@ def save_mail(payload):
     except (OSError, ValueError):
         cfg = {}
     smtp = cfg.get("smtp") if isinstance(cfg.get("smtp"), dict) else {}
-    smtp.update({"host": "smtp.gmail.com", "port": 587, "starttls": True, "user": addr.strip(), "from_addr": addr.strip(), "password": pw})
+    if provider == "brevo":
+        smtp.update({"host": "smtp-relay.brevo.com", "port": 587, "starttls": True, "user": login, "from_addr": addr.strip(), "password": pw})
+    else:
+        smtp.update({"host": "smtp.gmail.com", "port": 587, "starttls": True, "user": addr.strip(), "from_addr": addr.strip(), "password": pw})
     cfg["smtp"] = smtp
     if copy_to.strip():
         cfg["owner_copy"] = copy_to.strip()
@@ -228,7 +243,7 @@ def test_mail():
     if not (s.get("host") and s.get("from_addr")):
         return 200, {"ok": False, "message": "Email sending is not set up yet. Run python tools/setup-config.py first."}
     if not uaply_api.mail_ready():
-        return 200, {"ok": False, "message": "The sending Gmail has no App Password yet. Create one at myaccount.google.com/apppasswords, then run python tools/setup-config.py."}
+        return 200, {"ok": False, "message": "Email sending has no password or key yet. Add one in the Connect email box on this page."}
     if not to:
         return 200, {"ok": False, "message": "No address to send the test to."}
     msg = EmailMessage()
@@ -242,7 +257,11 @@ def test_mail():
             if s.get("user"):
                 srv.login(s["user"], s.get("password", ""))
             srv.send_message(msg)
-    except smtplib.SMTPAuthenticationError:
+    except smtplib.SMTPAuthenticationError as e:
+        if "brevo" in (s.get("host") or ""):
+            why = (" Brevo may be blocking this computer's internet address: in Brevo, open Security, Authorized IPs, and allow it (or turn off IP blocking for SMTP)."
+                   if "525" in str(e) or "ip" in str(e).lower() else "")
+            return 200, {"ok": False, "message": "Brevo refused the login. Check the SMTP login and key in Brevo (SMTP & API, SMTP tab)." + why}
         return 200, {"ok": False, "message": "Gmail refused the login. Use an App Password (not your normal password), with 2-Step Verification on."}
     except smtplib.SMTPServerDisconnected:
         return 200, {"ok": False, "message": "The mail server closed the connection. Check the host and port, and that the App Password is right."}
@@ -286,9 +305,11 @@ code{background:var(--bg);padding:1px 5px;border-radius:5px}
 <p class="m">Then paste the Client ID from Google Cloud Console (the long address ending in .apps.googleusercontent.com). It is public, so it is safe to paste here. It is saved only on this computer.</p>
 <p><input id="gi" type="text" placeholder="123456789-abc.apps.googleusercontent.com" style="width:340px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><button id="gs" type="button">Save Google client ID</button> <span id="gr" class="m" role="status"></span></p></article>
-<article id="gmail"><b>Connect Gmail</b><p class="m">Paste the Gmail address that will send UAply's email and its App Password (a 16-letter code from myaccount.google.com/apppasswords, not your normal password). It is saved only in uaply-config.json on this computer, which is never uploaded, and a test email is sent right away.</p>
-<p><input id="ge" type="email" placeholder="Sending Gmail address" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
-<p><input id="gp" type="password" placeholder="App Password" autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<article id="gmail"><b>Connect email (Brevo or Gmail)</b><p class="m">How UAply sends sign-up codes, receipts and applications. <b>Brevo</b> sends from your own domain (for example uaplytechnologies@uaply.net): paste that address, Brevo's SMTP login and an SMTP key from Brevo, SMTP &amp; API, SMTP tab. <b>Gmail</b>: paste the Gmail address and its App Password (a 16-letter code from myaccount.google.com/apppasswords, not your normal password). It is saved only in uaply-config.json on this computer, which is never uploaded, and a test email is sent right away.</p>
+<p><select id="gv" aria-label="Email provider" style="padding:8px;border:1px solid var(--line);border-radius:8px"><option value="brevo">Brevo (your own domain)</option><option value="gmail">Gmail</option></select></p>
+<p><input id="ge" type="email" placeholder="Send from, e.g. uaplytechnologies@uaply.net" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p id="glw"><input id="gl" type="text" placeholder="Brevo SMTP login (ends in @smtp-brevo.com)" autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p><input id="gp" type="password" placeholder="Brevo SMTP key or Gmail App Password" autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><input id="gc" type="email" placeholder="Send copies and tests to (optional)" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><button id="sv" type="button">Save and send a test email</button> <span id="sr" class="m" role="status"></span></p></article>
 <article id="ats"><b>Connect an employer's hiring system</b><p class="m">For an employer that uses Greenhouse or Lever and gave you the key they created. Their real postings then say <b>Apply instantly</b>. The key is saved only in uaply-partners.json on this computer and is never shown again.</p>
@@ -310,7 +331,8 @@ fetch('/api/setup/test-mail',{method:'POST',headers:{'Content-Type':'application
 document.getElementById('gs').onclick=function(){var r=document.getElementById('gr');r.textContent='Saving...';
 fetch('/api/setup/save-google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({client_id:document.getElementById('gi').value})}).then(function(x){return x.json()}).then(function(j){r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
 document.getElementById('sv').onclick=function(){var r=document.getElementById('sr'),g=function(i){return document.getElementById(i).value};r.textContent='Saving...';
-fetch('/api/setup/save-mail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:g('ge'),password:g('gp'),copy_to:g('gc')})}).then(function(x){return x.json()}).then(function(j){if(j.saved)document.getElementById('gp').value='';r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
+fetch('/api/setup/save-mail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:g('gv'),email:g('ge'),login:g('gl'),password:g('gp'),copy_to:g('gc')})}).then(function(x){return x.json()}).then(function(j){if(j.saved)document.getElementById('gp').value='';r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
+;(function(){var v=document.getElementById('gv'),w=document.getElementById('glw');function sync(){w.hidden=v.value!=='brevo'}v.onchange=sync;sync()})();
 document.getElementById('as').onclick=function(){var r=document.getElementById('ar'),g=function(i){return document.getElementById(i).value};r.textContent='Saving...';
 fetch('/api/setup/save-ats',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:g('ak'),board:g('ab'),api_key:g('aa')})}).then(function(x){return x.json()}).then(function(j){if(j.saved){document.getElementById('aa').value='';setTimeout(function(){location.reload()},900)}r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
 document.querySelectorAll('.rm').forEach(function(b){b.onclick=function(){fetch('/api/setup/remove-ats',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:b.getAttribute('data-k'),board:b.getAttribute('data-b')})}).then(function(){location.reload()})}})

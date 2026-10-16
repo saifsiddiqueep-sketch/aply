@@ -90,6 +90,25 @@ FakeSMTP.mode = "drop"
 s, out = setup_api.save_mail({"email": "uaply.sender@gmail.com", "password": PW})
 t("a dropped connection is explained, not shown as an error code", (out["ok"], "closed the connection" in out["message"]), (False, True))
 
+# Brevo: sends from the owner's own domain with Brevo's SMTP login and key
+FakeSMTP.mode = "ok"
+FakeSMTP.sent = []
+KEY = "xsmtpsib-" + "0123456789abcdef" * 4 + "-AbCdEfGh12345678"
+s, out = setup_api.save_mail({"provider": "brevo", "email": "uaplytechnologies@uaply.net", "login": "", "password": KEY})
+t("Brevo without its SMTP login is refused, with where to find it", (s, "smtp-brevo.com" in out["message"]), (400, True))
+s, out = setup_api.save_mail({"provider": "brevo", "email": "uaplytechnologies@uaply.net", "login": "9a1b2c001@smtp-brevo.com", "password": "abcdefghijklmnop"})
+t("a Gmail App Password is not taken as a Brevo key", (s, "xsmtpsib-" in out["message"]), (400, True))
+s, out = setup_api.save_mail({"provider": "brevo", "email": "uaplytechnologies@uaply.net", "login": "9a1b2c001@smtp-brevo.com", "password": KEY, "copy_to": "uaplytechnologies@gmail.com"})
+cfg_b = json.load(open(uaply_api.CONFIG_PATH, encoding="utf-8"))["smtp"]
+t("Brevo is saved: its server, the login, and mail comes from the uaply.net address", (out["ok"], cfg_b["host"], cfg_b["port"], cfg_b["user"], cfg_b["from_addr"]),
+  (True, "smtp-relay.brevo.com", 587, "9a1b2c001@smtp-brevo.com", "uaplytechnologies@uaply.net"))
+t("...and the test email goes out from that address with Brevo's login", (FakeSMTP.sent[-1]["From"], FakeSMTP.login_used), ("uaplytechnologies@uaply.net", ("9a1b2c001@smtp-brevo.com", KEY)))
+t("the key is never sent back to the page", KEY in json.dumps(out), False)
+FakeSMTP.mode = "auth"
+s, out = setup_api.test_mail()
+t("Brevo refusing the login says where to check in Brevo", (out["ok"], "Brevo refused the login" in out["message"]), (False, True))
+FakeSMTP.mode = "ok"
+
 # the Connect Google box: only the public client ID, only a real-looking one
 uaply_api.CONFIG_PATH = os.path.join(TMP, "uaply-config2.json")
 s, out = setup_api.save_google({"client_id": "not a client id"})
@@ -106,7 +125,7 @@ uaply_api.CONFIG_PATH = os.path.join(TMP, "uaply-config.json")
 os.remove(uaply_api.CONFIG_PATH)
 uaply_api.config = lambda: {"smtp": {"host": "smtp.gmail.com", "from_addr": "a@gmail.com", "user": "a@gmail.com", "password": ""}, "delivery": "test"}
 s, out = setup_api.test_mail()
-t("the test button says the App Password is missing", (out["ok"], "no App Password" in out["message"]), (False, True))
+t("the test button says the password or key is missing", (out["ok"], "no password or key" in out["message"]), (False, True))
 
 # the Connect an employer's hiring system box
 import jobs_api  # noqa: E402
