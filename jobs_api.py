@@ -18,6 +18,12 @@ LEGAL STATUS OF EACH SOURCE (checked October 2026; this is not legal advice, hav
   * The Muse: terms not found. Unverified; do not enable until verified in writing.
   * Greenhouse, Lever, Ashby public boards: meant for employers' careers pages; no terms found that cover third-party
     aggregation. Unverified, LINK-OUT ONLY.
+  * USAJOBS (the federal government's own API, read October 16, 2026): its terms let public data be copied, stored and
+    republished, commercial use included, without OPM approval; credit and a link to the official announcement are asked
+    for, and nobody may be told an application was sent when it was not. LINK-OUT ONLY, credited "via USAJOBS". Needs a
+    free key (feed_keys.usajobs); without one the source is skipped with the status "no key".
+  * SmartRecruiters public Posting API (City of Philadelphia): public postings of a public body, no key, no published
+    terms for readers. LINK-OUT ONLY, credited "City of Philadelphia on SmartRecruiters".
   Third-party feeds are OFF unless the owner lists them under "feeds" in uaply-config.json. Jobs from a feed are never
   emailed to anyone (the recruiter address is dropped); swiping right only opens the employer's own page.
 
@@ -32,6 +38,7 @@ import re
 import sys
 import threading
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -42,10 +49,16 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 UA = "UAplyDev/0.1 (local prototype)"
 DEFAULT_TTL = 30 * 60
 TTL = {"remotive": 6 * 3600,          # Remotive allows roughly 4 requests a day
-       "jobicy": 3600}                # Jobicy asks for at most one sync pass an hour
+       "jobicy": 3600,                # Jobicy asks for at most one sync pass an hour
+       "usajobs": 3 * 3600,           # federal postings change slowly; two searches every three hours
+       "smartrecruiters": 3600}       # the City's list once an hour (each posting's description is read far less often, see SR_DESC_TTL)
 PER_SOURCE = 14
 STUDENT_PER_SOURCE = 10          # internships, co-ops and part-time roles are kept first so the student tabs are not empty
 OTHER_PER_SOURCE = 6
+# A public body's own list (the City, the federal government) is local and is kept whole up to this many postings, student roles first,
+# instead of the 14 an employer board gets. SmartRecruiters is also read no further than this (so at most this many description reads).
+KEEP = {"usajobs": 120, "smartrecruiters": 120}
+SR_DESC_TTL = 24 * 3600          # a SmartRecruiters posting's description is read once, then again only after a day or when the posting is re-released
 
 # (kind, board token, display name). Boards are the employer's own public careers feed.
 SOURCES = [
@@ -80,8 +93,16 @@ SOURCES = [
     ("jobicy", "data-science", "Jobicy"),
     ("muse", "Internship", "The Muse"),       # The Muse public jobs API; links go to the posting on The Muse
     ("muse", "Entry Level", "The Muse"),
+    ("usajobs", "philadelphia", "USAJOBS"),   # every federal posting within 25 miles of Philadelphia (needs feed_keys.usajobs)
+    ("usajobs", "students", "USAJOBS"),       # the same area, only the Students and Recent graduates hiring paths (Pathways)
 ]
-MULTI = ("jobicy", "muse")                    # several feeds share one display name
+MULTI = ("jobicy", "muse", "usajobs")         # several feeds share one display name
+# The two USAJOBS searches (documented at developer.usajobs.gov/api-reference/get-api-search; several values are joined with ';')
+USAJOBS_QUERIES = {
+    "philadelphia": {"LocationName": "Philadelphia, Pennsylvania", "Radius": "25", "ResultsPerPage": "500", "Fields": "Full"},
+    "students": {"LocationName": "Philadelphia, Pennsylvania", "Radius": "25", "ResultsPerPage": "500", "Fields": "Full", "HiringPath": "student;graduates"},
+}
+USAJOBS_EMAIL = "uaplytechnologies@gmail.com"   # USAJOBS wants the email the key was requested with as the User-Agent (feed_keys.usajobs_email, else owner_copy, else this)
 
 SKILLS = [
     ("JavaScript", r"javascript|\bjs\b"), ("TypeScript", r"typescript"), ("React", r"\breact(?:\.js|js)?\b"),
@@ -197,10 +218,34 @@ def _contact(text):
     return ""
 
 
-def _get(url):
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
+def _get(url, headers=None):
+    req = urllib.request.Request(url, headers=dict({"User-Agent": UA, "Accept": "application/json"}, **(headers or {})))
     with urllib.request.urlopen(req, timeout=20) as r:
         return json.loads(r.read().decode("utf-8", "replace"))
+
+
+KEY_RE = re.compile(r"^[A-Za-z0-9+/=_.-]{16,200}$")      # what a feed's API key looks like (USAJOBS: about 44 letters, digits, + / =)
+
+
+def feed_keys():
+    """The job feeds' own API keys the owner pasted on the setup page ('feed_keys' in uaply-config.json, or in UAPLY_CONFIG_JSON on a
+    host): {"usajobs": ..., "usajobs_email": ..., "muse": ...}. Only well-formed values are returned. These are secrets: never logged, never
+    sent to a browser, never shown on a page (see _scrub)."""
+    cfg = _cfg()
+    k = cfg.get("feed_keys") if isinstance(cfg.get("feed_keys"), dict) else {}
+    out = {n: k[n].strip() for n in ("usajobs", "muse") if isinstance(k.get(n), str) and KEY_RE.match(k[n].strip())}
+    mail = next((m.strip() for m in (k.get("usajobs_email"), cfg.get("owner_copy")) if isinstance(m, str) and EMAIL_RE.fullmatch(m.strip())), "")
+    out["usajobs_email"] = mail or USAJOBS_EMAIL
+    return out
+
+
+def _scrub(text):
+    """Error text with every feed key taken out, so a key can never reach the server's log or the job list's status line."""
+    for n in ("usajobs", "muse"):
+        v = feed_keys().get(n)
+        if v:
+            text = text.replace(v, "[key]").replace(urllib.parse.quote(v, safe=""), "[key]")
+    return text
 
 
 ROLE_HEAD = re.compile(r"(?:About (?:the|this) (?:role|job|internship|position|opportunity|team)|The (?:role|opportunity|internship|position)|Role overview|"
@@ -343,6 +388,58 @@ def _fetch_raw(kind, token, name):
                                 text=_text(j.get("contents")), url=j["refs"]["landing_page"], salary_text="",
                                 fallback=cats[0] if cats else None, posted=_ts(j.get("publication_date")),
                                 force_type="internship" if token == "Internship" else None))
+    elif kind == "usajobs":
+        out = _usajobs(token)
+    return out
+
+
+USA_INTERN = re.compile(r"\bintern(?:ship)?s?\b|student trainee|\bpathways\b", re.I)
+USA_GRAD = re.compile(r"recent grad|graduates?\b", re.I)
+
+
+def _usajobs(token):
+    """One USAJOBS search (USAJOBS_QUERIES[token]). Headers as USAJOBS' Authentication guide says: Host, User-Agent = the email the key was
+    requested with, Authorization-Key = the key. Field names as in the Search API reference."""
+    keys = feed_keys()
+    q = USAJOBS_QUERIES.get(token) or USAJOBS_QUERIES["philadelphia"]
+    url = "https://data.usajobs.gov/api/search?" + "&".join("%s=%s" % (k, urllib.parse.quote(v, safe=",;")) for k, v in q.items())
+    data = _get(url, {"Host": "data.usajobs.gov", "User-Agent": keys["usajobs_email"], "Authorization-Key": keys.get("usajobs", "")})
+    out = []
+    for item in ((data or {}).get("SearchResult") or {}).get("SearchResultItems") or []:
+        d = item.get("MatchedObjectDescriptor") or {}
+        det = (d.get("UserArea") or {}).get("Details") or {}
+        title = d.get("PositionTitle") or ""
+        if not title:
+            continue
+        loc = d.get("PositionLocationDisplay") or ""
+        places = [p.get("LocationName", "") for p in d.get("PositionLocation") or [] if isinstance(p, dict) and p.get("LocationName")]
+        if not loc or loc.lower().startswith("multiple locations"):        # "Multiple Locations": name the first two, as The Muse cards do
+            loc = "; ".join(places[:2]) + (" +%d more" % (len(places) - 2) if len(places) > 2 else "") or loc
+        pay = (d.get("PositionRemuneration") or [{}])[0] or {}
+        sal, sal_text = None, ""
+        try:
+            lo, hi = float(pay.get("MinimumRange") or 0), float(pay.get("MaximumRange") or 0)
+            money = lambda n: "{:,.0f}".format(n) if n >= 1000 else "{:,.2f}".format(n)   # noqa: E731  (yearly in dollars, hourly with cents)
+            sal_text = ("$%s - $%s %s" % (money(lo), money(hi), pay.get("Description") or "")).strip() if hi else ""
+            if pay.get("RateIntervalCode") == "PA" and 20000 <= lo < hi <= 600000:
+                sal = [int(lo), int(hi)]                                   # yearly pay only; hourly pay stays in the text
+        except (TypeError, ValueError):
+            pass
+        duties = det.get("MajorDuties")
+        duties = " ".join(x for x in duties if isinstance(x, str)) if isinstance(duties, list) else (duties if isinstance(duties, str) else "")
+        paths = det.get("HiringPath")
+        paths = [p.lower() for p in (paths if isinstance(paths, list) else [paths]) if isinstance(p, str)]
+        # Pathways: a student internship when the title or the hiring path says so; a Recent Graduates posting stays an (entry-level) job
+        intern = (USA_INTERN.search(title) and not USA_GRAD.search(title)) or ("student" in paths and "graduates" not in paths and not USA_GRAD.search(title))
+        sched = " ".join(s.get("Name", "") for s in d.get("PositionSchedule") or [] if isinstance(s, dict))
+        cats = [c.get("Name") for c in d.get("JobCategory") or [] if isinstance(c, dict) and c.get("Name")]
+        apply_uri = [u for u in d.get("ApplyURI") or [] if isinstance(u, str) and u.startswith("https://")]
+        out.append(dict(id=item.get("MatchedObjectId") or d.get("PositionID"), title=title, company=d.get("OrganizationName") or d.get("DepartmentName") or "USAJOBS",
+                        loc=loc, remote=True if (det.get("RemoteIndicator") is True or re.search(r"remote", loc, re.I)) else None,
+                        text=_text(" ".join(x for x in (det.get("JobSummary"), duties, d.get("QualificationSummary")) if isinstance(x, str))),
+                        url=(apply_uri[0] if apply_uri else d.get("PositionURI") or ""), announcement=d.get("PositionURI") or "",
+                        salary_text=sal_text, sal=sal, posted=_ts(d.get("PublicationStartDate")), fallback=cats[0] if cats else None,
+                        force_type="internship" if intern else ("parttime" if re.search(r"part[- ]time", sched, re.I) else None)))
     return out
 
 
@@ -381,16 +478,19 @@ def _normalize(raw, kind, name, board=None):
     blurb = text[:170].rsplit(" ", 1)[0] + "…" if len(text) > 170 else text
     desc = _role_summary(text)                                                    # what the emails show about the job
     jid = 100000 + int(hashlib.sha1(("%s:%s" % (kind, raw["id"])).encode()).hexdigest()[:6], 16)
-    src = name if kind in ("remotive", "jobicy", "muse") else "%s's careers page" % raw["company"]
+    src = name if kind in ("remotive", "jobicy", "muse", "usajobs") else "%s's careers page" % raw["company"]
     # Where this posting lives in the employer's own hiring system. It is only an address (not a credential): it is used when, and only when, the
     # employer has connected with their own key (see ats_connections); otherwise it is never used and apply stays "link".
     pid = str(raw["id"])
     ats = {"kind": kind, "board": board, "id": pid} if (kind in ats_api.KINDS and board and ats_api.TOKEN_RE.match(board) and ats_api.ID_RE.match(pid)) else None
     # contact is deliberately empty and apply is "link": a third-party feed never gets an application emailed to anyone
-    return dict(id=jid, co=raw["company"], role=title, loc=_place(loc, mode), mode=mode,
-                sal=raw.get("sal") or _salary(raw["salary_text"], text), yrs=yrs, edu=edu, skills=skills, blurb=blurb, desc=desc,
-                type=typ, url=raw["url"], source=src, contact="", apply="link", live=True, ats=ats,
-                posted=raw.get("posted", 0), perks=_perks(text), comm=bool(COMM_RE.search(text)))
+    out = dict(id=jid, co=raw["company"], role=title, loc=_place(loc, mode), mode=mode,
+               sal=raw.get("sal") or _salary(raw["salary_text"], text), yrs=yrs, edu=edu, skills=skills, blurb=blurb, desc=desc,
+               type=typ, url=raw["url"], source=src, contact="", apply="link", live=True, ats=ats,
+               posted=raw.get("posted", 0), perks=_perks(text), comm=bool(COMM_RE.search(text)))
+    if (raw.get("announcement") or "").startswith("https://"):
+        out["announcement"] = raw["announcement"]                 # USAJOBS: the official announcement, kept next to the apply link
+    return out
 
 
 _refreshing = set()
@@ -442,6 +542,8 @@ def _load_source(src):
     """Serve what is cached right away, even if stale, and refresh it in the background.
     Only the very first request for a source waits for the network."""
     ttl = TTL.get(src[0], DEFAULT_TTL)
+    if src[0] == "usajobs" and not feed_keys().get("usajobs"):
+        return _fetch_source(src)                # no key: skipped right away, never served from an older copy
     with _lock:
         c = _cache.get(src)
         if c and time.time() - c["at"] >= ttl and src not in _refreshing:
@@ -455,6 +557,10 @@ def _load_source(src):
 def _fetch_source(src):
     kind, token, name = src
     ttl = TTL.get(kind, DEFAULT_TTL)
+    if kind == "usajobs" and not feed_keys().get("usajobs"):
+        with _lock:
+            _cache.pop(src, None)               # a key that was removed stops the source at once (no copy is served from before)
+        return [], "no key"                     # skipped, nothing fetched or cached: the source starts the moment the owner adds the key
     try:
         student, other = [], []
         for raw in _fetch_raw(kind, token, name):
@@ -462,13 +568,19 @@ def _fetch_source(src):
             if j:
                 (student if j["type"] in ("internship", "coop", "parttime") else other).append(j)
         # keep the student-type roles first (a board can list hundreds of senior roles ahead of its internships)
-        jobs = student[:STUDENT_PER_SOURCE] + other[:max(OTHER_PER_SOURCE, PER_SOURCE - len(student[:STUDENT_PER_SOURCE]))]
+        if kind in KEEP:
+            jobs = (student + other)[:KEEP[kind]]
+        else:
+            jobs = student[:STUDENT_PER_SOURCE] + other[:max(OTHER_PER_SOURCE, PER_SOURCE - len(student[:STUDENT_PER_SOURCE]))]
         status = "%d jobs" % len(jobs)
     except Exception as e:                      # keep serving the last good copy if the feed is down
         c = _cache.get(src)
         jobs = c["jobs"] if c else []
-        status = "error: %s" % str(e)[:80]
-        sys.stderr.write("[uaply] job feed %s failed: %s\n" % ("/".join(src), str(e)[:200]))      # the reason is kept in the server's own log
+        why = _scrub(str(e))                    # a feed key is never written to the log or the status line
+        if isinstance(e, urllib.error.HTTPError) and e.code in (401, 403) and kind in ("usajobs", "muse"):
+            why = "the feed refused the key (HTTP %d); check it on the setup page" % e.code
+        status = "error: %s" % why[:80]
+        sys.stderr.write("[uaply] job feed %s failed: %s\n" % ("/".join(src), why[:200]))      # the reason is kept in the server's own log
         with _lock:
             if c:
                 c["at"] = time.time() - ttl + 120   # retry in two minutes
