@@ -313,7 +313,7 @@ function apply(w,host){
   /* fine print: always one tap away (App Store and Google Play also expect a reachable privacy policy) */
   var lp=(host&&host.defaultView&&host.defaultView.location.pathname)||"/",LB=/\/(sandbox|dev)\/(index\.html)?$/.test(lp)?"../legal/":"legal/";   /* also /dev/index.html: the hosted copies have legal/ one folder up */
   var legalbar=d.createElement("div");legalbar.id="legalbar";
-  legalbar.innerHTML=[["terms.html","Terms"],["privacy.html","Privacy"],["ai-and-employment.html","AI and matching"],["copyright.html","Copyright"]]
+  legalbar.innerHTML=[["terms.html","Terms"],["privacy.html","Privacy"],["ai-and-employment.html","AI and matching"],["copyright.html","Copyright"],["support.html","Support"]]
     .map(function(l){return '<a href="'+LB+l[0]+'" target="_blank" rel="noopener noreferrer">'+l[1]+'</a>'}).join(" · ");
   nav.after(legalbar);
 
