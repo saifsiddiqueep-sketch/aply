@@ -108,7 +108,12 @@ function apply(w,host){
     if(it)it.click();else if(parts[0]==="prof"&&w.__uaplyOpenProf)w.__uaplyOpenProf(parts[1]);   /* "preferences" and "resume" now live inside Profile setup */
     if(w.innerWidth<=520)close();
   }
+  /* a static preview with no server (uaply-nav.js decides): nothing to ask or send to, so every answer says that, with a link */
+  function isPreview(){return !!(w.__uaplyPreview&&w.__uaplyPreview())}
+  function previewText(){return w.__uaplyPreviewText||"This is a preview with no server."}
+  function previewSay(){botSay(previewText(),'<span class="src"><a href="'+esc(w.__uaplyPreviewUrl||"https://uaply.net")+'" target="_blank" rel="noopener noreferrer">uaply.net</a></span>')}
   function post(path,body){
+    if(isPreview())return Promise.resolve({ok:false,j:{error:previewText()}});
     return w.fetch(path,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
       .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j}},function(){return {ok:false,j:{}}})})
       .catch(function(){return {ok:false,j:{error:"I couldn't reach UAply just now. Check your connection and try again."}}});
@@ -126,6 +131,7 @@ function apply(w,host){
     botSay(CFG.ai
       ?"Hi! I'm UAply Assistant, an AI. I can answer questions about UAply and pass your feedback to the team. I can't see your profile or applications, and I can make mistakes."
       :"Hi! I'm UAply Assistant, an automated helper (not a person). I answer from UAply's help articles and pass your feedback to the team. I can't see your profile or applications.");
+    if(isPreview())previewSay();
     botSay("What can I help with?");
     starters();
   }
@@ -140,7 +146,9 @@ function apply(w,host){
 
   /* ---------- questions ---------- */
   function ask(q){
-    if(busy)return;busy=true;clearChips();
+    if(busy)return;
+    if(isPreview()){clearChips();previewSay();starters();return}
+    busy=true;clearChips();
     hist.push({role:"user",content:q});hist=hist.slice(-10);
     typing(true);
     post("/api/chat",{messages:hist}).then(function(r){
@@ -170,6 +178,7 @@ function apply(w,host){
   /* ---------- feedback: one question at a time ---------- */
   function startFeedback(rating,source){
     clearChips();
+    if(isPreview()){previewSay();starters();return}
     flow={kind:"fb",step:"rating",data:{topic:source==="nudge"?"nudge":"general",source:source}};
     if(rating){setRating(rating);return}
     botSay("Thanks for helping make UAply better! How would you rate UAply so far?");
@@ -185,12 +194,14 @@ function apply(w,host){
   }
   function startBug(){
     clearChips();
+    if(isPreview()){previewSay();starters();return}
     flow={kind:"bug",step:"what",data:{topic:"bug",source:"chat"}};
     botSay("Sorry about that. What happened? A sentence is enough.");hint("What happened?");
     chips([{label:"Cancel",run:function(){meSay("Cancel");flow=null;hint();botSay("No problem. Anything else?");starters()}}]);
   }
   function startHuman(){
     clearChips();
+    if(isPreview()){previewSay();starters();return}
     if(CFG.support){
       botSay("You can email the UAply team at "+CFG.support+". Or leave a message here and we'll reply by email.",
         '<span class="src"><a href="mailto:'+esc(CFG.support)+'">'+esc(CFG.support)+'</a></span>');
@@ -213,6 +224,7 @@ function apply(w,host){
     chips(list);
   }
   function finish(data){
+    if(isPreview()){clearChips();hint();flow=null;previewSay();starters();return}
     data.page=where();clearChips();hint();
     typing(true);
     post("/api/feedback",data).then(function(r){

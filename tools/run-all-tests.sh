@@ -71,6 +71,7 @@ run "dev reset/setup/accounts" python tools/test-reset.py 18767
 
 step "Screens in a real browser (iPhone size)"
 run "dev: release checks, no test or developer content anywhere" env W=390 H=844 PORT=18767 node tools/cdp.js tools/ui-release.js
+run "hosted copies (no server): Account, Plan, swipe right and help say it is a preview, never 'cannot reach'" env W=390 H=844 PREVIEW_PORT=18786 node tools/cdp.js tools/ui-preview.js
 run "dev: every screen and button" env REL=1 PORT=18767 node tools/cdp.js tools/ui-sweep.js
 run "dev: forgot password, emailed link, new password, change password" env PORT=18767 node tools/cdp.js tools/ui-reset.js
 run "nothing is cut off at 320 to 430 px" env PORT=18767 node tools/ui-widths.js

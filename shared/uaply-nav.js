@@ -3,6 +3,11 @@
    Accepted, Rejected, Interviews), Profile (Profile setup, Filters, Account, Plan & billing, Data & privacy).
    patch() edits an in-memory copy of index.html; apply() builds the UI. */
 (function(){
+/* the public hosted copies (GitHub Pages) have no server: share/build-share.js sets UAplyOpts.preview, and a page that finds no UAply
+   server behind it (an /api address answering 404 or an HTML page) counts as one too. A real server that is down is NOT a preview:
+   that still says it cannot be reached. */
+var PREVIEW_TEXT="This is a preview with example jobs and no server, so sign-in, applying and email are off here. The real site is uaply.net.";
+var PREVIEW_URL="https://uaply.net";
 function once(src,a,b){if(src.indexOf(a)<0)throw new Error("patch target not found: "+a.slice(0,40));return src.replace(a,function(){return b})}
 
 var EXTRA=`,
@@ -62,6 +67,9 @@ function patch(s){
   s=once(s,'var job=JOB_BY_ID[id];','var job=JOB_BY_ID[id];if(dir==="applied"&&window.__uaplyGate&&window.__uaplyGate(job)===false){busy=false;renderAll();return}');
   s=once(s,'function show(t,focusPane){','function show(t,focusPane){if(window.__uaplyOnShow)window.__uaplyOnShow(t);');
   s=once(s,'function renderAll(){renderDeck();renderApps();renderDash()}','function renderAll(){renderDeck();renderApps();renderDash()}'+API);
+  /* hosted preview without the Real jobs experiment (it is left out there): a swipe right only saves the job on this device, so say that */
+  if(window.UAplyOpts&&window.UAplyOpts.preview&&!window.UAplyLive)
+    s=once(s,'"Applied to "+job.co+" · "+m.pct+"% match"','"Saved "+job.co+" to Applied on this device · "+m.pct+"% match. '+PREVIEW_TEXT+'"');
   return s;
 }
 
@@ -246,6 +254,12 @@ function apply(w,host){
   /* sandbox without a server: Stripe Payment Links (test mode) per plan, {starter:url, pro:url}. Only buy.stripe.com links are used */
   var PAYLINK={};(function(l){l=l&&typeof l==="object"?l:{};["starter","pro"].forEach(function(k){if(/^https:\/\/buy\.stripe\.com\/[A-Za-z0-9_]+$/.test(l[k]||""))PAYLINK[k]=l[k]})})(OPTS.stripeLinks);
   var REL=!!OPTS.release;   /* release build: no test controls, no simulated sign-in, no sample data, no paid plans */
+  /* a static preview with no server (see PREVIEW_TEXT): the other experiments ask through w.__uaplyPreview() */
+  function preview(){return !!OPTS.preview||!!w.__uaplyPreviewOn}
+  w.__uaplyPreview=preview;w.__uaplyPreviewText=PREVIEW_TEXT;w.__uaplyPreviewUrl=PREVIEW_URL;
+  function previewHTML(){return '<div class="plan" id="previewBox" style="display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--surface)"><b>Preview</b><p class="note" style="margin:0">'+PREVIEW_TEXT+'</p><div class="acts"><a class="btn" href="'+PREVIEW_URL+'" target="_blank" rel="noopener noreferrer">Go to uaply.net</a></div></div>'}
+  /* no UAply server behind this page: a 404, or an HTML page where JSON was expected (a plain web host). A 5xx or no answer is a real outage. */
+  function noServer(r){return r.status===404||(r.ok&&/text\/html/i.test((r.headers&&r.headers.get("content-type"))||""))}
   var SRV={up:false,user:null,mode:"test"};   /* declared early: the plan and auto-message checks read it while the screens are built */
   var NEAR=!!OPTS.nearMe;   /* sandbox only for now: ask for device location, commute slider in Filters, nearby jobs score higher */
   var NK=w.__uaplyKey+".nav";
@@ -1423,8 +1437,11 @@ function apply(w,host){
   })();
   function renderAcct(v){
     var h='<h3>'+label("prof",v)+'</h3><p class="lead">'+LEADS[v]+'</p>';
-    if(v==="account"){acctSec.innerHTML=h+accountHTML()+'<p class="note" id="aMsg" role="status"></p>';paintHeader();setTimeout(mountGoogle,0);return}
-    if(v==="plan"&&(SRV.up||REL)){
+    /* preview: the release build shows only the preview note; the sandbox keeps its simulated sign-in below it */
+    if(v==="account"){acctSec.innerHTML=h+(preview()?previewHTML()+(REL?"":accountHTML()):accountHTML())+'<p class="note" id="aMsg" role="status"></p>';paintHeader();setTimeout(mountGoogle,0);return}
+    if(v==="plan"&&preview()&&REL){
+      h+=previewHTML();
+    }else if(v==="plan"&&(SRV.up||REL)){
       h+=billingHTML();
     }else if(v==="plan"){
       var ps=planState();
@@ -1561,6 +1578,7 @@ function apply(w,host){
   }
   /* ---------- real accounts on this server (auth_api.py). Used whenever the back end is running. ---------- */
   function apiPost(path,body){
+    if(preview())return Promise.resolve({ok:false,j:{error:PREVIEW_TEXT,code:"preview"}});   /* nothing to send it to: say so, never "could not reach" */
     return w.fetch(path,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
       .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j}},function(){return {ok:false,j:{error:"The server sent an unexpected reply."}}})})
       .catch(function(){return {ok:false,j:{error:"Could not reach the server."}}});
@@ -1586,7 +1604,10 @@ function apply(w,host){
   /* the three start-up answers below can arrive in any order and each redraws the Account screen; keep the message already showing
      (for example "Signed in with Google" or why Google sign-in failed, just after coming back from Google) instead of wiping it */
   function redrawAcct(){var m=d.getElementById("aMsg"),t=m?m.textContent:"";renderAcct("account");var m2=d.getElementById("aMsg");if(t&&m2)m2.textContent=t}
-  w.fetch("/api/auth/me",{credentials:"same-origin"}).then(function(r){if(!r.ok)throw new Error("no auth");return r.json()}).then(function(j){
+  w.fetch("/api/auth/me",{credentials:"same-origin"}).then(function(r){
+    if(noServer(r)){w.__uaplyPreviewOn=true;if(!acctSec.hidden)renderAcct(sub.prof)}   /* a plain web host: this is a preview */
+    if(!r.ok)throw new Error("no auth");return r.json();
+  }).then(function(j){
     SRV.up=true;SRV.user=j.user||null;paintHeader();
     if(!acctSec.hidden&&sub.prof==="account")redrawAcct();
     googleReturn();

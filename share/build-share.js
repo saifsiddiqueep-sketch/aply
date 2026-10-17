@@ -1,17 +1,19 @@
 /* Builds self-contained, hostable copies of the sandbox and dev pages into share/.
    Run from the project folder:  node share/build-share.js
-   The hosted copies have no server, so Real jobs, Apply assistant and Send applications are left out.
+   The hosted copies have no server, so Real jobs, Apply assistant and Send applications are left out, and UAplyOpts.preview tells the
+   pages so: Account, Plan, a swipe right and the help assistant then say "This is a preview ... The real site is uaply.net."
    prod/index.html is only read, never written. */
 const fs = require("fs");
 const read = (p) => fs.readFileSync(p, "utf8");
 const prod = read("prod/index.html");
 const nav = read("shared/uaply-nav.js");
 const profile = read("shared/uaply-profile.js");
+const chat = read("shared/uaply-chat.js");               // the Help button: in a preview it answers that there is no server here
 const employers = read("shared/uaply-employers.js");     // Hiring mode: sandbox only (it registers itself after envs)
 const learn = read("shared/uaply-learn.js");             // Learns from your swipes: sandbox only (envs asks for it only when it is on)
 let envs = read("shared/uaply-envs.js");
 
-const NEEDS_SERVER = ["live", "kit", "submit", "chat"];   // the assistant needs chat_api.py, which a static host cannot run
+const NEEDS_SERVER = ["live", "kit", "submit"];
 envs = envs.replace(/fetch\("prod-index\.html",\{cache:"no-store"\}\)\.then\(function\(r\)\{return r\.text\(\)\}\)/, "Promise.resolve(window.__PROD_SRC)");
 envs = envs.replace(/var ORDER=\[([^\]]*)\];/, (m, list) => {
   const kept = list.split(",").map((s) => s.trim()).filter((s) => !NEEDS_SERVER.includes(s.replace(/"/g, "")));
@@ -21,7 +23,7 @@ if (envs.includes('fetch("prod-index.html"')) throw new Error("envs patch failed
 
 const safe = (s) => s.replace(/<\/script/gi, "<\\/script");
 const inline = "<script>window.__PROD_SRC=" + JSON.stringify(prod).replace(/</g, "\\u003c") + ";</script>\n" +
-  "<script>" + safe(nav) + "</script>\n<script>" + safe(profile) + "</script>\n<script>" + safe(envs) + "</script>";
+  "<script>" + safe(nav) + "</script>\n<script>" + safe(profile) + "</script>\n<script>" + safe(chat) + "</script>\n<script>" + safe(envs) + "</script>";
 
 function darkBlocks(html) {
   // add the guarded dark block and the explicit data-theme block so the host theme toggle works
@@ -56,9 +58,11 @@ function build(src, out, title, edits, extra) {
 build("sandbox/index.html", "share/sandbox.html", "UAply Sandbox", [
   ["on={glide:true,learn:true,easy:true,axis:true,nav:true,profile:true,live:true,kit:true,submit:true,", "on={glide:true,learn:true,easy:true,axis:true,nav:true,profile:true,"],
   ["Experiment freely. Reads a copy of index.html (prod); prod is never changed.", "Experiment freely. Hosted copy: example jobs only, and your swipes stay in your own browser."],
+  ["window.UAplyOpts={", "window.UAplyOpts={preview:true,"],     // no server behind the hosted copy
 ], "\n<script>" + safe(employers) + "</script>\n<script>" + safe(learn) + "</script>");
 build("dev/index.html", "share/dev.html", "UAply", [
   ['var PROMOTED=["glide","nav","profile","live","kit","submit",', 'var PROMOTED=["glide","nav","profile",'],
+  ["window.UAplyOpts={", "window.UAplyOpts={preview:true,"],     // no server behind the hosted copy
   // the hosted copy has no server, so it must say so instead of posing as the real app
   ['<div class="bar" id="devbar" hidden><span class="badge">DEV</span><span id="what">Release candidate</span></div>',
    '<div class="bar" id="devbar"><span class="badge">PREVIEW</span><span id="what">Static preview: example jobs only. Accounts and real jobs run on the UAply server.</span></div>'],
