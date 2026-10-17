@@ -636,6 +636,8 @@ def _fetch_source(src):
             # only the first STUDENT_PER_SOURCE student roles and PER_SOURCE others can be kept below, so a posting past those is not worked
             # through at all (a big board lists hundreds; reading every one cost about 35 CPU seconds, a minute or more on a small host)
             bucket, cap = (other, PER_SOURCE) if _type(raw) == "job" else (student, STUDENT_PER_SOURCE)
+            if kind in KEEP:                                     # the City and USAJOBS keep up to 120 (student roles first), so read them all
+                cap = KEEP[kind]
             if len(bucket) >= cap:
                 continue
             j = _normalize(raw, kind, name, token)
