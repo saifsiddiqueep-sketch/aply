@@ -5,7 +5,32 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const CHROME = path.join(process.env.LOCALAPPDATA || "", "Google", "Chrome", "Application", "chrome.exe");
+// Which Chrome to start: UAPLY_CHROME if set, else the usual Windows install, else common Linux/Mac places
+// (a Playwright Chromium under /opt/pw-browsers, google-chrome, chromium, the Mac app).
+function findChrome() {
+  if (process.env.UAPLY_CHROME) return process.env.UAPLY_CHROME;
+  const win = path.join(process.env.LOCALAPPDATA || "", "Google", "Chrome", "Application", "chrome.exe");
+  if (fs.existsSync(win)) return win;
+  const pw = process.env.PLAYWRIGHT_BROWSERS_PATH || "/opt/pw-browsers";
+  try {
+    for (const d of fs.readdirSync(pw).filter((n) => /^chromium-\d+$/.test(n)).sort().reverse()) {
+      for (const sub of ["chrome-linux", "chrome-linux64"]) {
+        const p = path.join(pw, d, sub, "chrome");
+        if (fs.existsSync(p)) return p;
+      }
+    }
+  } catch (e) {}
+  const dirs = (process.env.PATH || "").split(path.delimiter);
+  for (const name of ["google-chrome", "google-chrome-stable", "chromium", "chromium-browser"]) {
+    for (const d of dirs) { const p = path.join(d, name); if (d && fs.existsSync(p)) return p; }
+  }
+  const mac = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+  if (fs.existsSync(mac)) return mac;
+  return win;                                             // not found: keep the old path so the error names it
+}
+const CHROME = findChrome();
+// Chrome refuses to start as root on Linux (containers) unless its sandbox is off
+const EXTRA = process.platform === "linux" && process.getuid && process.getuid() === 0 ? ["--no-sandbox"] : [];
 
 let failed = false;                                       // set when the test prints a FAIL line, so the runner (run-all-tests.sh) can see it
 const _log = console.log;
@@ -19,7 +44,7 @@ async function launch() {
   for (let attempt = 1; attempt <= 3; attempt++) {
     const port = 9300 + Math.floor(Math.random() * 500);
     const profile = fs.mkdtempSync(path.join(os.tmpdir(), "uaply-cdp-"));
-    const proc = spawn(CHROME, ["--headless=new", "--disable-gpu", "--remote-debugging-port=" + port, "--user-data-dir=" + profile,
+    const proc = spawn(CHROME, [...EXTRA, "--headless=new", "--disable-gpu", "--remote-debugging-port=" + port, "--user-data-dir=" + profile,
       "--window-size=" + (process.env.W || 1100) + "," + (process.env.H || 900), "about:blank"], { stdio: "ignore" });
     let tab;
     for (let i = 0; i < 75 && !tab; i++) {
