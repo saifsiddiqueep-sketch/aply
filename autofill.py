@@ -76,7 +76,9 @@ def norm(label, company=""):
     if company:
         s = re.sub(re.escape(company.lower()), " {co} ", s)
     s = re.sub(r"[^a-z0-9{} ]+", " ", s)
-    return re.sub(r"\s+", " ", s).strip()[:160]
+    # cut to 160 first, then trim: a long question cut right after a word used to end in a space, the browser saved the answer
+    # under that key, clean_answers() trimmed it, the two never matched, and the person was asked the same question forever
+    return re.sub(r"\s+", " ", s).strip()[:160].strip()
 
 
 # ------------------------------------------------------------------------------------------------------------------------------- rules

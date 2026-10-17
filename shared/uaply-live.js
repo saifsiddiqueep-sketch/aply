@@ -42,9 +42,20 @@ function patch(s){
 function apply(w,host){
   var d=w.document;
   function open(url){if(w.__uaplyOpen)w.__uaplyOpen(url)}
+  /* "View original posting" (on a card) and "Finish on their site" (in Applied) open on a tap or a click: when the same finger or
+     mouse button lifts within 10px of where it went down. They used to open on the first touch, so a swipe or a scroll that
+     happened to start on the link opened the employer's site (and a mouse drag from it could not swipe the card). The card's
+     mouse drag holds the pointer, so the browser's own click never reaches the link; this does the job instead. */
+  var tapLink=null;
   d.addEventListener("pointerdown",function(e){
     var b=e.target.closest&&e.target.closest("[data-open]");
-    if(b){e.stopPropagation();e.preventDefault();open(b.getAttribute("data-open"))}
+    tapLink=b&&(e.pointerType!=="mouse"||e.button===0)?{b:b,id:e.pointerId,x:e.clientX,y:e.clientY}:null;
+  },true);
+  d.addEventListener("pointercancel",function(e){if(tapLink&&tapLink.id===e.pointerId)tapLink=null},true);   /* the browser took it for a scroll */
+  d.addEventListener("pointerup",function(e){
+    var t=tapLink;tapLink=null;
+    if(!t||t.id!==e.pointerId||Math.abs(e.clientX-t.x)>10||Math.abs(e.clientY-t.y)>10||!t.b.isConnected)return;
+    open(t.b.getAttribute("data-open"));
   },true);
   d.addEventListener("click",function(e){
     var b=e.target.closest&&e.target.closest("[data-open]");
@@ -259,6 +270,13 @@ function kitApply(w,host){
      deck behind it) waits for the answer and then goes on, or back. Only one: more presses, or a double tap on a box a swipe
      opened, add nothing, so a job is never sent twice. */
   var consentWait=[],consentAtStart=false;
+  /* while a box is open over the deck (this consent box, an employer's questions, the apply sheet, the plan paywall), the arrow
+     keys and Z belong to the box, never to the deck behind it. They used to reach it: ArrowRight on a focused button in the box
+     applied to the next job behind it, which then sat in Applied without ever being sent; ArrowLeft passed it unseen. */
+  d.addEventListener("keydown",function(e){
+    var k=e.key;if(k!=="ArrowRight"&&k!=="ArrowLeft"&&k!=="z"&&k!=="Z")return;
+    if(d.getElementById("kitConsent")||d.getElementById("kitAsk")||d.getElementById("kitSheet")||d.getElementById("paywall"))e.stopPropagation();
+  },true);
   function ensureConsent(go,cancel,atStart){
     if(hasConsent()){go();return}      /* outside hasConsent's try: a problem while applying must never look like "not agreed yet" and bring this box back */
     if(d.getElementById("kitConsent")){if(consentAtStart&&!consentWait.length&&!atStart)consentWait.push([go,cancel]);return}
