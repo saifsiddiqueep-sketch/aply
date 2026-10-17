@@ -10,8 +10,8 @@ Delivery modes (uaply-config.json, key "delivery"):
                     recruiter from your mail account, with Reply-To set to the candidate. The request must carry
                     confirm_real=true (the user pressed Send after reviewing it). If there is no recruiter email, the
                     result is "handoff": the employer accepts applications only on its own page, and the app opens it.
-                    Direct ATS submission (Greenhouse, Lever) needs an API key issued by each employer, so it is not
-                    attempted here.
+                    Direct ATS submission (Greenhouse, Lever, Ashby, SmartRecruiters) needs an API key issued by each
+                    employer, so it happens only for employers who connected (ats_api.py).
 
 Safeguards: explicit consent flag, candidate name and email required, https posting URLs only, one application per
 candidate per job, a daily cap on live sends, size limits, and the server rejects cross-site requests.
@@ -712,6 +712,7 @@ def submit(p, user=None, site=""):
     #   - an employer that connected its Greenhouse: anything the form requires that the profile cannot answer is asked first, then it all goes in
     #   - the sandbox, in test mode: the same, for every Greenhouse posting, and the filled form goes to the test inbox (nothing reaches the employer)
     #   - every other posting: the filled answers come back with the hand-off, so finishing on the employer's page is quick
+    #   - an employer that connected its Ashby or SmartRecruiters: the same as Greenhouse, but read with their key, and only for a live send
     ref = known.get("ats") if isinstance(known.get("ats"), dict) else None
     gh = ats if (ats and ats.get("kind") == "greenhouse") else (ref if ref and ref.get("kind") == "greenhouse" else None)
     preview = (mode == "test" and policy == "link" and gh is not None and
@@ -720,9 +721,16 @@ def submit(p, user=None, site=""):
     if gh and (policy in ("direct", "link") or preview) and not _redirect(cfg):
         form = autofill.fetch_form(gh["board"], gh["id"])
         plan = autofill.plan_greenhouse(form, cand, job, note, resume_meta, resume_bytes, answers) if form else None
-        if plan and plan["missing"] and (preview or (policy == "direct" and ats)):
-            pub = autofill.public_plan(plan)
-            return 200, {"status": "needs_answers", "mode": mode, "questions": pub["missing"], "filled": pub["filled"], "total": pub["total"]}
+    elif ats and ats.get("kind") in ("ashby", "smartrecruiters") and policy == "direct" and mode == "live" and not _redirect(cfg):
+        # Ashby and SmartRecruiters show a posting's form only to the employer's key, so it is read only for a live send to an employer who
+        # connected (never in test mode, which must not use an employer's key). A question the app cannot ask (a file other than the resume, a
+        # type UAply cannot fill) is not asked: the send then reports it and the person finishes on the employer's page.
+        plan = ats_api.plan(ats["kind"], ats["id"], ats["key"], cand, job, note, resume_meta if resume_bytes else None, answers)
+        if plan and any(m.get("kind") == "other" for m in plan["missing"]):
+            plan = dict(plan, missing=[])
+    if plan and plan["missing"] and (preview or (policy == "direct" and ats)):
+        pub = autofill.public_plan(plan)
+        return 200, {"status": "needs_answers", "mode": mode, "questions": pub["missing"], "filled": pub["filled"], "total": pub["total"]}
     summary = ({"filled": plan["filled"], "total": plan["total"],
                 "items": [{"q": i["q"][:160], "a": i["a"][:200]} for i in plan["items"] if i["a"] and not i.get("skip")][:40]} if plan else None)
     if cand["ext"]["salary"] and not (plan and plan.get("salary_sent")):
@@ -775,7 +783,8 @@ def submit(p, user=None, site=""):
                     return 429, {"error": "Daily sending limit reached."}
                 rec["to"], rec["status"] = target, "sending"      # reserved now, so a double tap cannot send twice
                 APPS.append(rec)
-                send_args = (cfg, target if _smtp_ready(cfg) else "", dict(cand, answers=answers) if ats else cand, job, note, contact,
+                send_args = (cfg, target if _smtp_ready(cfg) else "", dict(cand, answers=answers, job={"co": job["co"], "role": job["role"]}) if ats else cand,
+                             job, note, contact,
                              resume_meta, resume_bytes, hook, rec, ats)
             else:
                 if target:                     # an employer who agreed to receive email, but this server cannot send email: tell the owner
