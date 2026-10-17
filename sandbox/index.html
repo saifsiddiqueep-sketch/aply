@@ -37,7 +37,7 @@ iframe{border:1px solid var(--line);border-radius:14px;background:var(--bg);widt
 html,body{overscroll-behavior:none}
 body.app{height:100vh;height:100dvh;background:var(--bg)}
 body.app .top,body.app .log{display:none!important}
-body.app .stage{padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+body.app .stage{padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) max(0px,calc(env(safe-area-inset-bottom,0px) - 12px)) env(safe-area-inset-left,0px)}
 body.app iframe{border:0;border-radius:0;width:100%!important}
 .log{display:none;height:90px;overflow:auto;margin:0 10px 10px;padding:8px 10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;font:12px/1.5 ui-monospace,Menlo,monospace;color:var(--muted)}
 .log.on{display:block}.log b{color:var(--ink)}
@@ -53,7 +53,7 @@ body.app iframe{border:0;border-radius:0;width:100%!important}
 </div>
 <div class="stage" id="stage"><iframe id="app" title="UAply sandbox build" allow="geolocation"></iframe></div>
 <div class="log" id="log" aria-live="polite"></div>
-<script>window.UAplyOpts={nearMe:true,consentFirst:true,simpleTabs:true,
+<script>window.UAplyOpts={nearMe:true,consentFirst:true,simpleTabs:true,navLift:0,
   /* Stripe Payment Links (TEST mode, "UAply sandbox" Stripe account): used where there is no server, like the GitHub Pages copy */
   stripeLinks:{starter:"https://buy.stripe.com/test_00w6oA7S25nWcZUcEDcEw00",pro:"https://buy.stripe.com/test_dRm9AM8W6aIgcZU8oncEw01"}};   /* sandbox only: ask for device location and show the commute slider; ask for consent once, before the first swipe */</script>
 <script src="uaply-nav.js"></script>
