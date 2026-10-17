@@ -51,9 +51,9 @@ try {
 console.log("Every experiment still applies to the production page");
 try {
   global.window = {}; global.localStorage = { getItem() { return null; } };
-  ["shared/uaply-nav.js", "shared/uaply-live.js", "shared/uaply-profile.js"].forEach((f) => new Function("window", "localStorage", fs.readFileSync(f, "utf8"))(window, localStorage));
+  ["shared/uaply-nav.js", "shared/uaply-live.js", "shared/uaply-profile.js", "shared/uaply-learn.js"].forEach((f) => new Function("window", "localStorage", fs.readFileSync(f, "utf8"))(window, localStorage));
   let src = fs.readFileSync("prod/index.html", "utf8");
-  src = window.UAplyNav.patch(src); src = window.UAplyProfile.patch(src); src = window.UAplyLive.patch(src); src = window.UAplyLive.kit.patch(src);
+  src = window.UAplyNav.patch(src); src = window.UAplyProfile.patch(src); src = window.UAplyLive.patch(src); src = window.UAplyLive.kit.patch(src); src = window.UAplyLearn.patch(src);
   new Function(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/.exec(src)[1]);
   ok("patched app assembles and parses");
 } catch (e) { bad("patching the production page failed: " + e.message); }

@@ -51,6 +51,7 @@ if api:
     for url, rel in (("/uaply-envs.js", "shared/uaply-envs.js"), ("/uaply-nav.js", "shared/uaply-nav.js"),
                      ("/uaply-live.js", "shared/uaply-live.js"), ("/uaply-profile.js", "shared/uaply-profile.js"),
                      ("/uaply-chat.js", "shared/uaply-chat.js"), ("/uaply-employers.js", "shared/uaply-employers.js"),
+                     ("/uaply-learn.js", "shared/uaply-learn.js"),
                      ("/help/articles.json", "help/articles.json"),
                      ("/prod-index.html", "prod/index.html")):
         alias.setdefault(url, os.path.join(HERE, rel))
