@@ -71,6 +71,8 @@ var CSS=`
 .nwrap{position:relative;flex:1;display:flex;min-width:0}
 .nb{flex:1;border:0;background:none;border-radius:999px;padding:6px 8px;min-height:48px;font-weight:600;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;min-width:0}
 .nb small{font:500 11px var(--mono);opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+#bnav.simple .nb small{display:none}#bnav.simple .nb{font-size:15px;min-height:44px}
+@media (max-width:700px){#bnav.simple~#legalbar{display:none}#bnav.simple~#toastHost{margin-top:-12px}body:has(#bnav.simple){padding-bottom:calc(4px + env(safe-area-inset-bottom,0px))}}
 .nb[aria-current="true"]{background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--accent-ink)}
 .nmenu{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);min-width:220px;max-height:calc(100vh - 96px);overflow-y:auto;overscroll-behavior:contain;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:6px;display:flex;flex-direction:column;gap:2px;z-index:20}
 .nwrap:first-child .nmenu{left:0;transform:none}
@@ -286,6 +288,8 @@ function apply(w,host){
   /* bottom nav */
   var main=d.getElementById("main"),nav=d.createElement("nav");
   nav.id="bnav";nav.setAttribute("aria-label","Main");
+  /* sandbox only: one-word tabs (Jobs, Dashboard, Profile) without the second line naming the open screen */
+  if(OPTS.simpleTabs){SECS.svc.label="Jobs";nav.className="simple"}
   Object.keys(SECS).forEach(function(k){
     var wrap=d.createElement("div");wrap.className="nwrap";wrap.setAttribute("data-k",k);
     wrap.innerHTML='<button type="button" class="nb" id="nb-'+k+'" aria-haspopup="menu" aria-expanded="false"><span>'+SECS[k].label+'</span><small></small></button><div class="nmenu" role="menu" aria-labelledby="nb-'+k+'" hidden></div>';
