@@ -150,7 +150,7 @@ t("the page tells Google both local addresses (Google needs the bare localhost o
 t("each address has a Copy button", page.count('class="cp"'), 2)
 t("the Google and Gmail boxes have anchors for the sign-in screen's links", ('id="google"' in page, 'id="gmail"' in page), (True, True))
 t("the steps are clickable links to Google's own pages", all(('href="%s"' % u) in page for u in (
-    "https://console.cloud.google.com/apis/credentials/consent", "https://console.cloud.google.com/apis/credentials/oauthclient",
+    "https://console.cloud.google.com/auth/overview", "https://console.cloud.google.com/auth/clients",      # Google Auth Platform (Google's current console)
     "https://myaccount.google.com/apppasswords", "https://myaccount.google.com/signinoptions/two-step-verification")), True)
 t("links open in a new tab without handing over the opener", 'target="_blank" rel="noopener noreferrer"' in page, True)
 t("the page explains why a test inbox is still showing", "Why you still see the test inbox" in page, True)

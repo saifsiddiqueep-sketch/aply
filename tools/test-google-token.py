@@ -1,8 +1,11 @@
 """Tests "Continue with Google" the way Google's own button works: the page gets a signed token and posts it to UAply. Every kind of forged or wrong
 token must be refused. Start tools/mock-google.py and a server configured for it (see tools/run-all-tests.sh), then:
   python tools/test-google-token.py [server_port]"""
+import html
 import http.cookiejar
 import json
+import os
+import re
 import sys
 import urllib.error
 import urllib.parse
@@ -10,7 +13,7 @@ import urllib.request
 
 PORT = sys.argv[1] if len(sys.argv) > 1 else "18768"
 B = "http://127.0.0.1:%s" % PORT
-M = "http://127.0.0.1:8790"
+M = "http://127.0.0.1:%s" % os.environ.get("MOCK_GOOGLE_PORT", "8790")      # where tools/mock-google.py listens
 R = []
 
 
@@ -72,6 +75,15 @@ t("a Google account with some other email signs in but is NOT treated as having 
 call(u, "/api/auth/logout", {})
 t("...and signs in again by its Google account number", call(u, "/api/auth/google/token", {"credential": token(email="fresh@example.com", sub="9020")})[0], 200)
 call(u, "/api/auth/logout", {})
+# the real owner of that address uses Forgot password: the emailed link proves the address is theirs, so the Google login Google did not
+# vouch for (it may belong to whoever had the address before) stops opening the account
+call(client(), "/api/auth/forgot", {"email": "fresh@example.com"})
+links = re.findall(r"\?reset=([A-Za-z0-9_-]{20,100})", html.unescape(urllib.request.urlopen(B + "/outbox").read().decode("utf-8")))
+t("the reset link reaches the test inbox", bool(links), True)
+t("the owner sets a password with it", call(client(), "/api/auth/reset", {"token": links[0] if links else "x" * 30, "password": "owners own pass 1"})[0], 200)
+s, out = call(client(), "/api/auth/google/token", {"credential": token(email="fresh@example.com", sub="9020")})
+t("after that the unvouched Google login no longer opens the account", (s, out.get("code")), (400, "email_in_use"))
+t("...and the owner logs in with the new password", call(client(), "/api/auth/login", {"email": "fresh@example.com", "password": "owners own pass 1"})[0], 200)
 
 # consent for new accounts
 b = client()
@@ -93,10 +105,12 @@ t("a Google email that Google says is not verified is refused", (s, out["code"])
 pw = client()
 call(pw, "/api/auth/signup", {"email": "linked@gmail.com", "password": "correct horse 99", "agree": True})
 t("a new password account starts unverified", me(pw)["emailVerified"], False)
-call(pw, "/api/auth/logout", {})
-g = client()
+g = client()                                    # pw stays signed in: the link below must sign it out
 s, out = call(g, "/api/auth/google/token", {"credential": token(email="linked@gmail.com", sub="9004")})
-t("Google with the same Gmail address signs into that same account", (s, out["user"]["email"], out["user"]["hasPassword"]), (200, "linked@gmail.com", True))
+t("Google with the same Gmail address signs into that same account", (s, out["user"]["email"]), (200, "linked@gmail.com"))
+t("...the password nobody confirmed by email is removed, and the page is told", (out["user"]["hasPassword"], out.get("passwordRemoved")), (False, True))
+t("...whoever set that password is signed out of it", me(pw), None)
+t("...and that password no longer works", call(client(), "/api/auth/login", {"email": "linked@gmail.com", "password": "correct horse 99"})[0], 401)
 t("...and that proves the email is theirs", me(g)["emailVerified"], True)
 
 # the Google account id, not the email, identifies the person
@@ -108,7 +122,7 @@ t("the same Google id with a changed email is still the same account", out["user
 call(pw, "/api/auth/signup", {"email": "boss@corp.example", "password": "correct horse 99", "agree": True})
 call(pw, "/api/auth/logout", {})
 s, out = call(client(), "/api/auth/google/token", {"credential": token(email="boss@corp.example", sub="9031", hd="corp.example")})
-t("a Workspace account links to the existing account with its address", (s, out["user"]["email"], out["user"]["hasPassword"]), (200, "boss@corp.example", True))
+t("a Workspace account links to the existing account with its address (its unconfirmed password removed)", (s, out["user"]["email"], out["user"]["hasPassword"]), (200, "boss@corp.example", False))
 # ...but a plain "verified" address on any other domain can NOT take over an existing account (the address may have changed hands)
 call(pw, "/api/auth/signup", {"email": "victim@example.com", "password": "correct horse 99", "agree": True})
 call(pw, "/api/auth/logout", {})

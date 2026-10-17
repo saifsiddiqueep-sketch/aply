@@ -1557,15 +1557,18 @@ function apply(w,host){
     if(!A.S.profile.custom&&pe&&SRV.user)pe.value=SRV.user.email;
     paintHeader();
   }
+  /* the three start-up answers below can arrive in any order and each redraws the Account screen; keep the message already showing
+     (for example "Signed in with Google" or why Google sign-in failed, just after coming back from Google) instead of wiping it */
+  function redrawAcct(){var m=d.getElementById("aMsg"),t=m?m.textContent:"";renderAcct("account");var m2=d.getElementById("aMsg");if(t&&m2)m2.textContent=t}
   w.fetch("/api/auth/me",{credentials:"same-origin"}).then(function(r){if(!r.ok)throw new Error("no auth");return r.json()}).then(function(j){
     SRV.up=true;SRV.user=j.user||null;paintHeader();
-    if(!acctSec.hidden&&sub.prof==="account")renderAcct("account");
+    if(!acctSec.hidden&&sub.prof==="account")redrawAcct();
     googleReturn();
   }).catch(function(){SRV.up=false;paintHeader()});
-  w.fetch("/api/apply/config").then(function(r){return r.ok?r.json():null}).then(function(j){if(j&&j.mode)SRV.mode=j.mode;if(j)SRV.testInbox=j.testInbox||"";if(!acctSec.hidden&&sub.prof==="account"&&!SRV.user&&SRV.up)renderAcct("account")}).catch(function(){});
+  w.fetch("/api/apply/config").then(function(r){return r.ok?r.json():null}).then(function(j){if(j&&j.mode)SRV.mode=j.mode;if(j)SRV.testInbox=j.testInbox||"";if(!acctSec.hidden&&sub.prof==="account"&&!SRV.user&&SRV.up)redrawAcct()}).catch(function(){});
   w.fetch("/api/auth/providers").then(function(r){return r.ok?r.json():null}).then(function(j){
     SRV.google=!!(j&&j.google);SRV.googleClientId=(j&&j.googleClientId)||"";SRV.googleRedirect=!!(j&&j.googleRedirect);SRV.canEmail=!!(j&&j.canEmail);
-    if(SRV.google&&!acctSec.hidden&&sub.prof==="account")renderAcct("account");
+    if(SRV.google&&!acctSec.hidden&&sub.prof==="account")redrawAcct();
   }).catch(function(){});
   var GERR={agree:"Tick the box to confirm you are 18 or older and agree to the Terms and Privacy Policy, then try Google again.",cancelled:"Google sign-in was cancelled.",expired:"That Google sign-in expired or could not be checked. Try again.",failed:"Google sign-in did not work. Try again, or use your email and password.",unverified:"Google says that email address is not verified, so UAply cannot use it.",off:"Google sign-in is not switched on.",email_in_use:"That email already has a UAply account. Log in with your email and password instead."};
   function googleReturn(){
@@ -1582,11 +1585,21 @@ function apply(w,host){
     if(!er&&!ok)return;
     try{tp.history.replaceState(null,"",tp.location.pathname)}catch(e){}
     sub.prof="account";cur="prof";go("prof");renderAcct("account");
-    msg(er?(GERR[er]||GERR.failed):"Signed in with Google.");
+    msg(er?(GERR[er]||GERR.failed):(q.get("password_removed")?PW_GONE:"Signed in with Google."));
   }
   w.__uaplyAuth=function(){return {up:SRV.up,user:SRV.user}};
   /* Apple (App Store guideline 4.8) requires Sign in with Apple wherever an iPhone app offers Google, so inside the iPhone app Google stays hidden until Apple sign-in exists */
   function iosShell(){try{var c=w.top.Capacitor;return !!(c&&c.getPlatform&&c.getPlatform()==="ios"&&!SRV.apple)}catch(e){return false}}
+  /* Google refuses to sign anyone in inside an app's built-in web view (Android and iPhone alike: "Error 403: disallowed_useragent"),
+     so the phone apps hide the Google button until a native Google sign-in is added. Phone and computer browsers keep it. */
+  function noGoogle(){if(iosShell())return true;try{var c=w.top.Capacitor;return !!(c&&c.isNativePlatform&&c.isNativePlatform())}catch(e){return false}}
+  /* iPhone and iPad (every browser there is Safari underneath): Google says its button needs the full-page sign-in there, because
+     Safari's tracking protection breaks the pop-up. iPadOS reports itself as a Mac, so a touch screen gives it away. */
+  function iosWeb(){var n=w.navigator||{};return /iPhone|iPad|iPod/.test(n.userAgent||"")||(n.platform==="MacIntel"&&n.maxTouchPoints>1)}
+  var GBTN='<button type="button" class="btn" data-auth="gsign" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#1f1f1f;border:1px solid #747775">'+
+    '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>'+
+    '<span>Continue with Google</span></button>';
+  var PW_GONE="Signed in with Google. This account had a password that was never confirmed by email, so it was removed to keep the account yours. To also sign in with a password, log out and use Forgot password.";
   /* proving the email is theirs: a 6-digit code (shown to anyone signed in with a password who has not entered it yet) */
   /* what to tell the person after a code was requested: emailed, could not be sent, or (this computer, no real email connected) saved in the test inbox */
   function codeNote(dl,em){
@@ -1611,15 +1624,16 @@ function apply(w,host){
     msg("Signing in with Google…");
     apiPost("/api/auth/google/token",{credential:resp&&resp.credential,agree:!!ga}).then(function(r){
       if(!r.ok||!r.j.user){msg((r.j&&r.j.error)||"Google sign-in did not work. Try again.");return}
-      SRV.user=r.j.user;afterServerSignIn();renderAcct("account");msg("Signed in with Google.");
+      SRV.user=r.j.user;afterServerSignIn();renderAcct("account");msg(r.j.passwordRemoved?PW_GONE:"Signed in with Google.");
     });
   }
   function mountGoogle(){
     var box=d.getElementById("gBtn");
     if(!box||!SRV.google||!SRV.googleClientId)return;
     function fallback(){
-      box.innerHTML=SRV.googleRedirect?'<button type="button" class="btn" data-auth="gsign" style="width:100%">Continue with Google</button>':'<small>Google sign-in could not load. Use your email and password.</small>';
+      box.innerHTML=SRV.googleRedirect?GBTN:'<small>Google sign-in could not load. Use your email and password.</small>';
     }
+    if(iosWeb()&&SRV.googleRedirect){box.innerHTML=GBTN;return}      /* iPhone and iPad: the full-page sign-in (needs the client secret on the server) */
     function draw(){
       try{
         var g=w.google.accounts.id;
@@ -1698,8 +1712,8 @@ function apply(w,host){
       '<div class="acts"><button type="button" class="btn" data-auth="ssubmit">'+(up?"Create account":"Log in")+'</button><button type="button" class="btn ghost" data-auth="smode">'+(up?"I already have an account":"Create an account")+'</button>'+(up?'':'<button type="button" class="btn ghost" data-auth="sforgot">Forgot password?</button>')+'</div>'+
       '<small>Your account is stored on UAply\'s server. Passwords are scrambled (hashed) and never stored as typed. Once you are signed in, each swipe right emails you a receipt.</small>'+
       (SRV.testInbox&&!SRV.canEmail&&up?'<small>No real email is connected on this computer yet, so the verification code and receipts go to the <a href="/outbox" target="_blank" rel="noopener noreferrer">test inbox</a>. <a href="/setup#gmail" target="_blank" rel="noopener noreferrer">Connect Gmail</a> to send real ones.</small>':'')+
-      (SRV.google&&!iosShell()?'<p class="note" style="text-align:center;margin:0">or</p><div class="checks"><label><input type="checkbox" id="gAgree"> I am 18 or older and agree to the <a href="'+LB+'terms.html" target="_blank" rel="noopener noreferrer">Terms</a> and <a href="'+LB+'privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a> (needed the first time)</label></div><div id="gBtn" style="min-height:44px"></div><small>Google handles the sign-in. UAply never sees your Google password, only your verified email.</small>'
-        :(SRV.testInbox&&!iosShell()?'<p class="note" style="text-align:center;margin:0">or</p><button type="button" class="btn" data-auth="gsetup" style="width:100%">Continue with Google</button><small>Google sign-in is not connected on this computer yet. Press the button to open setup (about 5 minutes). Only you see this button until it is connected; visitors never do.</small>':''))+'</div>';
+      (SRV.google&&!noGoogle()?'<p class="note" style="text-align:center;margin:0">or</p><div class="checks"><label><input type="checkbox" id="gAgree"> I am 18 or older and agree to the <a href="'+LB+'terms.html" target="_blank" rel="noopener noreferrer">Terms</a> and <a href="'+LB+'privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a> (needed the first time)</label></div><div id="gBtn" style="min-height:44px"></div><small>Google handles the sign-in. UAply never sees your Google password, only your verified email.</small>'
+        :(SRV.testInbox&&!noGoogle()?'<p class="note" style="text-align:center;margin:0">or</p><button type="button" class="btn" data-auth="gsetup" style="width:100%">Continue with Google</button><small>Google sign-in is not connected on this computer yet. Press the button to open setup (about 5 minutes). Only you see this button until it is connected; visitors never do.</small>':''))+'</div>';
   }
   function accountHTML(){
     var u=session(),h="";

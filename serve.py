@@ -201,7 +201,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         err, user, token = auth_api.oauth_login(ident["provider"], ident["subject"], ident["email"], agreed, ident.get("trusted", True))
         if err:
             return self._redirect("/?auth_error=" + err, [self._oauth_cookie("")])
-        return self._redirect("/?signed_in=google", self._cookie(token) + [self._oauth_cookie("")])
+        return self._redirect("/?signed_in=google" + ("&password_removed=1" if user.get("passwordRemoved") else ""), self._cookie(token) + [self._oauth_cookie("")])
 
     def _owner_ok(self):
         """Owner pages: open on this computer; on a public server only with OWNER_PASSWORD (any username)."""
@@ -354,7 +354,10 @@ class H(http.server.SimpleHTTPRequestHandler):
                     err, user, token = auth_api.oauth_login(ident["provider"], ident["subject"], ident["email"], payload.get("agree") is True, ident.get("trusted", True))
                 if err:
                     return self._send(429 if err == "limited" else 400, {"error": msg.get(err, msg["failed"]), "code": err})
-                return self._send(200, {"user": user}, headers=self._cookie(token))
+                out = {"user": user}
+                if user.pop("passwordRemoved", False):           # a password nobody had proven was the owner's was removed (auth_api.oauth_login)
+                    out["passwordRemoved"] = True
+                return self._send(200, out, headers=self._cookie(token))
             if p == "/api/auth/verify":
                 code, out = auth_api.verify_code(self._token(), payload.get("code"), ip)
                 return self._send(code, out)

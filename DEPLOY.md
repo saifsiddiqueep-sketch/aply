@@ -5,12 +5,11 @@ plans, and it starts every new profile blank. `sandbox` is the test bench and ke
 
 ## Before real users: your checklist
 1. **Host the server** (section 1 below). Until then nothing is online: the phone app's address returns 404.
-2. **Google sign-in (free):** UAply uses Google's own "Continue with Google" button (the same system LinkedIn, Indeed and others use), so people can pick
-   the Google account already signed in on their browser. It needs only the public **client ID**: in console.cloud.google.com/apis/credentials create an
-   OAuth client ID (Web application), set the consent screen to External and **Publish app**, add your website address under *Authorized JavaScript
-   origins* (for testing `http://localhost:8767`), then paste the client ID into the "Connect Google sign-in" box at `/setup` (or `UAPLY_CONFIG_JSON` on a
-   host). No secret is needed. Google blocks its sign-in inside an iPhone app's built-in browser, so the iPhone app hides the Google button until a native
-   Google sign-in plugin (and Sign in with Apple, which Apple then requires) is added. Password sign-up works everywhere.
+2. **Google sign-in (free):** see section 3 below. On computers and Android phones UAply shows Google's own "Continue with Google"
+   button (people pick the Google account already signed in on their browser); it needs only the public **client ID**. On iPhone and
+   iPad Google requires its full-page sign-in instead, which also needs the **client secret** on the server. Google blocks sign-in
+   inside an app's built-in web view, so the Android and iPhone apps hide the Google button until a native Google sign-in plugin (and
+   Sign in with Apple, which Apple then requires) is added. Password sign-up works everywhere.
 3. **Email** (password resets, receipts): create a Gmail App Password (needs 2-Step Verification) or use a transactional email
    service, then run `python tools/setup-config.py`. `/setup` has a "Send test email" button. Without it, reset links only reach
    the test inbox, so a real person cannot reset a password.
@@ -61,3 +60,26 @@ then run `npx cap sync` in `mobile/`.
   share sheet and offline screen help; push notifications for new matches (needs Apple and Firebase accounts) would help more.
 - **Store forms:** both stores need the privacy policy URL (`/legal/privacy.html`) and accurate privacy answers; account
   deletion already exists in the app (Profile, Account).
+
+## 3. Google sign-in
+One OAuth client serves both ways in. In console.cloud.google.com, signed in with the Google account that should own UAply:
+1. **Google Auth Platform > Overview > Get started** (create a project named UAply first if asked): App name `UAply`, User support
+   email your Gmail, Audience **External**, contact email your Gmail, agree to the policy, Create.
+2. **Branding:** App home page `https://uaply.net`, Privacy policy `https://uaply.net/legal/privacy.html`, Terms
+   `https://uaply.net/legal/terms.html`, Authorized domain `uaply.net`. Save.
+3. **Audience > Publish app** (status becomes In production). Sign-in only asks for openid, email and profile, which are not
+   sensitive scopes, so no review is needed; until Google verifies the branding, its screen shows the domain instead of the name.
+4. **Clients > Create client**, Application type **Web application**, name `UAply web`.
+   - Authorized JavaScript origins: `https://uaply.net`, `https://www.uaply.net`, `https://uaply-dev.onrender.com`,
+     `http://localhost:8767`, `http://localhost` (Google wants both localhost forms for local testing).
+   - Authorized redirect URIs: `https://uaply.net/api/auth/google/callback`, `https://www.uaply.net/api/auth/google/callback`,
+     `https://uaply-dev.onrender.com/api/auth/google/callback`, `http://localhost:8767/api/auth/google/callback`.
+   - Create. Copy the **Client ID** and the **Client secret**: Google shows the secret only this once (afterwards only its last
+     four characters; a new one can be added with Add secret).
+5. Render, uaply-dev, Environment: set `UAPLY_CONFIG_JSON` to include
+   `"google":{"client_id":"<the ID>","client_secret":"<the secret>"}` (merged with the email settings already there). On this
+   computer, paste only the client ID into `/setup` (Connect Google sign-in).
+6. Wait about 5 minutes (Google says changes can take up to a few hours), then test: on a computer, Profile > Account shows Google's
+   button; on an iPhone, the white "Continue with Google" button goes to Google's page and back. "The given origin is not allowed"
+   or `origin_mismatch` means the exact address in the browser (with or without www, http or https, the port) is missing from the
+   JavaScript origins; `redirect_uri_mismatch` means it is missing from the redirect URIs.
