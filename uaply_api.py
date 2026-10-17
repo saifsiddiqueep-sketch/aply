@@ -270,7 +270,8 @@ def _resume(raw):
         return None, None
     if not isinstance(raw, dict):
         raise ValueError("bad resume")
-    name = re.sub(r"[^A-Za-z0-9._ -]", "_", _s(raw.get("name"), 120)).strip() or "resume.pdf"
+    # letters of any language stay ("José García CV.pdf" reaches the employer as it is); slashes, quotes and other symbols become _
+    name = re.sub(r"[^\w. -]", "_", _s(raw.get("name"), 120)).strip() or "resume.pdf"
     m = re.match(r"^data:[\w/+.-]+;base64,([A-Za-z0-9+/=]+)$", raw.get("data") if isinstance(raw.get("data"), str) else "")
     ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
     if not m or ext not in _RESUME_KINDS:

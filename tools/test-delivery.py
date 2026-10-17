@@ -172,6 +172,18 @@ t("a name shaped like an address: the employer's Reply still goes only to the ve
   (out["status"], [a.addr_spec for a in rt], [a.display_name for a in rt]), ("sent", ["sam.h@example.com"], ["Sam <attacker@evil.example>"]))
 t("the sender shows as UAply even when only a bare address is set up", [m["From"].addresses[0].display_name for m in got], ["UAply"] * len(got))
 
+# 4c. a resume file name with accents reaches the employer as the person named it (it used to arrive as "Jos_ Garc_a CV.pdf")
+reset()
+open(mail_file, "w").close()
+accented = {"name": "José García CV.pdf", "data": RESUME["data"]}
+code, out = apply("Email Only Co", email_addr="jose@example.com", resume=accented)
+time.sleep(1)
+got = [email.message_from_string(json.loads(x)["raw"], policy=email.policy.default) for x in open(mail_file, encoding="utf-8") if x.strip()]
+atts = [a for m in got if m["To"] == "hr@emailonly.example" for a in m.iter_attachments()]
+t("an accented resume file name is kept, with the right type", [(a.get_filename(), a.get_content_type()) for a in atts], [("José García CV.pdf", "application/pdf")])
+code, out = apply("Email Only Co", email_addr="jose2@example.com", resume={"name": "../../etc/pass\"wd.pdf", "data": RESUME["data"]})
+t("a file name with slashes or quotes is still made safe", uaply_api.APPS[-1]["resume"]["name"], ".._.._etc_pass_wd.pdf")
+
 # 5. retries
 reset()
 Employer.script = [500, 500, 200]
