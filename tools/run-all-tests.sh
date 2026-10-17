@@ -56,6 +56,8 @@ step "Swipe-right emails (content, test label, safety, real send)"
 run "receipt and owner copy emails" python tools/test-emails.py
 run "help requests from the assistant reach the support inbox" python tools/test-support.py
 run "applications go straight into employers' hiring systems (Greenhouse, Lever)" python tools/test-ats.py
+run "applications go straight into an employer's Ashby" python tools/test-ats-ashby.py
+run "applications go straight into an employer's SmartRecruiters" python tools/test-ats-smartrecruiters.py
 run "swipe right to apply instantly, end to end" python tools/test-ats-flow.py
 run "paid plans: Stripe checkout, signed webhook, limits" python tools/test-billing.py
 run "autofill: real employers' forms answered from the profile, questions asked once" python tools/test-autofill.py

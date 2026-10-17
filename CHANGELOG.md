@@ -30,6 +30,46 @@ production page and only changes when the owner decides.
   and date styles; every refused file; the endpoint on a real server, nothing written to disk, rate limit) and `tools/ui-resume.js`
   (22 checks at iPhone size). Both run in `tools/run-all-tests.sh`; the Python test also runs in GitHub's checks, which now install pypdf.
 
+### Swipe right applies straight into Ashby and SmartRecruiters, for employers who connect
+- **Employers on Ashby or SmartRecruiters can now connect** the same way as Greenhouse and Lever: they create a key in their own system (Ashby:
+  Admin, Integrations, API Keys, with Candidates write and Jobs read; SmartRecruiters: Settings, Admin, Credential Manager, an Application API
+  key) and the owner pastes it into the Connect box on the setup page, or into the host's settings. Their real postings then say **Apply
+  instantly**, and a swipe right puts the application into their pipeline with the resume attached.
+- **The posting's own questions are answered from the profile**, with the same rules Greenhouse uses (work authorization, sponsorship, LinkedIn,
+  how they heard, why this company, and the rest). A required question the profile cannot answer is asked once and remembered; one the app cannot
+  ask (a file other than the resume, or a kind of field UAply does not know) means nothing is sent and the person finishes on the employer's page.
+  UAply never guesses.
+- **Voluntary questions stay unanswered**: SmartRecruiters' diversity questions and any gender, race, veteran or disability question on an Ashby
+  form are skipped. A privacy consent the employer requires is given only when the person switched on "Acknowledge employers' notices for me" or
+  answered it themselves, and optional consents (talent pool, text messages) are never given.
+- **Test mode never uses an employer's key**: their form is read only for a live send.
+- The real City of Philadelphia and Ashby feeds already record where each posting lives, so a connected employer's listed jobs work without
+  extra setup; SmartRecruiters postings now remember the id its application service needs.
+- New tests: `tools/test-ats-ashby.py` (29 checks) and `tools/test-ats-smartrecruiters.py` (29 checks) against a stand-in that checks every request
+  against the two systems' published documentation, plus new end-to-end checks in `tools/test-ats-flow.py` and `tools/test-setup.py`. A real key
+  has not been tried yet: the first connected employer should start with a test posting.
+
+### Profile setup asks what employers' forms require, so more swipes apply without a question
+- **New answers in Profile setup, all optional:** Willing to relocate for the right job (Yes or No; the Willing to relocate box under
+  Work style is the same answer, so changing one changes the other), Expected yearly pay in US dollars, Country you live in (United
+  States, Canada, United Kingdom or Other, asked right after your ZIP code), and, under your most recent employer, your job title there
+  and the months you started and ended (leave the end blank if you still work there; an end before the start is pointed out).
+- **Fewer questions after a swipe right:** "Are you willing to relocate?", "What are your salary expectations?", "Which country do you
+  live in?", "What is your current job title?", "Dates of employment" and "Are you currently employed?" are now answered from your
+  profile on employers' Greenhouse forms. Your title at your most recent employer is used for "current title"; the title you are
+  looking for is used only when that is blank.
+- **Expected pay goes only where a form requires it.** An optional pay box is left blank, a yes or no question about a pay range is
+  never given a number, and anywhere else your expected pay is not sent, not kept in the application record and not listed in your
+  receipt. Leave it blank and a form that requires it asks you each time.
+- **Greenhouse gets the fields its own careers page fills in without asking:** your country as a two-letter code, your location
+  ("Philadelphia, Pennsylvania, United States") with its map position from your ZIP code (all three together or none, since Greenhouse
+  ignores a location without the map position), and your most recent job (company, title, start month, and end month or "current").
+- **Your receipt, the employer's email and the webhook** now list your country, willingness to relocate, your job title and dates at
+  your most recent employer, and expected pay only when that employer's form required it, so the receipt still lists exactly what was
+  shared. The Privacy Policy and `EMPLOYERS.md` list the new fields.
+- The stand-in Greenhouse (`tools/mock-ats.py`) has a job (1006) with these questions and the location box, and refuses a location
+  without its map position or a half-filled job entry. `tools/test-autofill.py` has 31 new checks (67 in all).
+
 ### Sign-in ready for the live site (uaply.net), iPhones and Google
 - **Continue with Google on iPhone and iPad** now uses Google's full-page sign-in (a white "Continue with Google" button with
   Google's G), because Google says its pop-up button needs that on iPhone (Safari's tracking protection breaks the pop-up).
