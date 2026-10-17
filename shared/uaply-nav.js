@@ -1675,13 +1675,13 @@ function apply(w,host){
     em=em||"your email";
     if(dl==="sent")return "We emailed a 6-digit code to "+em+". Check your inbox (and spam), then enter it below.";
     if(dl==="failed")return "We could not send the code to "+em+". Check that the address is right, then press Send a new code.";
-    if(dl==="delivered_test")return "No real email is connected on this computer, so the code is in the test inbox.";
+    if(dl==="delivered_test")return SRV.testInbox?"No real email is connected on this computer, so the code is in the test inbox.":"Email is not switched on for this site yet, so no code was sent. Your account works and you can swipe; verify once email is on.";
     return SRV.canEmail?"We emailed you a 6-digit code: enter it below to verify your email.":"";
   }
   function verifyHTML(){
     if(!SRV.user||SRV.user.emailVerified!==false)return "";
     var where=SRV.canEmail?"We emailed a 6-digit code to "+E(SRV.user.email)+".":(SRV.testInbox?"No real email is connected on this computer, so the code is in the <a href='/outbox' target='_blank' rel='noopener noreferrer'>test inbox</a>. To send it to the real inbox, <a href='/setup#gmail' target='_blank' rel='noopener noreferrer'>connect Gmail</a> (about 3 minutes).":"");
-    if(!where)return '<div class="plan" style="display:flex;flex-direction:column;gap:6px;border:1px solid var(--line)"><b>Verify your email</b><small>This server cannot send email yet, so there is no code to enter. You can still swipe. Confirmation emails and direct applications to employers need a verified email.</small></div>';
+    if(!where)return '<div class="plan" style="display:flex;flex-direction:column;gap:6px;border:1px solid var(--line)"><b>Verify your email</b><small>Email is not switched on for this site yet, so there is no code to enter. Your account works and you can swipe. Once email is on, this box shows a Send a new code button; confirmation emails and direct applications to employers need a verified email.</small></div>';
     return '<div class="plan" style="display:flex;flex-direction:column;gap:8px;border:1px solid var(--accent)"><b>Verify your email</b><small>'+where+' It works for 10 minutes. Until you verify, you will not get confirmation emails and cannot apply directly to employers.</small>'+
       '<div class="field"><label for="sCode">6-digit code</label><input type="text" id="sCode" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123456"></div>'+
       '<div class="acts"><button type="button" class="btn" data-auth="sverify">Verify</button><button type="button" class="btn ghost" data-auth="sresend">Send a new code</button></div></div>';
@@ -1768,7 +1768,7 @@ function apply(w,host){
     if(!SRV.user&&AUI.reset)return resetHTML();
     if(!SRV.user&&AUI.forgot&&AUI.sMode==="in")return forgotHTML();
     if(SRV.user)return '<div class="plan" style="display:flex;flex-direction:column;gap:8px"><span class="tag" style="background:var(--accent);color:var(--accent-ink)">ACCOUNT</span><b>You are signed in</b><small>'+E(SRV.user.email)+(SRV.user.emailVerified===false?' · email not verified yet':' · email verified')+'</small>'+verifyHTML()+
-      '<p class="note" style="margin:0">'+(SRV.user.emailVerified===false?'Once your email is verified, each swipe right sends a confirmation to it':'Every time you swipe right, a confirmation goes to this email')+(SRV.canEmail?'':' (no real email is connected here yet, so it is saved in the <a href="/outbox" target="_blank" rel="noopener noreferrer">test inbox</a>; <a href="/setup#gmail" target="_blank" rel="noopener noreferrer">connect Gmail</a> to send real ones)')+'.</p>'+
+      '<p class="note" style="margin:0">'+(SRV.user.emailVerified===false?'Once your email is verified, each swipe right sends a confirmation to it':'Every time you swipe right, a confirmation goes to this email')+(SRV.canEmail?'':SRV.testInbox?' (no real email is connected here yet, so it is saved in the <a href="/outbox" target="_blank" rel="noopener noreferrer">test inbox</a>; <a href="/setup#gmail" target="_blank" rel="noopener noreferrer">connect Gmail</a> to send real ones)':' (email is not switched on for this site yet, so no confirmation goes out for now)')+'.</p>'+
       (AUI.survey||AUI.delOpen?'':'<div class="acts"><button type="button" class="btn ghost" data-auth="sout">Sign out</button></div>'+changeHTML())+
       deleteHTML()+
       '</div>';
