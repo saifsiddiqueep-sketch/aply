@@ -153,7 +153,7 @@
   {
    "id": "privacy",
    "title": "What data does UAply keep, and does it sell my data?",
-   "tags": "privacy data personal information stored keep share sell cookies",
+   "tags": "privacy data personal information stored keep share sell sold selling sells cookies",
    "body": "Your profile is saved on your device. Each time you swipe right, UAply's server keeps a record of that application (the job and the details sent with it) so it can deliver it and show what happened. If you create an account, your email, a scrambled form of your password and your receipts are kept too; deleting your account removes them and the applications you made while signed in. Employers only receive your details when you apply to one that agreed to receive applications. UAply does not sell your information. The Privacy Policy, linked at the bottom of the app, has the details.",
    "go": "prof:data"
   },
