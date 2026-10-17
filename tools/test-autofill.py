@@ -132,6 +132,12 @@ t("after the person answers the missing questions once, the same form is complet
 k_dbx = autofill.norm("Have you previously worked for Dropbox?", "Dropbox")
 k_other = autofill.norm("Have you previously worked for Discord?", "Discord")
 t("saved answers ignore the company's name, so they carry over to other employers", k_dbx == k_other and "{co}" in k_dbx, True)
+# a long question whose 160-character cut lands right after a word (Block's "I certify ..." does): the key the browser saves the
+# answer under must be the key the server looks it up by, or the same question comes back after every answer
+long_q = "I certify that all of the information I have provided is correct and complete and realize that falsification or misrepresentation, including omission, on this or any other personnel record"
+k_long = autofill.norm(long_q, "Block")
+t("a long question's key never ends in a space (it is cut at 160, then trimmed)", (len(k_long) <= 160, k_long == k_long.strip()), (True, True))
+t("an answer saved under a long question's key is found again", autofill.clean_answers({k_long: "Yes"}).get(k_long), "Yes")
 t("saved answers from the browser are capped and cleaned", (len(autofill.clean_answers({"q%d" % i: "a" for i in range(200)})), autofill.clean_answers({"x": 5, "": "y", "ok": "  v "})),
   (80, {"ok": "v"}))
 
