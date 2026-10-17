@@ -25,6 +25,27 @@ production page and only changes when the owner decides.
   against the two systems' published documentation, plus new end-to-end checks in `tools/test-ats-flow.py` and `tools/test-setup.py`. A real key
   has not been tried yet: the first connected employer should start with a test posting.
 
+### Profile setup asks what employers' forms require, so more swipes apply without a question
+- **New answers in Profile setup, all optional:** Willing to relocate for the right job (Yes or No; the Willing to relocate box under
+  Work style is the same answer, so changing one changes the other), Expected yearly pay in US dollars, Country you live in (United
+  States, Canada, United Kingdom or Other, asked right after your ZIP code), and, under your most recent employer, your job title there
+  and the months you started and ended (leave the end blank if you still work there; an end before the start is pointed out).
+- **Fewer questions after a swipe right:** "Are you willing to relocate?", "What are your salary expectations?", "Which country do you
+  live in?", "What is your current job title?", "Dates of employment" and "Are you currently employed?" are now answered from your
+  profile on employers' Greenhouse forms. Your title at your most recent employer is used for "current title"; the title you are
+  looking for is used only when that is blank.
+- **Expected pay goes only where a form requires it.** An optional pay box is left blank, a yes or no question about a pay range is
+  never given a number, and anywhere else your expected pay is not sent, not kept in the application record and not listed in your
+  receipt. Leave it blank and a form that requires it asks you each time.
+- **Greenhouse gets the fields its own careers page fills in without asking:** your country as a two-letter code, your location
+  ("Philadelphia, Pennsylvania, United States") with its map position from your ZIP code (all three together or none, since Greenhouse
+  ignores a location without the map position), and your most recent job (company, title, start month, and end month or "current").
+- **Your receipt, the employer's email and the webhook** now list your country, willingness to relocate, your job title and dates at
+  your most recent employer, and expected pay only when that employer's form required it, so the receipt still lists exactly what was
+  shared. The Privacy Policy and `EMPLOYERS.md` list the new fields.
+- The stand-in Greenhouse (`tools/mock-ats.py`) has a job (1006) with these questions and the location box, and refuses a location
+  without its map position or a half-filled job entry. `tools/test-autofill.py` has 31 new checks (67 in all).
+
 ### Sign-in ready for the live site (uaply.net), iPhones and Google
 - **Continue with Google on iPhone and iPad** now uses Google's full-page sign-in (a white "Continue with Google" button with
   Google's G), because Google says its pop-up button needs that on iPhone (Safari's tracking protection breaks the pop-up).

@@ -179,8 +179,22 @@ _TYPES = {"fulltime": "Full-time", "parttime": "Part-time", "internship": "Inter
 _MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
 
+_COUNTRIES = {"US": "United States", "CA": "Canada", "GB": "United Kingdom", "other": "Outside the United States, Canada and the United Kingdom"}
+
+
 def _pick(v, allowed):
     return v if isinstance(v, str) and v in allowed else ""
+
+
+def _month_value(v):
+    """A "2024-06" month from Profile setup, or ""."""
+    v = _s(v, 7)
+    return v if re.match(r"^\d{4}-(0[1-9]|1[0-2])$", v) else ""
+
+
+def _month_words(v):
+    """"2024-06" as "June 2024"."""
+    return "%s %s" % (_MONTHS[int(v[5:7]) - 1], v[:4]) if _month_value(v) else ""
 
 
 def _https(v, n=300):
@@ -210,13 +224,23 @@ def _ext(raw):
     types = [t for t in x.get("types") if t in _TYPES] if isinstance(x.get("types"), list) else []
     zipc = _s(x.get("zip"), 10)
     state = _s(x.get("state"), 30)
+    job_start, job_end = (_month_value(x.get(k)) for k in ("job_start", "job_end"))
+    if job_end and (not job_start or job_end < job_start):
+        job_start = job_end = ""                   # dates that cannot be right are left out, so a job is never reported as current by mistake
+    try:
+        salary = int(float(x.get("salary")))
+        salary = salary if 0 < salary <= 10000000 else ""
+    except (TypeError, ValueError, OverflowError):
+        salary = ""
     return {"phone": phone, "headline": _s(x.get("headline"), 120), "summary": _s(x.get("summary"), 600),
             "resume": _https(x.get("resume")), "linkedin": _linkedin(x.get("linkedin")), "portfolio": _https(x.get("portfolio")),
             "school": _s(x.get("school"), 100), "major": _s(x.get("major"), 100), "grad": grad, "gpa": gpa,
-            "employer": _s(x.get("employer"), 100), "auth": _pick(x.get("auth"), _AUTH),
+            "employer": _s(x.get("employer"), 100), "job_title": _s(x.get("job_title"), 100), "job_start": job_start, "job_end": job_end,
+            "auth": _pick(x.get("auth"), _AUTH),
             "sponsor": _pick(x.get("sponsor"), ("yes", "no")), "start": _pick(x.get("start"), _START), "types": types,
             # the common questions employers' own forms ask (used by autofill.py to fill those forms; none of them is shown to a recruiter otherwise)
             "zip": zipc if re.match(r"^\d{5}(-\d{4})?$", zipc) else "", "state": state if re.match(r"^[A-Za-z .]{2,30}$", state) else "",
+            "country": _pick(x.get("country"), _COUNTRIES), "salary": salary,     # expected yearly pay: kept only when a form asked for it (see submit)
             "relocate": _pick(x.get("relocate"), ("yes", "no")), "office": _pick(x.get("office"), ("yes", "no")),
             "former": _pick(x.get("former"), ("no", "ask")), "govt": _pick(x.get("govt"), ("yes", "no")), "phd": _pick(x.get("phd"), ("yes", "no")),
             "pronouns": _s(x.get("pronouns"), 30), "ack": x.get("ack") is True, "why": _s(x.get("why"), 600)}
@@ -230,14 +254,19 @@ def _detail_rows(c, note=""):
     grad = re.match(r"^(\d{4})-(\d{2})$", x.get("grad") or "")
     grad = "graduation %s %s" % (_MONTHS[int(grad.group(2)) - 1], grad.group(1)) if grad else ""      # "graduation June 2027", not "2027-06"
     edu = ", ".join(v for v in (x.get("school"), x.get("major"), grad, ("GPA %s" % x["gpa"]) if x.get("gpa") != "" and x.get("gpa") is not None else "") if v)
+    start, end = _month_words(x.get("job_start")), _month_words(x.get("job_end"))
+    dates = ("%s to %s" % (start, end or "present")) if start else ""
     rows = [("Applicant", c.get("name")), ("Email", c.get("email")), ("Current or target title", c.get("title")),
-            ("Experience", exp), ("Location", c.get("loc")), ("Skills", skills),
+            ("Experience", exp), ("Location", c.get("loc")), ("Country", _COUNTRIES.get(x.get("country"), "")), ("Skills", skills),
             ("Phone", x.get("phone")), ("Headline", x.get("headline")), ("Resume", x.get("resume")),
             ("Resume file", ("%s (attached)" % c["resume_file"]) if c.get("resume_file") else ""),
             ("LinkedIn", x.get("linkedin")), ("Portfolio", x.get("portfolio")), ("Education", edu),
-            ("Most recent employer", x.get("employer")),
+            ("Most recent employer", x.get("employer")), ("Job title there", x.get("job_title")), ("Dates there", dates),
             ("Work authorization", _AUTH.get(x.get("auth"), "") + ("; needs sponsorship" if x.get("sponsor") == "yes" else "; no sponsorship needed" if x.get("sponsor") == "no" else "") if x.get("auth") else ""),
             ("Earliest start", _START.get(x.get("start"), "")),
+            ("Willing to relocate", {"yes": "Yes", "no": "No"}.get(x.get("relocate"), "")),
+            # expected pay is in the record only when the employer's own form asked for it (submit() leaves it out otherwise)
+            ("Expected yearly pay", ("$%s" % format(x["salary"], ",")) if isinstance(x.get("salary"), int) and x["salary"] > 0 else ""),
             ("Looking for", ", ".join(_TYPES[t] for t in x.get("types", [])))]
     return [(k, str(v)) for k, v in rows if v and str(v) not in note]
 
@@ -317,6 +346,13 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 def _webhook_payload(rec, resume_bytes):
     c, j = rec["candidate"], rec["job"]
     x = c.get("ext") or {}
+    out = _webhook_body(rec, resume_bytes, c, j, x)
+    if isinstance(x.get("salary"), int) and x["salary"] > 0:      # only when this employer's own application form asked for it
+        out["applicant"]["expected_yearly_pay_usd"] = x["salary"]
+    return out
+
+
+def _webhook_body(rec, resume_bytes, c, j, x):
     return {"id": rec["id"], "event": "application.created", "source": "UAply", "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(rec["at"])),
             "job": {"id": j["id"], "title": j["role"], "company": j["co"], "location": j["loc"], "url": j["url"], "type": j.get("type"), "work_style": j.get("mode")},
             "applicant": {"name": c["name"], "email": c["email"], "phone": x.get("phone", ""), "title": c.get("title", ""), "location": c.get("loc", ""),
@@ -324,7 +360,10 @@ def _webhook_payload(rec, resume_bytes):
                           "education": {"level": c.get("edu", ""), "school": x.get("school", ""), "major": x.get("major", ""), "graduation": x.get("grad", ""), "gpa": x.get("gpa", "")},
                           "links": {"resume": x.get("resume", ""), "linkedin": x.get("linkedin", ""), "portfolio": x.get("portfolio", "")},
                           "work_authorization": x.get("auth", ""), "needs_sponsorship": x.get("sponsor", ""), "earliest_start": x.get("start", ""),
-                          "most_recent_employer": x.get("employer", "")},
+                          "country": x.get("country", ""), "willing_to_relocate": x.get("relocate", ""),
+                          "most_recent_employer": x.get("employer", ""),
+                          "most_recent_job": {"employer": x.get("employer", ""), "title": x.get("job_title", ""), "start": x.get("job_start", ""),
+                                              "end": x.get("job_end", ""), "current": bool(x.get("job_start")) and not x.get("job_end")}},
             "message": rec.get("note", ""), "match_percent": rec.get("match", 0),
             "resume": ({"name": rec["resume"]["name"], "type": rec["resume"]["type"], "size": rec["resume"]["size"],
                         "content_base64": base64.b64encode(resume_bytes).decode("ascii")} if resume_bytes and rec.get("resume") else None)}
@@ -694,6 +733,9 @@ def submit(p, user=None, site=""):
         return 200, {"status": "needs_answers", "mode": mode, "questions": pub["missing"], "filled": pub["filled"], "total": pub["total"]}
     summary = ({"filled": plan["filled"], "total": plan["total"],
                 "items": [{"q": i["q"][:160], "a": i["a"][:200]} for i in plan["items"] if i["a"] and not i.get("skip")][:40]} if plan else None)
+    if cand["ext"]["salary"] and not (plan and plan.get("salary_sent")):
+        # expected pay goes only to an employer whose own form asks for it: otherwise it is not sent, kept or listed in the receipt
+        cand["ext"] = dict(cand["ext"], salary="")
 
     send_args = None
     with _lock:
