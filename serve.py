@@ -225,6 +225,8 @@ class H(http.server.SimpleHTTPRequestHandler):
         p = self.path.split("?", 1)[0]
         if p == "/healthz":                                                 # for the host's health check
             return self._send(200, {"ok": True})
+        if api and p == "/legal":                                           # a typed uaply.net/legal (no slash) finds the legal pages too
+            return self._redirect("/legal/")
         if api and p in OWNER_PAGES and not self._owner_ok():
             if not OWNER_PASSWORD:
                 return self._send(403, {"error": "Owner pages are off on this server. Set OWNER_PASSWORD to use them."})

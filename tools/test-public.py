@@ -70,6 +70,8 @@ me = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".
 for p in ("/legal/" + me, "/legal//" + me.split(":", 1)[-1].lstrip("/"), "/legal//etc/passwd", "/legal/%2Fetc%2Fpasswd", "/legal/C:/Windows/win.ini"):
     s, _, body = req("GET", p)
     t("absolute path %s after /legal/ reads nothing" % p[:60], s == 404 and b"import " not in body and b"root:" not in body, True)
+s, h, _ = req("GET", "/legal")
+t("a typed /legal (no slash) goes to the legal pages", (s, h.get("location")), (302, "/legal/"))
 for p in ("/legal/", "/legal/terms.html", "/legal/privacy.html", "/legal/style.css", "/legal/favicon-32.png"):
     t("legal file %s still opens" % p, req("GET", p)[0], 200)
 t("a made-up path is a plain 404", req("GET", "/nope.html")[0], 404)
