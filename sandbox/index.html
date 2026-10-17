@@ -90,7 +90,7 @@ setMin(window.innerHeight<800);
 /* phones get the app full screen; ?controls=1 brings the sandbox controls back, ?app=1 forces app mode anywhere */
 var qs=location.search,standalone=(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone===true;
 if(standalone||/[?&]app=1/.test(qs)||(window.innerWidth<700&&!/[?&]controls=1/.test(qs)))document.body.classList.add("app");
-paint("On by default: Bottom navigation, Smarter matching, Compact fit, Card rise motion, Progress & profile notice, Bigger tap targets, Applied dates, Swipe hint.");
+paint("On by default: "+E.ORDER.filter(function(k){return on[k]}).map(function(k){return E.FEATURES[k].name}).join(", ")+".");   /* read from `on` above, so the list never goes stale */
 load();
 })();
 </script>

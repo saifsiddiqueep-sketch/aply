@@ -26,6 +26,9 @@ session of that account and works for Google-only accounts too (it then gains a 
 Wrong passwords: 5 per connection and account, and 20 per account from all connections together, in 15 minutes (the second
 limit holds even when a visitor makes up a new address for every try).
 
+Email verification: a new password account gets a 6-digit code by email (email_codes above); a "Continue with Google" account
+counts as verified only when Google is the authority on that address (see oauth_login).
+
 A hosted database (instead of this file) is a later step: this module is the stand-in that already behaves like one.
 """
 import hashlib

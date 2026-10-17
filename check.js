@@ -28,13 +28,13 @@ console.log("Python files");
 /* On Windows "python" is often only a Microsoft Store shortcut; fall back to the "py" launcher when it does not run. */
 const py = process.platform !== "win32" ? "python3"
   : (spawnSync("python", ["--version"], { encoding: "utf8" }).status === 0 ? "python" : "py");
-["serve.py", "jobs_api.py", "uaply_api.py", "auth_api.py", "chat_api.py"].forEach((f) => {
+fs.readdirSync(".").filter((f) => f.endsWith(".py")).forEach((f) => {     /* every server module, not a hand-kept list (it had missed 8 of 13) */
   const r = spawnSync(py, ["-m", "py_compile", f], { encoding: "utf8" });
   r.status === 0 ? ok(f) : bad(f + "\n" + (r.stderr || r.error));
 });
 
 console.log("JSON files");
-["uaply-config.example.json", ".claude/launch.json", "help/articles.json"].forEach((f) => {
+fs.readdirSync(".").filter((f) => f.endsWith(".json") && !["uaply-config.json", "uaply-partners.json"].includes(f)).concat(   /* never the owner's secret files: an error message could quote them */[".claude/launch.json", "help/articles.json", "mobile/capacitor.config.json"]).filter((f) => fs.existsSync(f)).forEach((f) => {
   try { JSON.parse(fs.readFileSync(f, "utf8")); ok(f); } catch (e) { bad(f + ": " + e.message); }
 });
 
@@ -75,6 +75,56 @@ console.log("Release build (dev)");
   const testy = relText.filter((t) => /test version|test inbox|sandbox|simulated|isn't available yet|claude|anthropic/i.test(t));
   testy.length ? bad("help/articles.json: release answers with test or developer wording: " + testy.map((t) => t.split(":")[0]).join(", ")) : ok("no release answer mentions a test version, a test inbox or the coding tools");
 }
+
+console.log("Wiring between files");
+try {
+  /* a fresh copy of every shared script, so this does not depend on the section above */
+  const W = {}, fakeDoc = { getElementById() { return null; } };
+  ["nav", "live", "profile", "chat", "envs", "employers"].forEach((f) => new Function("window", "localStorage", "document", fs.readFileSync("shared/uaply-" + f + ".js", "utf8"))(W, localStorage, fakeDoc));
+  const E = W.UAplyEnv, prod = fs.readFileSync("prod/index.html", "utf8");
+  const NEEDS = { submit: ["nav", "live", "kit"], profile: ["nav"], employers: ["nav"] };   /* the same rule as run() in uaply-envs.js */
+  const build = (keys) => {
+    let s = prod, err = "";
+    E.ORDER.forEach((k) => { if (keys.includes(k) && E.FEATURES[k].patch) { try { s = E.FEATURES[k].patch(s); } catch (e) { err += k + ": " + e.message + ". "; } } });
+    for (const m of s.matchAll(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/g)) { try { new Function(m[1]); } catch (e) { err += "the patched script no longer parses: " + e.message + ". "; } }
+    return err;
+  };
+  /* a patch whose text is no longer in prod/index.html throws, and the app would show "Problem: ..." instead of the feature */
+  const alone = E.ORDER.map((k) => [k, build([k].concat(NEEDS[k] || []))]).filter((x) => x[1]);
+  alone.length ? bad("these experiments no longer apply on their own: " + alone.map((x) => x[1]).join(" ")) : ok("each of the " + E.ORDER.length + " experiments applies on its own");
+  const all = build(E.ORDER);
+  all ? bad("with every experiment on: " + all) : ok("every experiment applies together");
+  const dev = fs.readFileSync("dev/index.html", "utf8"), P = JSON.parse(/var PROMOTED=(\[[^\]]*\])/.exec(dev)[1]);
+  const unknown = P.filter((k) => !E.FEATURES[k]);
+  unknown.length ? bad("dev/index.html PROMOTED names features that do not exist: " + unknown.join(", ")) : ok("every feature dev's PROMOTED list names exists (" + P.length + ")");
+  /* sandbox-only: Hiring mode, the pretend back end, and the "Save to Applied?" question the sandbox removed */
+  const leak = P.filter((k) => ["employers", "backend", "confirm"].includes(k));
+  leak.length ? bad("sandbox-only features in the release build: " + leak.join(", ")) : ok("no sandbox-only feature (Hiring mode, Mock back end, Confirm apply) is in the release build");
+  const devErr = build(P.concat(NEEDS.submit));
+  devErr ? bad("the release build does not assemble: " + devErr) : ok("the release build (dev's PROMOTED list) assembles and parses");
+  /* "Take me there" under an assistant answer: each article's destination must be a real menu item or Profile setup step, reached
+     directly (the old names "preferences" and "resume" are only shortcuts and land on the wrong step) */
+  const navSrc = fs.readFileSync("shared/uaply-nav.js", "utf8"), items = {};
+  for (const m of navSrc.matchAll(/(svc|dash|prof):\{label:"[^"]*",items:\[(.*?)\]\}/g)) items[m[1]] = [...m[2].matchAll(/\["(\w+)"/g)].map((x) => x[1]);
+  const steps = [...(/var STEPS=\[([\s\S]*?)\n  \];/.exec(navSrc) || ["", ""])[1].matchAll(/\{k:"(\w+)"/g)].map((x) => x[1]);
+  const wrong = [];
+  JSON.parse(fs.readFileSync("help/articles.json", "utf8")).articles.forEach((a) => {
+    [["", a.go], [" (release)", a.release && a.release.go]].forEach(([which, g]) => {
+      if (!g) return;
+      const [sec, v] = String(g).split(":");
+      if (!items[sec] || !(items[sec].includes(v) || (sec === "prof" && steps.includes(v)))) wrong.push(a.id + which + " -> " + g);
+    });
+  });
+  !items.prof || steps.length !== 5 ? bad("could not read the menus or the Profile setup steps from shared/uaply-nav.js") :
+    wrong.length ? bad("help articles whose \"Take me there\" goes nowhere or to the wrong place: " + wrong.join(", ")) : ok("every help article's \"Take me there\" is a real screen or Profile setup step");
+  /* getElementById("x") in the shared scripts: x must be made by prod/index.html or by one of the scripts */
+  const every = ["prod/index.html", "sandbox/index.html", "dev/index.html"].concat(fs.readdirSync("shared").map((f) => "shared/" + f)).map((f) => fs.readFileSync(f, "utf8")).join("\n");
+  const made = new Set([...every.matchAll(/\bid=\\?["']([A-Za-z][\w-]*)|\.id\s*=\s*["']([A-Za-z][\w-]*)["']/g)].map((m) => m[1] || m[2]));
+  const prefixes = [...every.matchAll(/\bid=\\?["']([A-Za-z][\w-]*)['"]\s*\+/g)].map((m) => m[1]);
+  const missing = new Set();
+  fs.readdirSync("shared").forEach((f) => { for (const m of fs.readFileSync("shared/" + f, "utf8").matchAll(/getElementById\(\s*"([^"]+)"\s*\)/g)) if (!made.has(m[1]) && !prefixes.some((p) => m[1].startsWith(p))) missing.add(f + ": " + m[1]); });
+  missing.size ? bad("getElementById of ids nothing creates: " + [...missing].join(", ")) : ok("every id the shared scripts look up is created somewhere (" + made.size + " ids)");
+} catch (e) { bad("wiring checks could not run: " + e.message); }
 
 console.log("Python lint (pyflakes, when installed)");
 {

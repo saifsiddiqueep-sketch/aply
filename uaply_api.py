@@ -110,8 +110,8 @@ def _append(name, obj):
         os.makedirs(DATA, exist_ok=True)
         with open(os.path.join(DATA, name), "a", encoding="utf-8") as f:
             f.write(json.dumps(obj) + "\n")
-    except Exception:
-        pass            # keep working from memory if the disk is not writable
+    except Exception as e:    # keep working from memory if the disk is not writable, but tell the owner: these records are lost on restart
+        sys.stderr.write("[uaply] could not save to %s: %s: %s\n" % (name, type(e).__name__, str(e)[:200]))
 
 
 def _load():
@@ -376,7 +376,7 @@ def _deliver(cfg, target, cand, job, note, contact, resume_meta, resume_bytes, h
         else:
             errors.append("%s: %s" % (ats["kind"], why))
     if not done and manual and not errors:     # nothing was sent because the posting asks something the profile cannot answer: finish on the employer's page
-        sys.stderr.write("[uaply] application %s needs a manual finish: %s" % (rec["id"], manual))
+        sys.stderr.write("[uaply] application %s needs a manual finish: %s\n" % (rec["id"], manual))
         return "handoff", None, []
     return ("sent" if done else "failed"), ("; ".join(errors) if errors else None), done
 
@@ -427,7 +427,8 @@ def _send_owner_copy(cfg, rec):
                 srv.login(s["user"], s.get("password", ""))
             srv.send_message(_copy_message(cfg, rec))
         return True
-    except Exception:
+    except Exception as e:
+        sys.stderr.write("[uaply] the owner's copy of application %s was not sent: %s: %s\n" % (rec.get("id"), type(e).__name__, str(e)[:200]))
         return False
 
 
@@ -537,8 +538,9 @@ def _receipt(cfg, user, cand, job, note, rec):
         try:
             _send_receipt(cfg, to, subject, body, page)
             status = "sent"
-        except Exception:
+        except Exception as e:
             status = "failed"
+            sys.stderr.write("[uaply] the applicant's confirmation was not sent: %s: %s\n" % (type(e).__name__, str(e)[:200]))
     elif cfg["delivery"] == "live":
         status = "not_configured"
     try:
@@ -680,7 +682,10 @@ def submit(p, user=None):
                 APPS.append(rec)
                 _append("applications.jsonl", rec)
     if send_args:                                                  # the slow network calls happen outside the lock
-        status, err, channels = _deliver(*send_args)
+        try:
+            status, err, channels = _deliver(*send_args)
+        except Exception as e:     # never leave the record on "sending": that would block every retry as a duplicate and count toward the daily cap
+            status, err, channels = "failed", "unexpected problem (%s)" % type(e).__name__, []
         with _lock:
             rec["status"], rec["channels"] = status, channels
             if err:

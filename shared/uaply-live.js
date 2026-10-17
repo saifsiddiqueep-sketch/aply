@@ -89,7 +89,9 @@ function kitApply(w,host){
     try{var k="uaply.session",v=w.localStorage.getItem(k);if(!v){v=Math.random().toString(36).slice(2)+Date.now().toString(36);w.localStorage.setItem(k,v)}return v}catch(e){return "anon"}
   }
   function post(path,body){
-    return w.fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j}})});
+    /* a reply that is not JSON (a host's "Bad gateway" page, say) is a server problem, not "you're offline": only a request that never
+       arrived rejects, which is what queues the application for when the connection is back */
+    return w.fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j}},function(){return {ok:false,j:{error:"UAply's server had a problem and nothing was sent. Try again in a moment.",code:"server"}}})});
   }
   /* contact lines under the note, from the Application profile experiment (empty if it is off) */
   function signature(p){
@@ -144,7 +146,7 @@ function kitApply(w,host){
     o.innerHTML='<div role="dialog" aria-modal="true" aria-labelledby="kitH" style="background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:20px;max-width:460px;width:100%;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px">'+
       '<h2 id="kitH" style="margin:0;font:800 20px var(--display)">'+(submitOn&&!ask?'Sending to ':'Finish applying to ')+esc(job.co)+'</h2>'+
       '<p style="margin:0;color:var(--muted);font-size:14px">'+intro+'</p>'+
-      (!p.custom?'<p style="margin:0;color:var(--mid);font-size:13px">This uses the example profile. Add your own details in Profile first.</p>':'')+
+      (!p.custom?'<p style="margin:0;color:var(--mid);font-size:13px">This uses the example profile. Add your own details in Profile setup first.</p>':'')+
       (submitOn&&!profileOk?'<p style="margin:0;color:var(--no);font-size:13px">Add your name and a valid email in Profile setup, under About you, so the recruiter can reply.</p>':'')+
       '<textarea id="kitText" rows="7" aria-label="Application note" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font:inherit;resize:vertical"></textarea>'+
       '<p id="kitStatus" role="status" style="margin:0;font-size:13.5px;font-weight:600;min-height:1.3em"></p>'+
@@ -192,7 +194,7 @@ function kitApply(w,host){
     }
     var sendBtn=d.getElementById("kitSend");if(sendBtn)sendBtn.onclick=send;
     var pb=d.getElementById("kitProfile");
-    if(pb)pb.onclick=function(){close();var b=d.getElementById("nb-prof");if(b){b.click();var it=d.querySelector('.nwrap[data-k=prof] .nitem[data-v=settings]');if(it)it.click()}};
+    if(pb)pb.onclick=function(){close();openProfile("about")};   /* the message above asks for the name and email: open that step */
     d.getElementById("kitOpen").onclick=function(){if(w.__uaplyOpen)w.__uaplyOpen(job.url)};
     d.getElementById("kitCopy").onclick=function(){copy(ta.value,this)};
     var ansBtn=d.getElementById("kitAnswers");
@@ -275,7 +277,8 @@ function kitApply(w,host){
     d.getElementById("kcNo").onclick=function(){answer(false)};
     o.addEventListener("keydown",function(e){if(e.key==="Escape")answer(false)});
   }
-  function openProfile(){var b=d.getElementById("nb-prof");if(b){b.click();var it=d.querySelector('.nwrap[data-k=prof] .nitem[data-v=settings]');if(it)it.click()}}
+  /* step: a Profile setup step ("about", "back"...) to open on. Called from a button it gets the click event, which is ignored */
+  function openProfile(step){if(typeof step==="string"&&w.__uaplyOpenProf){w.__uaplyOpenProf(step);return}var b=d.getElementById("nb-prof");if(b){b.click();var it=d.querySelector('.nwrap[data-k=prof] .nitem[data-v=settings]');if(it)it.click()}}
 
   /* answers the person gave to questions employers' forms asked, kept on this device and sent with each application so the
      same question is never asked twice (the server matches them to each new form; see autofill.py) */
@@ -291,7 +294,7 @@ function kitApply(w,host){
     var hasFile=qs.some(function(q){return q.kind==="file"});
     var h='<form role="dialog" aria-modal="true" aria-labelledby="kaH" novalidate style="background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:20px;max-width:480px;width:100%;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;font-size:14px">'+
       '<h2 id="kaH" style="margin:0;font:800 20px var(--display)">'+(qs.length===1?'One question':qs.length+' questions')+' from '+esc(job.co)+'</h2>'+
-      '<p style="margin:0;color:var(--muted)">UAply filled in '+filled+' of '+total+' answers on '+esc(job.co)+'\'s application. '+(hasFile?'It also needs a resume file. Answer what you can (it is saved), then upload your resume in Profile and swipe right again.':'Answer '+(qs.length===1?'this':'these')+' and UAply sends it. Your answers are saved, so the next employer that asks the same thing gets them automatically.')+'</p>';
+      '<p style="margin:0;color:var(--muted)">UAply filled in '+filled+' of '+total+' answers on '+esc(job.co)+'\'s application. '+(hasFile?'It also needs a resume file. Answer what you can (it is saved), then upload your resume in Profile setup, under Background and links, and swipe right again.':'Answer '+(qs.length===1?'this':'these')+' and UAply sends it. Your answers are saved, so the next employer that asks the same thing gets them automatically.')+'</p>';
     qs.forEach(function(q,i){
       var id="kaQ"+i;
       h+='<div style="display:flex;flex-direction:column;gap:5px"><label for="'+id+'" style="font-weight:600">'+esc(q.q)+'</label>';
@@ -309,7 +312,7 @@ function kitApply(w,host){
       e.preventDefault();
       var add={},blank=null;
       o.querySelectorAll("[data-k]").forEach(function(el){var v=(el.value||"").trim();if(!v&&!blank)blank=el;add[el.getAttribute("data-k")]=v});
-      if(hasFile){keepAnswers(add);o.remove();cancel();openProfile();return}   /* keep whatever was answered: only the resume is left next time */
+      if(hasFile){keepAnswers(add);o.remove();cancel();openProfile("back");return}   /* keep whatever was answered: only the resume is left next time */
       if(blank){d.getElementById("kaMsg").textContent="Answer every question to send the application.";blank.focus();return}
       keepAnswers(add);o.remove();go();
     };
@@ -340,7 +343,7 @@ function kitApply(w,host){
     }
     function mark(status,to){var dec=S&&S.decisions&&S.decisions[job.id];if(dec){dec.sent={at:Date.now(),to:to||"",status:status};if(save)save()}}
     if(!(p.name&&EMAIL.test(p.email||"")&&(!live||p.custom))){
-      revert();toast("Add your name and email in Profile first, so employers can reply. "+job.co+" is back in your deck.","Open Profile",openProfile,9000);return;
+      revert();toast("Add your name and email in Profile setup, under About you, so employers can reply. "+job.co+" is back in your deck.","Open Profile",function(){openProfile("about")},9000);return;
     }
     if(live&&!auto){sheet(job,m,p,undo,S,save);return}           /* auto_send is off in the config: show the review screen */
     /* what happened to the applicant's own email receipt (signed-in accounts only) */
@@ -363,10 +366,10 @@ function kitApply(w,host){
         var j=r.j||{};
         if(!r.ok){
           /* nothing was sent (a limit, a missing detail, an unverified email): the job goes back to the deck rather than sitting in Applied */
-          if(retry){mark("");return}
+          if(retry){if(j.code!=="server")mark("");return}          /* a server hiccup keeps it waiting for the next try */
           revert();
           var act=j.code==="limit"?["See plans",function(){var b=d.getElementById("nb-prof");if(b){b.click();var it=d.querySelector('.nwrap[data-k=prof] .nitem[data-v=plan]');if(it)it.click()}}]
-                  :j.code==="slow_down"?["",null]:["Open Profile",openProfile];
+                  :j.code==="slow_down"||j.code==="server"?["",null]:["Open Profile",openProfile];
           toast((j.error||"Could not send your application.")+" "+job.co+" is back in your deck.",act[0],act[1],9000);return;
         }
         if(j.status==="needs_answers"){

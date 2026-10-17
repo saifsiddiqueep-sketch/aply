@@ -47,7 +47,9 @@ def _money(sal):
 
 
 def _when(ts):
-    return time.strftime("%b %d, %Y at %I:%M %p UTC", time.gmtime(ts)).replace(" 0", " ", 1)
+    """'Oct 5, 2026 at 9:05 AM UTC': no leading zero on the day or the hour (the old one-time replace dropped only the first of the two)."""
+    t = time.gmtime(ts)
+    return "%s %d, %d at %d:%02d %s UTC" % (time.strftime("%b", t), t.tm_mday, t.tm_year, (t.tm_hour % 12) or 12, t.tm_min, "AM" if t.tm_hour < 12 else "PM")
 
 
 def _https(u):

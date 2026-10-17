@@ -14,7 +14,7 @@ import urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 TMP = tempfile.mkdtemp(prefix="uaply-billing-")
-PORT = 8798
+PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8798          # a free port can be given: python tools/test-billing.py PORT
 os.environ.update(UAPLY_DATA_DIR=TMP, UAPLY_CONFIG_JSON="{}", UAPLY_STRIPE_BASE="http://127.0.0.1:%d" % PORT)
 import auth_api  # noqa: E402
 import billing_api  # noqa: E402
@@ -90,6 +90,25 @@ try:
     sub = add_sub("sub_1", "cus_1", "price_pro1", status="canceled", end=int(time.time()) - 10)
     billing_api.webhook(*signed({"id": "evt_4", "type": "customer.subscription.deleted", "data": {"object": sub}}))
     t("when the subscription ends the account is back on Free", billing_api.plan_of(user), "free")
+    # the server fails while handling an event (the database is busy, say): Stripe sends it again, and that retry must count
+    sub = add_sub("sub_1", "cus_1", "price_plus1")
+    raw6, sig6 = signed({"id": "evt_6", "type": "customer.subscription.updated", "data": {"object": sub}})
+    real_set = auth_api.set_billing
+
+    def busy(*a, **k):
+        raise RuntimeError("database is locked")
+    auth_api.set_billing = busy
+    try:
+        billing_api.webhook(raw6, sig6)
+        first = "handled"
+    except RuntimeError:
+        first = "error"                                   # serve.py answers 500 here, so Stripe tries again later
+    auth_api.set_billing = real_set
+    t("an event whose handling failed is not remembered as done, so Stripe's retry switches the plan on",
+      (first, billing_api.webhook(raw6, sig6)[1].get("duplicate"), billing_api.plan_of(user)), ("error", None, "plus"))
+    sub = add_sub("sub_1", "cus_1", "price_pro1", status="canceled", end=int(time.time()) - 10)
+    billing_api.webhook(*signed({"id": "evt_7", "type": "customer.subscription.deleted", "data": {"object": sub}}))
+    t("a signed event that is not an object is refused, not a crash", billing_api.webhook(*signed(["not", "an", "object"]))[0], 400)
 
     # weekly limits, enforced by the server
     for i in range(50):

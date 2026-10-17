@@ -13,7 +13,7 @@ import urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 TMP = tempfile.mkdtemp(prefix="uaply-atsflow-")
-PORT = 8796
+PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8796          # a free port can be given: python tools/test-ats-flow.py PORT
 os.environ.update(UAPLY_DATA_DIR=TMP, UAPLY_CONFIG_JSON="{}", UAPLY_ATS_BASE_GREENHOUSE="http://127.0.0.1:%d" % PORT, UAPLY_ATS_BASE_LEVER="http://127.0.0.1:%d" % PORT)
 os.environ["UAPLY_ATS_JSON"] = json.dumps([{"kind": "lever", "board": "acme", "api_key": "lever-key-456"}, {"kind": "workday", "board": "x", "api_key": "abcdefgh123"}])
 

@@ -134,10 +134,6 @@ def _us_ok(loc, remote):
 SAL_RE = re.compile(r"\$\s?(\d{2,3}(?:,\d{3})+|\d{2,3}\s?[kK])\s*(?:-|–|—|to)\s*\$?\s*(\d{2,3}(?:,\d{3})+|\d{2,3}\s?[kK])")
 YRS_RE = re.compile(r"(\d{1,2})\+?\s*(?:or more\s*)?(?:years|yrs)", re.I)
 
-EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-RECRUITING_RE = re.compile(r"career|jobs|recruit|talent|hiring|apply|people@|hr@", re.I)
-NOT_CONTACT_RE = re.compile(r"scam|fraud|phish|abuse|security|privacy|legal|compliance|no-?reply|donotreply|\.(png|jpg|gif)$", re.I)
-
 _cache = {}
 _lock = threading.Lock()
 _disk = {"loaded": False, "dirty": False}
@@ -185,16 +181,8 @@ def _save_disk():
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(snap, f)
         os.replace(tmp, path)
-    except Exception:
-        pass
-
-
-def _contact(text):
-    """A recruiting address printed in the posting, if there is one. Only recruiting-looking mailboxes qualify."""
-    for m in EMAIL_RE.findall(text or ""):
-        if RECRUITING_RE.search(m.split("@")[0]) and not NOT_CONTACT_RE.search(m):
-            return m
-    return ""
+    except Exception as e:                      # jobs still work from memory; only a restart would have to wait for every feed again
+        sys.stderr.write("[uaply] could not save the job cache: %s: %s\n" % (type(e).__name__, str(e)[:200]))
 
 
 def _get(url):
@@ -517,11 +505,13 @@ def _clean(v, n):
 
 
 def partners_file(for_writing=False):
-    """Where the employer list is kept: on a host on the persistent disk (UAPLY_DATA_DIR), else next to the code. With for_writing, the path to create."""
-    places = [os.path.join(os.environ["UAPLY_DATA_DIR"], "uaply-partners.json")] if os.environ.get("UAPLY_DATA_DIR") else []
-    places += [os.path.join(ROOT, "uaply-partners.json")]
-    found = next((p for p in places if os.path.exists(p)), None)
-    return found or (places[-1] if for_writing else None)
+    """Where the employer list is kept: on a host on the persistent disk (UAPLY_DATA_DIR), else next to the code. With for_writing, the path to create.
+    With UAPLY_DATA_DIR set, ONLY that folder is used. It used to fall back to the file next to the code, so a test run (which always sets
+    UAPLY_DATA_DIR) read the owner's real employer list and the Connect box test wrote a test key into it; and on a host a first save went
+    to the code folder, which a redeploy wipes."""
+    folder = os.environ.get("UAPLY_DATA_DIR") or ROOT
+    path = os.path.join(folder, "uaply-partners.json")
+    return path if (for_writing or os.path.exists(path)) else None
 
 
 def _file_stamp(path):

@@ -25,6 +25,12 @@ Serves ROOT; each urlpath=file alias maps one URL to a file outside ROOT (e.g. /
   POST /api/feedback      store feedback sent through the assistant
   GET  /feedback          the feedback summary page (this server only listens on this computer)
   GET  /help/articles.json  the help articles the assistant answers from
+  POST /api/auth/verify, /api/auth/resend   the 6-digit code that proves an email is the person's own
+  POST /api/auth/google/token   "Continue with Google" through Google's own button
+  POST /api/setup/save-google, save-stripe, save-ats, remove-ats   the other boxes on /setup (this computer only)
+  GET  /api/billing/status, POST /api/billing/checkout, /api/billing/portal, /api/billing/webhook   Plus and Pro (billing_api.py)
+  GET  /api/employer/me, /api/employer/logo/<id>, POST /api/employer/...   Hiring mode, sandbox only (employers_api.py)
+  GET  /healthz           for the host's health check
 Accounts use an HttpOnly session cookie. When a signed-in user swipes right, a receipt goes to their email."""
 import sys, os, re, json, http.server, base64, hmac, threading, time
 
@@ -277,7 +283,11 @@ class H(http.server.SimpleHTTPRequestHandler):
                 n = 0
             if not 0 < n <= 512000:
                 return self._refuse(400, {"error": "bad size"})
-            code, out = billing_api.webhook(self.rfile.read(n), self.headers.get("Stripe-Signature") or "")
+            try:
+                code, out = billing_api.webhook(self.rfile.read(n), self.headers.get("Stripe-Signature") or "")
+            except Exception as e:                      # say so (Stripe then sends the event again later) instead of dropping the connection
+                log_oops(p, e)
+                code, out = 500, {"error": OOPS}
             return self._send(code, out)
         if not api or p not in ("/api/apply", "/api/decision", "/api/auth/signup", "/api/auth/login", "/api/auth/logout",
                                 "/api/auth/delete", "/api/auth/forgot", "/api/auth/reset", "/api/auth/change-password",

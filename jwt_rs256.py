@@ -23,10 +23,6 @@ _lock = threading.Lock()
 _keys = {"url": "", "until": 0.0, "by_kid": {}}
 
 
-def b64url(data):
-    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
-
-
 def b64url_decode(text):
     return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
 

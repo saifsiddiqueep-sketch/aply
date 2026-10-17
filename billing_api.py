@@ -81,7 +81,7 @@ def limit_reached(user):
         return None
     p = PLANS[plan_of(user)]
     if p["cap"] and _week_used(user["id"]) >= p["cap"]:
-        return "You've used your %d applications this week on %s. Choose a bigger plan in Profile, Plan to keep applying." % (p["cap"], p["name"])
+        return "You've used your %d applications this week on %s. Choose a bigger plan in Profile, Plan and billing to keep applying." % (p["cap"], p["name"])
     return None
 
 
@@ -187,10 +187,10 @@ def webhook(raw, header):
         ev = json.loads(raw.decode("utf-8"))
     except ValueError:
         return 400, {"error": "bad body"}
+    if not isinstance(ev, dict):
+        return 400, {"error": "bad body"}
     if ev.get("id") in _seen:
         return 200, {"ok": True, "duplicate": True}
-    _seen.append(ev.get("id"))
-    del _seen[:-500]
     kind, obj = ev.get("type", ""), ((ev.get("data") or {}).get("object") or {})
     if kind == "checkout.session.completed" and obj.get("mode") == "subscription":
         ref = obj.get("client_reference_id") or ""
@@ -203,4 +203,8 @@ def webhook(raw, header):
                 _apply_subscription(sub, uid)
     elif kind in ("customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"):
         _apply_subscription(obj)
+    # remembered only once it was handled: if handling failed (an error reaches serve.py, which answers 500), Stripe sends the event
+    # again and that retry must not be thrown away as a duplicate, or the person who paid would never get the plan
+    _seen.append(ev.get("id"))
+    del _seen[:-500]
     return 200, {"ok": True}

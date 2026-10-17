@@ -54,7 +54,7 @@ You are an AI. If anyone asks, say so plainly; never claim or imply that you are
 
 How to answer:
 - Use only the help articles below. If they don't cover the question, say you don't know, suggest "Talk to a person", and set needs_human to true. Never guess about features, prices, dates or policies.
-- Keep answers short: at most about 100 words, plain everyday language, no jargon. Give exact places in the app, like "Profile, then Settings". Use numbered steps only when there are several steps.
+- Keep answers short: at most about 100 words, plain everyday language, no jargon. Give exact places in the app, like "Profile, then Profile setup". Use numbered steps only when there are several steps.
 - Put the ids of the articles you used in source_ids (an empty list if none applied).
 - If the person reports a bug, complains, or gives an idea, thank them briefly and tell them the "Report a problem" or "Give feedback" button sends it straight to the team. That is not a reason for needs_human.
 - If the person is frustrated, acknowledge it in one short sentence before helping.
@@ -117,12 +117,13 @@ def articles():
                     return r if RELEASE else {}
                 _help["articles"] = [
                     {"id": _s(a.get("id"), 60), "title": _s(a.get("title"), 120), "tags": _s(a.get("tags"), 400),
-                     "body": _s(rel(a).get("body") or a.get("body"), 1500), "go": _s(a.get("go"), 40)}
+                     "body": _s(rel(a).get("body") or a.get("body"), 1500), "go": _s(rel(a).get("go") or a.get("go"), 40)}
                     for a in raw if isinstance(a, dict) and a.get("id") and a.get("title") and a.get("body")
                     and not rel(a).get("hide")]
                 _help["mtime"] = mtime
-            except Exception:
-                pass
+            except Exception as e:                  # a typo in the file: keep the last good articles, and tell the owner why answers are missing
+                print("UAply Assistant: help/articles.json could not be read (%s: %s)" % (type(e).__name__, str(e)[:160]), file=sys.stderr)
+                _help["mtime"] = mtime              # said once per change of the file, not on every question
         return list(_help["articles"])
 
 
@@ -364,8 +365,8 @@ def feedback(p, ip, user=None, notify=None):
             os.makedirs(DATA, exist_ok=True)
             with open(os.path.join(DATA, "feedback.jsonl"), "a", encoding="utf-8") as f:
                 f.write(json.dumps(rec) + "\n")
-        except Exception:
-            pass
+        except Exception as e:                       # kept in memory for the Feedback page, but lost on restart: tell the owner
+            print("UAply Assistant: could not save feedback to disk (%s: %s)" % (type(e).__name__, str(e)[:160]), file=sys.stderr)
     return 200, {"ok": True, "id": rec["id"], "delivery": delivery}
 
 
