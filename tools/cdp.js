@@ -31,6 +31,9 @@ function findChrome() {
 const CHROME = findChrome();
 // Chrome refuses to start as root on Linux (containers) unless its sandbox is off
 const EXTRA = process.platform === "linux" && process.getuid && process.getuid() === 0 ? ["--no-sandbox"] : [];
+// Chrome keeps a socket file under TMPDIR, and on Linux/Mac a socket path longer than about 100 characters fails, so Chrome
+// never answers. A long TMPDIR (a test runner's own folder) did that: then Chrome and its profile use /tmp instead.
+const TMP = process.platform !== "win32" && os.tmpdir().length > 60 && fs.existsSync("/tmp") ? "/tmp" : os.tmpdir();
 
 let failed = false;                                       // set when the test prints a FAIL line, so the runner (run-all-tests.sh) can see it
 const _log = console.log;
@@ -43,9 +46,9 @@ setTimeout(() => { console.log("TEST SCRIPT FAILED: no result after " + Math.rou
 async function launch() {
   for (let attempt = 1; attempt <= 3; attempt++) {
     const port = 9300 + Math.floor(Math.random() * 500);
-    const profile = fs.mkdtempSync(path.join(os.tmpdir(), "uaply-cdp-"));
+    const profile = fs.mkdtempSync(path.join(TMP, "uaply-cdp-"));
     const proc = spawn(CHROME, [...EXTRA, "--headless=new", "--disable-gpu", "--remote-debugging-port=" + port, "--user-data-dir=" + profile,
-      "--window-size=" + (process.env.W || 1100) + "," + (process.env.H || 900), "about:blank"], { stdio: "ignore" });
+      "--window-size=" + (process.env.W || 1100) + "," + (process.env.H || 900), "about:blank"], { stdio: "ignore", env: Object.assign({}, process.env, { TMPDIR: TMP }) });
     let tab;
     for (let i = 0; i < 75 && !tab; i++) {
       try { tab = (await (await fetch("http://127.0.0.1:" + port + "/json")).json()).find((t) => t.type === "page"); } catch (e) {}
