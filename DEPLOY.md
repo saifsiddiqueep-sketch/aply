@@ -75,20 +75,30 @@ dashboard; no code changes. `python tools/test-render.py` starts the server the 
 Before real users: fill the blanks in `legal/`, and keep `delivery` in test mode until partner employers have agreed.
 
 ## 2. App Store and Google Play (Capacitor, in `mobile/`)
-The app opens the hosted dev site (`mobile/capacitor.config.json`, `server.url`). Update that URL if Render's name differs,
-then run `npx cap sync` in `mobile/`.
-- **Already done:** the Android project (`mobile/android`) and iPhone project (`mobile/ios`) exist, with the UAply icon,
-  splash screens and three phone features: interview reminders (local notifications), a vibration on each swipe, and
-  the share sheet. These only run inside the app; the website is unchanged.
-- **Android (works on Windows):** install Android Studio (accepting Google's Android SDK license), open `mobile/android`,
-  and build a signed app bundle. Google Play developer account: one-time fee. Keep the signing key safe: losing it
-  means you can't update the app.
-- **iPhone (needs a Mac):** on Windows use a cloud Mac build service (for example Codemagic) with `mobile/ios`.
-  Apple Developer account: yearly fee.
-- **Review risk:** Apple can reject apps that only wrap a website ("minimum functionality"). The reminders, vibration,
-  share sheet and offline screen help; push notifications for new matches (needs Apple and Firebase accounts) would help more.
-- **Store forms:** both stores need the privacy policy URL (`/legal/privacy.html`) and accurate privacy answers; account
-  deletion already exists in the app (Profile, Account).
+The apps open https://uaply.net (`mobile/capacitor.config.json`, `server.url`). If the address changes, edit it there and
+in `mobile/www/index.html` (`SITE`, the "can't connect" screen), then run `npx cap sync` in `mobile/`.
+- **What the apps have:** the UAply icon and splash screens; interview reminders (local notifications), a vibration on each
+  swipe, the share sheet; a "Can't reach UAply" screen with Try again whenever the site does not load (`server.errorPath`).
+  "Continue with Google" is hidden inside the apps (Google blocks its sign-in inside app web views, and Apple would also
+  require Sign in with Apple next to it); app users sign in with email and password.
+- **Android (works on Windows, free):** run `powershell -ExecutionPolicy Bypass -File mobile\build-android.ps1` for a test
+  `.apk`, or add `-Release` for the signed `.aab` Google Play needs. The first run downloads Java 21 and Google's Android
+  command-line tools into your user folder (checksums checked) and shows Google's Android SDK license for you to accept.
+  `-Release` creates your upload key `mobile\android\uaply-upload-key.jks` the first time and asks you to choose its
+  password: write the password down and back up the file privately (it is git-ignored and must never be committed). The app
+  targets Android 16 (API 36), which Google Play requires for new apps since August 31, 2026. Raise `versionCode` in
+  `mobile/android/app/build.gradle` before each new upload.
+- **iPhone (no Mac needed):** `codemagic.yaml` builds `mobile/ios` on Codemagic's cloud Mac (free plan: 500 Mac minutes a
+  month), signs it and sends it to TestFlight. Before the first build: an App Store Connect API key added in Codemagic as
+  "UAply ASC key", and the app's Apple ID number in `APP_STORE_APPLE_ID`. The iPhone app is iPhone-only (no iPad).
+- **Accounts and fees:** Google Play developer account US$25 once (photo ID, proof of address and a real Android phone to
+  verify); new personal accounts must run a closed test with at least 12 testers for 14 days in a row before going public.
+  Apple Developer Program US$99 a year.
+- **Review risk:** Apple can reject apps that only wrap a website (guideline 4.2). Push notifications for new matches,
+  links from emails opening in the app (Universal Links) or home-screen quick actions would make that much less likely.
+  Paid plans through Stripe are allowed inside the app on Apple's United States storefront only, so publish in the US only.
+- **Store forms:** both stores need the privacy policy URL (`/legal/privacy.html`, blanks filled) and accurate privacy
+  answers; account deletion exists in the app (Profile, Account, More account options).
 
 ## 3. Google sign-in
 One OAuth client serves both ways in. In console.cloud.google.com, signed in with the Google account that should own UAply:

@@ -1,0 +1,49 @@
+# Codemagic recipe: builds the UAply iPhone app (mobile/ios) on a cloud Mac, signs it and uploads it to TestFlight.
+# Codemagic reads this file from the repository root. It never starts by itself: press "Start new build" in Codemagic.
+# Free plan for individuals: 500 macOS M2 build minutes a month (one build of this app is roughly 10 to 15 minutes).
+# No secrets live in this file. Before the first build the owner, in Codemagic's website:
+#   1. Teams > Integrations > Developer Portal: add an App Store Connect API key (App Store Connect > Users and Access >
+#      Integrations > App Store Connect API, role App Manager) and name it exactly "UAply ASC key".
+#   2. Creates the app in App Store Connect (bundle ID com.uaply.app) and puts its Apple ID number in APP_STORE_APPLE_ID below.
+# Codemagic then makes the distribution certificate and provisioning profile itself (ios_signing below).
+workflows:
+  ios-testflight:
+    name: iPhone app to TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    working_directory: mobile
+    integrations:
+      app_store_connect: UAply ASC key
+    environment:
+      node: 22
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.uaply.app
+      vars:
+        APP_STORE_APPLE_ID: "0000000000"   # owner: replace with the app's Apple ID from App Store Connect, App Information
+    scripts:
+      - name: Install the Capacitor packages
+        script: npm ci
+      - name: Copy the app settings into the iPhone project (also runs pod install)
+        script: npx cap sync ios
+      - name: Use Codemagic's signing files in the Xcode project
+        script: xcode-project use-profiles --project ios/App/App.xcodeproj
+      - name: Give this build the next build number (TestFlight refuses a number it has already seen)
+        script: |
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
+          NEXT=$((LATEST + 1))
+          sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9]*;/CURRENT_PROJECT_VERSION = $NEXT;/" ios/App/App.xcodeproj/project.pbxproj
+          echo "Build number $NEXT"
+      - name: Build the signed .ipa
+        script: xcode-project build-ipa --workspace ios/App/App.xcworkspace --scheme App
+    artifacts:
+      - mobile/build/ios/ipa/*.ipa
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false

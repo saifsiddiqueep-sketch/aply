@@ -1,6 +1,15 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>UAply</title>
-<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#FDF0F2;color:#2A1218;font:16px/1.5 system-ui,sans-serif;text-align:center;padding:24px}
-@media (prefers-color-scheme: dark){body{background:#190B10;color:#FBE9EE}}button{min-height:48px;padding:0 24px;border:0;border-radius:999px;background:#C92A55;color:#fff;font-weight:700}</style>
-</head><body><main><h1>UAply</h1><p>You're offline. Connect to the internet to see jobs.</p><button type="button" onclick="location.reload()">Try again</button></main></body></html>
+<!-- The phone app's "can't connect" screen. capacitor.config.json (server.errorPath) shows it whenever uaply.net does not load:
+     no internet, or the site is down or restarting. "Try again" goes back to the site (keep SITE equal to server.url), and the
+     page also tries again by itself the moment the phone reconnects. -->
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#FDF0F2;color:#2A1218;font:16px/1.5 system-ui,sans-serif;text-align:center;padding:24px;box-sizing:border-box}
+@media (prefers-color-scheme: dark){body{background:#190B10;color:#FBE9EE}}button{min-height:48px;padding:0 24px;border:0;border-radius:999px;background:#C92A55;color:#fff;font:inherit;font-weight:700}</style>
+</head><body><main><h1>UAply</h1><p id="m">Can't reach UAply right now. Check that you're connected to the internet, then try again.</p><button type="button" id="b">Try again</button></main>
+<script>
+var SITE="https://uaply.net/";
+function go(){document.getElementById("m").textContent="Connecting…";location.href=SITE}
+document.getElementById("b").onclick=go;
+window.addEventListener("online",go);
+</script></body></html>
