@@ -326,6 +326,7 @@ function apply(w,host){
   var d=w.document,A=w.__uaply,hdr=d.getElementById("hdrAcct"),bar=d.querySelector(".bar");
   if(!A||!hdr||!bar)throw new Error("needs the Bottom navigation experiment");
   var esc=A.esc,money=A.money;
+  var lp=(host&&host.defaultView&&host.defaultView.location.pathname)||"/",SUPPORT=(/\/(sandbox|dev)\/(index\.html)?$/.test(lp)?"../legal/":"legal/")+"support.html";   /* legal/support.html, one folder up on the hosted copies */
   var KEY=(w.__uaplyKey||"uaply")+".hiring";
   function lsGet(k,def){try{var v=JSON.parse(w.localStorage.getItem(k));return v==null?def:v}catch(e){return def}}
   function lsSet(k,v){try{w.localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
@@ -523,7 +524,7 @@ function apply(w,host){
     var nav=[["overview","Overview",""],["jobs","Jobs",H.jobs.length||""],["applicants","Applicants",n.apps||""],["company","Company",""],["billing","Billing",""]];
     return '<div class="hub"><nav class="hnav" aria-label="Hiring sections"><button type="button" class="hco" data-view="company" title="Company profile">'+logoBox(c)+'<span><b>'+esc(c?c.name:"Your company")+'</b><small>'+(c?esc(c.industry||"Employer"):"Set up your company")+'</small></span></button>'+
       nav.map(function(x){return '<button type="button" data-view="'+x[0]+'"'+(H.view===x[0]?' aria-current="page"':'')+'>'+x[1]+(x[2]!==""?'<span class="n">'+x[2]+'</span>':'')+'</button>'}).join("")+
-      '<button type="button" class="post" data-act="new">+ Post a job</button></nav><div class="hmain">'+banner()+inner+'<p class="msg" id="hMsg" role="status" aria-live="polite"></p></div></div>';
+      '<button type="button" class="post" data-act="new">+ Post a job</button><a class="hsupport" data-support="1" href="'+SUPPORT+'" target="_blank" rel="noopener noreferrer" style="display:block;padding:10px 12px;color:var(--muted);font-size:14px">Help and support</a></nav><div class="hmain">'+banner()+inner+'<p class="msg" id="hMsg" role="status" aria-live="polite"></p></div></div>';
   }
   function banner(){
     if(H.mode==="local")return '<div class="h-banner"><span>Preview copy: your company and jobs are saved in this browser only, and your jobs appear in this browser\'s own swipe deck. On the UAply server they are published to everyone.</span></div>';
@@ -536,7 +537,7 @@ function apply(w,host){
     if(H.mode==="loading"){hub.innerHTML='<div class="box h-empty"><b>Loading…</b></div>';return}
     if(H.mode==="signedout"){hub.innerHTML='<div class="box" style="max-width:640px;margin:24px auto"><h1>Hire on UAply</h1><p class="lead">Post a job in a few minutes and get applicants who already match what you ask for. Every applicant arrives with a match score against your requirements.</p>'+
       '<div class="promise"><div><b>One page to post</b><small>Live preview of the card job seekers see.</small></div><div><b>No surprise bills</b><small>Pricing is TBD. When it starts, you see the price before you publish.</small></div><div><b>Close in one click</b><small>A closed job leaves the feed right away.</small></div></div>'+
-      '<div class="h-row" style="justify-content:flex-start"><button type="button" class="btn" data-act="signin">Sign in or create an account</button><small class="note">Use the same UAply account you use for job search.</small></div></div>';return}
+      '<div class="h-row" style="justify-content:flex-start"><button type="button" class="btn" data-act="signin">Sign in or create an account</button><small class="note">Use the same UAply account you use for job search.</small></div><p class="note"><a data-support="1" href="'+SUPPORT+'" target="_blank" rel="noopener noreferrer">Help and support</a></p></div>';return}
     var v=H.view;
     if(!H.company&&v!=="company"&&v!=="billing")v="welcome";
     var inner=v==="welcome"?welcome():v==="overview"?overview():v==="jobs"?jobsView():v==="post"?postView():v==="applicants"?appsView():v==="company"?companyView():billingView();

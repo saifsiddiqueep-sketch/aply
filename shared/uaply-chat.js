@@ -49,6 +49,8 @@ var EMAIL=/^[^@\s]{1,64}@[^@\s]+\.[A-Za-z]{2,}$/;
 
 function apply(w,host){
   var d=w.document,A=w.__uaply||null;
+  /* the Support page sits in legal/ next to the app (one folder up on the hosted /dev/ and /sandbox/ copies) */
+  var lp=(host&&host.defaultView&&host.defaultView.location.pathname)||"/",SUPPORT=(/\/(sandbox|dev)\/(index\.html)?$/.test(lp)?"../legal/":"legal/")+"support.html";
   if(!d.body)return;
   var st=d.createElement("style");st.textContent=CSS;d.head.appendChild(st);
   var K=(w.__uaplyKey||"uaply")+".chat";
@@ -202,11 +204,12 @@ function apply(w,host){
   function startHuman(){
     clearChips();
     if(isPreview()){previewSay();starters();return}
+    var sp=' <span class="src"><a href="'+SUPPORT+'" target="_blank" rel="noopener noreferrer" data-support="1">Support page: what to include, reply times</a></span>';
     if(CFG.support){
       botSay("You can email the UAply team at "+CFG.support+". Or leave a message here and we'll reply by email.",
-        '<span class="src"><a href="mailto:'+esc(CFG.support)+'">'+esc(CFG.support)+'</a></span>');
+        '<span class="src"><a href="mailto:'+esc(CFG.support)+'">'+esc(CFG.support)+'</a></span>'+sp);
       chips([{label:"Leave a message here",pri:true,run:function(){meSay("Leave a message here");startContact()}},{label:"Back to topics",run:function(){meSay("Back to topics");starters()}}]);
-    }else startContact();
+    }else{botSay("We usually reply within 2 business days.",sp);startContact()}
   }
   function startContact(){
     flow={kind:"contact",step:"text",data:{topic:"contact",source:"chat"}};

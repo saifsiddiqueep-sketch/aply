@@ -10,7 +10,7 @@ const nav = read("shared/uaply-nav.js");
 const profile = read("shared/uaply-profile.js");
 const chat = read("shared/uaply-chat.js");               // the Help button: in a preview it answers that there is no server here
 const employers = read("shared/uaply-employers.js");     // Hiring mode: sandbox only (it registers itself after envs)
-const learn = read("shared/uaply-learn.js");             // Learns from your swipes: sandbox only (envs asks for it only when it is on)
+const learn = read("shared/uaply-learn.js");             // Learns from your swipes: sandbox and dev (envs asks for it only when it is on)
 let envs = read("shared/uaply-envs.js");
 
 const NEEDS_SERVER = ["live", "kit", "submit"];
@@ -67,4 +67,4 @@ build("dev/index.html", "share/dev.html", "UAply", [
   ['<div class="bar" id="devbar" hidden><span class="badge">DEV</span><span id="what">Release candidate</span></div>',
    '<div class="bar" id="devbar"><span class="badge">PREVIEW</span><span id="what">Static preview: example jobs only. Accounts and real jobs run on the UAply server.</span></div>'],
   ['document.getElementById("what").textContent="Release candidate: "+PROMOTED.map(function(k){return UAplyEnv.FEATURES[k].name}).join(", ");', ''],
-]);
+], "\n<script>" + safe(learn) + "</script>");   // Learns from your swipes is in the release build too

@@ -42,6 +42,17 @@ def settings():
     return s
 
 
+PUBLIC = False           # serve.py sets this on a hosted (public) server
+
+
+def buttons(s=None):
+    """Whether the page offers Choose Plus / Choose Pro (or the sandbox's Payment Links): when Stripe keys are set on this server
+    (test or live), or when the server is not public (the owner's own computer, where the test checkout is tried). A public
+    server with no keys shows "Paid plans are coming. UAply is free during early access." instead."""
+    s = s or settings()
+    return bool(s["on"] or not PUBLIC)
+
+
 def _stripe(method, path, params=None):
     s = settings()
     data = urllib.parse.urlencode(params or {}).encode() if method == "POST" else None
@@ -87,7 +98,7 @@ def limit_reached(user):
 
 def status(user):
     s = settings()
-    out = {"enabled": s["on"], "test": s["test"], "plans": {k: {"name": v["name"], "price": v["price"], "cap": v["cap"]} for k, v in PLANS.items()}}
+    out = {"enabled": s["on"], "test": s["test"], "buttons": buttons(s), "early": not buttons(s), "plans": {k: {"name": v["name"], "price": v["price"], "cap": v["cap"]} for k, v in PLANS.items()}}
     if user:
         r = auth_api.billing_row(user["id"]) or {}
         plan = plan_of(user)

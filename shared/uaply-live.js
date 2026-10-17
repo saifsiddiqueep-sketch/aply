@@ -473,6 +473,11 @@ function kitApply(w,host){
     else if(job.url)sheet(job,m,p,undo,S,save);
   };
   w.__uaplyQuiet=!showSheet;
+  /* Data and privacy: when this browser agreed (null if never, or only to an earlier version), and Show it again, which forgets the
+     saved agreement for this build and opens the box; `done(agreed)` is called with the answer */
+  w.__uaplyConsentInfo=function(){try{var c=JSON.parse(w.localStorage.getItem(consentKey()));return c&&typeof c==="object"?{at:+c.at||0,current:c.v===CONSENT_V}:null}catch(e){return null}};
+  w.__uaplyConsentAgain=function(done){try{w.localStorage.removeItem(consentKey())}catch(e){}var o=d.getElementById("kitConsent");if(o)o.remove();
+    ensureConsent(function(){if(done)done(true)},function(){if(done)done(false)},true)};
   if(consentFirst&&!showSheet){
     /* not while someone is in Hiring mode: employers do not swipe. Hiring mode calls this again when they switch back */
     w.__uaplyAskConsent=function(){if(!hasConsent()&&!d.body.classList.contains("hire"))ensureConsent(function(){},function(){},true)};
