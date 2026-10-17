@@ -103,9 +103,36 @@ t("owner copy: lists the applicant and the job", "Sam Rivera" in text and "THE J
 t("the applied-on time drops the zero of a one-digit day AND hour (Oct 5, 9:05 AM)", emails._when(1791191100), "Oct 5, 2026 at 9:05 AM UTC")
 t("...and keeps two-digit ones and midnight as 12", (emails._when(1791932764), emails._when(1791158400)), ("Oct 13, 2026 at 11:06 PM UTC", "Oct 5, 2026 at 12:00 AM UTC"))
 
+# ---- the test banner says what the live app would really do, from the channels the server recorded ----
+R_ROWS = [("Applicant", "Sam Rivera"), ("Email", "sam@example.com"), ("Resume file", "Sam Rivera Resume.pdf (attached)")]
+_, text, _ = emails.applicant_receipt(ctx("delivered_test", to="Acme Robotics hiring system (simulated)", channels=["hiring system (simulated)"]))
+t("test banner, connected hiring system: says it would go into their hiring system, not an email",
+  ("straight into Acme Robotics's hiring system" in text, "emailed your application" in text), (True, False))
+_, text, _ = emails.applicant_receipt(ctx("delivered_test", to="Acme Robotics hiring system (simulated)", channels=["hiring system (simulated)"], preview=True))
+t("test banner, sandbox preview of a public posting: says the live app would send the person to the employer's site",
+  ("connects its hiring system" in text, "own site to finish" in text, "emailed your application" in text), (True, True, False))
+_, text, _ = emails.applicant_receipt(ctx("delivered_test", channels=["email (simulated)"]))
+t("test banner, an employer that takes email: names the address", "would have emailed your application to jobs@acme.example" in text, True)
+
+# ---- the resume line says where the file really went (no receipt or copy carries the file itself) ----
+_, text, page = emails.applicant_receipt(ctx("handoff", rows=R_ROWS))
+t("hand-off receipt: the resume is to be uploaded on the employer's form, not 'attached'",
+  ("Sam Rivera Resume.pdf (upload it on Acme Robotics's form)" in text, "(attached)" in text + page), (True, False))
+t("hand-off receipt: dated 'Swiped right on', since nothing was applied yet", ("Swiped right on:" in text, "Applied on" in text), (True, False))
+_, text, _ = emails.applicant_receipt(ctx("sent", test=False, rows=R_ROWS))
+t("sent receipt: the resume went with the application", ("Sam Rivera Resume.pdf (sent to Acme Robotics with the application)" in text, "Applied on:" in text), (True, True))
+sub, text, page = emails.owner_copy(ctx("sent", test=False, rows=R_ROWS))
+t("owner copy: says the resume is not attached to the copy, and 'Match' instead of 'Your match'",
+  ("not attached to this copy" in text, "Your match" in text + page, "Match: 87%" in text), (True, False, True))
+t("owner copy, live: no [TEST] label", sub.startswith("[UAply copy]"), True)
+sub, _, _ = emails.owner_copy(ctx("handoff", test=True, rows=R_ROWS))
+t("owner copy, test mode: labelled [TEST]", sub.startswith("[TEST] [UAply copy]"), True)
+rows = uaply_api._detail_rows({"name": "Sam", "email": "s@example.com", "ext": {"school": "Drexel University", "major": "Design", "grad": "2027-06", "gpa": 3.6}})
+t("education reads as words: graduation June 2027, not 2027-06", dict(rows).get("Education"), "Drexel University, Design, graduation June 2027, GPA 3.6")
+
 # ---- a real send through the stand-in mail server ----
 mail_file = os.path.join(TMP, "mail.jsonl")
-port = int(sys.argv[1]) if len(sys.argv) > 1 else 2527          # a free port can be given: python tools/test-emails.py PORT
+port = int(sys.argv[1]) if len(sys.argv) > 1 else 2527                # another port can be given, so two test runs never collide
 proc = subprocess.Popen([sys.executable, os.path.join(HERE, "fake-smtp.py"), str(port), mail_file], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 try:
     time.sleep(1.5)
@@ -148,6 +175,11 @@ try:
     time.sleep(1)
     new = [json.loads(x) for x in open(mail_file, encoding="utf-8") if x.strip()][n_before:]
     t("owner swipes: exactly one email, the confirmation", (len(new), new[0]["to"] if new else None, res2["copied"]), (1, ["owner@example.com"], False))
+    # with no public_url set (a fresh host), the receipt links to the https address the person is using; a plain http address is never linked
+    uaply_api.submit(dict(payload, job=dict(payload["job"], id=424244)), user, "https://uaply-dev.onrender.com")
+    t("no public_url: the receipt links to the https site the person used", "Open UAply, then Dashboard, then Applied. https://uaply-dev.onrender.com" in auth_api.mail_list(1)[0]["body"], True)
+    uaply_api.submit(dict(payload, job=dict(payload["job"], id=424245)), user, "http://127.0.0.1:8767")
+    t("...and an http address (this computer) is never put in an email", "127.0.0.1" in auth_api.mail_list(1)[0]["body"], False)
 finally:
     proc.terminate()
 

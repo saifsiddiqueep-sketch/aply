@@ -64,6 +64,21 @@ production page and only changes when the owner decides.
   free tools with checksum checks; you accept Google's SDK license yourself; the upload key and its password never go in git).
 - New `codemagic.yaml`: builds, signs and uploads the iPhone app to TestFlight on Codemagic's free cloud Mac (manual start only).
 
+### Swipe right always ends in the right place, and says so (sandbox and dev)
+- Every swipe-right path was tested end to end against local servers with a stand-in mail server and a stand-in
+  Greenhouse/Lever (`python tools/ui-apply-paths.py` replays them in a browser). Fixes:
+- The employer's Reply always goes to the applicant's verified email (a name written like an address could take it over),
+  and every UAply email shows the sender as UAply.
+- Test mode now says exactly where the live app would send the application (an employer's hiring system, not a made-up
+  email address); a job that left the employer's board is a hand-off in test mode too.
+- The Applied list shows every outcome: a failed delivery says "Not sent" with Try again; a second swipe on a job already
+  applied to shows what happened the first time; an application waiting for a connection is retried every 30 seconds when
+  UAply's server, not the device, was the problem. Undo or Withdraw after an application went out says the employer still
+  has it, and the Undo button during the live countdown cancels it cleanly.
+- Receipts and owner copies say where the resume really went (no receipt carries the file), the test banner follows the real
+  channel, the owner copy is labelled [TEST] in test mode, education reads "graduation June 2027", accented resume file
+  names are kept, and receipts link back to the site even when `public_url` is not set.
+
 ### Post a job from an existing job post (sandbox) — Mohammed
 - **Post a job** shows two options on one page. Option 1, at the top: "Start from your existing job post": paste a link, or
   paste the job text, and UAply fills in the form (title, job type, work style, place, pay, years, education, skills, majors,

@@ -35,6 +35,7 @@ import urllib.request
 import uuid
 import html
 from email.message import EmailMessage
+from email.utils import formataddr, parseaddr
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(ROOT, "data")
@@ -175,6 +176,7 @@ _AUTH = {"citizen": "US citizen or permanent resident", "authorized": "Authorize
          "none": "Not currently authorized"}
 _START = {"now": "Right away", "2w": "Within 2 weeks", "1m": "Within a month", "grad": "After graduation", "flex": "Flexible"}
 _TYPES = {"fulltime": "Full-time", "parttime": "Part-time", "internship": "Internship", "coop": "Co-op"}
+_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
 
 def _pick(v, allowed):
@@ -225,7 +227,9 @@ def _detail_rows(c, note=""):
     x = c.get("ext") or {}
     skills = ", ".join(c.get("skills") or [])
     exp = ("%s year%s" % (c["years"], "" if c.get("years") == 1 else "s")) if c.get("years") else ""
-    edu =", ".join(v for v in (x.get("school"), x.get("major"), x.get("grad"), ("GPA %s" % x["gpa"]) if x.get("gpa") != "" and x.get("gpa") is not None else "") if v)
+    grad = re.match(r"^(\d{4})-(\d{2})$", x.get("grad") or "")
+    grad = "graduation %s %s" % (_MONTHS[int(grad.group(2)) - 1], grad.group(1)) if grad else ""      # "graduation June 2027", not "2027-06"
+    edu = ", ".join(v for v in (x.get("school"), x.get("major"), grad, ("GPA %s" % x["gpa"]) if x.get("gpa") != "" and x.get("gpa") is not None else "") if v)
     rows = [("Applicant", c.get("name")), ("Email", c.get("email")), ("Current or target title", c.get("title")),
             ("Experience", exp), ("Location", c.get("loc")), ("Skills", skills),
             ("Phone", x.get("phone")), ("Headline", x.get("headline")), ("Resume", x.get("resume")),
@@ -290,7 +294,8 @@ def _resume(raw):
         return None, None
     if not isinstance(raw, dict):
         raise ValueError("bad resume")
-    name = re.sub(r"[^A-Za-z0-9._ -]", "_", _s(raw.get("name"), 120)).strip() or "resume.pdf"
+    # letters of any language stay ("José García CV.pdf" reaches the employer as it is); slashes, quotes and other symbols become _
+    name = re.sub(r"[^\w. -]", "_", _s(raw.get("name"), 120)).strip() or "resume.pdf"
     m = re.match(r"^data:[\w/+.-]+;base64,([A-Za-z0-9+/=]+)$", raw.get("data") if isinstance(raw.get("data"), str) else "")
     ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
     if not m or ext not in _RESUME_KINDS:
@@ -352,12 +357,21 @@ def _post_webhook(url, secret, payload):
     return False, reason
 
 
+def _from(cfg):
+    """The sender of every UAply email. A bare address (what /setup saves) gets the name "UAply", so inboxes show UAply as the sender
+    instead of the part before the @; an address that already carries a name is used as it is."""
+    v = (cfg.get("smtp") or {}).get("from_addr") or ""
+    name, addr = parseaddr(v)
+    return v if name or not addr else formataddr(("UAply", addr))
+
+
 def _send_email(cfg, to, cand, job, note, original="", resume=None):
     s = cfg["smtp"]
     msg = EmailMessage()
-    msg["From"] = s["from_addr"]
+    msg["From"] = _from(cfg)
     msg["To"] = to
-    msg["Reply-To"] = "%s <%s>" % (cand["name"], cand["email"])
+    # the name is quoted, so a name such as "Sam <someone@else.example>" can never become the address the employer's Reply goes to
+    msg["Reply-To"] = formataddr((cand["name"], cand["email"]))
     test = _redirect(cfg) == to
     msg["Subject"] = "%sApplication: %s - %s" % ("[TEST] " if test else "", job["role"], cand["name"])
     extra = ("\nTest redirect: this would have gone to %s.\n" % (original or "the company's application page")) if test else ""
@@ -411,27 +425,30 @@ def _owner_copy(cfg):
     return r.strip() if isinstance(r, str) and EMAIL_RE.match(r.strip()) else ""
 
 
-def _site_base(cfg):
-    """The public address of this site for links in emails ('' when it only runs on this computer)."""
+def _site_base(cfg, site=""):
+    """The public address of this site for links in emails ('' when it only runs on this computer). The configured public_url wins;
+    otherwise the address the person is using (serve.py passes it), so a host such as Render gets its link without extra settings.
+    Only an https address is ever put in an email."""
     g = cfg.get("google") if isinstance(cfg.get("google"), dict) else {}
-    for v in (cfg.get("public_url"), g.get("public_url")):
-        if isinstance(v, str) and v.startswith("https://"):
+    for v in (cfg.get("public_url"), g.get("public_url"), site):
+        if isinstance(v, str) and v.startswith("https://") and " " not in v:
             return v.rstrip("/")
     return ""
 
 
-def _mail_ctx(cfg, rec, note, user_email=""):
+def _mail_ctx(cfg, rec, note, user_email="", site=""):
     """Everything emails.py needs to write the receipt or the owner copy of one application."""
     return {"test": rec["mode"] != "live", "status": rec["status"], "cand": rec["candidate"], "job": rec["job"], "at": rec["at"],
             "match": rec.get("match", 0), "to": rec.get("to", ""), "rows": _detail_rows(rec["candidate"], note), "note": note,
-            "channels": rec.get("channels") or [], "user_email": user_email, "base_url": _site_base(cfg), "support_email": _s(cfg.get("support_email"), 120)}
+            "channels": rec.get("channels") or [], "user_email": user_email, "base_url": _site_base(cfg, site), "support_email": _s(cfg.get("support_email"), 120),
+            "preview": rec.get("preview") is True}
 
 
 def _copy_message(cfg, rec):
     """The owner's copy of one application, as plain text plus an HTML version (built apart from sending so it can be tested)."""
     subject, text, page = emails.owner_copy(_mail_ctx(cfg, rec, rec.get("note", "")))
     msg = EmailMessage()
-    msg["From"], msg["To"], msg["Subject"] = cfg["smtp"]["from_addr"], _owner_copy(cfg), subject
+    msg["From"], msg["To"], msg["Subject"] = _from(cfg), _owner_copy(cfg), subject
     msg.set_content(text)
     msg.add_alternative(page, subtype="html")
     return msg
@@ -459,7 +476,7 @@ def _send_owner_copy(cfg, rec):
 def _send_receipt(cfg, to, subject, body, page=None, reply_to=None):
     s = cfg["smtp"]
     msg = EmailMessage()
-    msg["From"] = s["from_addr"]
+    msg["From"] = _from(cfg)
     msg["To"] = to
     msg["Subject"] = subject
     if reply_to and EMAIL_RE.match(reply_to):             # pressing Reply answers this address (only a plain, valid address is ever used)
@@ -553,10 +570,10 @@ def mail_ready():
     return _smtp_ready(config())
 
 
-def _receipt(cfg, user, cand, job, note, rec):
+def _receipt(cfg, user, cand, job, note, rec, site=""):
     """Email the signed-in applicant a copy of what happened. Never raises: a receipt problem must not undo an application."""
     to = user["email"]
-    subject, body, page = emails.applicant_receipt(_mail_ctx(cfg, rec, note, user["email"]))
+    subject, body, page = emails.applicant_receipt(_mail_ctx(cfg, rec, note, user["email"], site))
     status = "delivered_test"
     if _smtp_ready(cfg):                      # the receipt goes only to the applicant's own address, so it is safe to send in test mode too
         try:
@@ -574,8 +591,9 @@ def _receipt(cfg, user, cand, job, note, rec):
     return {"to": to, "status": status}
 
 
-def submit(p, user=None):
-    """Returns (http_status, dict). `user` is the signed-in account ({id, email}) or None."""
+def submit(p, user=None, site=""):
+    """Returns (http_status, dict). `user` is the signed-in account ({id, email}) or None. `site` is the address the person is using
+    (for the link in their receipt)."""
     err = _validate(p)
     if err:
         return 400, {"error": err}
@@ -621,6 +639,10 @@ def submit(p, user=None):
     if known.get("emp"):
         contact = known.get("contact") or ""     # a Hiring mode posting: its verified account email, which browsers never receive
     policy = jobs_api.job_policy(job["id"])      # 'direct' (employer opted in), 'link' (employer's own page) or 'unknown' (example)
+    if policy == "unknown" and job["id"] >= 100000:
+        # a real posting (examples have small numbers) that this server no longer lists, for example one that left the employer's board:
+        # nothing can be sent to anyone, so it is a hand-off in test mode too (test mode used to report it as delivered)
+        policy = "link"
     hook = jobs_api.known_webhook(job["id"]) if policy == "direct" else None      # the HTTPS address the employer registered, if any
     ats = jobs_api.known_ats(job["id"]) if policy == "direct" else None           # the employer's own hiring system and key, if they connected
     answers = autofill.clean_answers(p.get("answers"))      # the person's own answers to questions employers' forms asked before
@@ -628,7 +650,8 @@ def submit(p, user=None):
     def dup():
         for a in APPS:
             if a["job"]["id"] == job["id"] and a["candidate"]["email"] == cand["email"] and a["status"] != "failed":
-                return 200, {"status": "duplicate", "id": a["id"], "to": a.get("to", ""), "mode": a["mode"]}
+                # "was" is what happened the first time, so the app can show it again (after an undo, or on another device)
+                return 200, {"status": "duplicate", "id": a["id"], "to": a.get("to", ""), "mode": a["mode"], "was": a["status"]}
         return None
 
     with _lock:
@@ -637,7 +660,9 @@ def submit(p, user=None):
         return seen
     if mode == "live" and policy == "direct":
         # an application sent straight to an employer carries the person's email as the reply address, so that address must be proven theirs
-        if not user or not user.get("emailVerified"):
+        if not user:                                       # nobody is signed in: there is no email to verify yet, so say what to do first
+            return 403, {"error": "Sign in first (Profile, Account) and verify your email, so %s can trust your address." % job["co"], "code": "signin"}
+        if not user.get("emailVerified"):
             return 403, {"error": "Verify your email first (Profile, Account) so the employer can trust your address.", "code": "verify"}
         if cand["email"] != user["email"].lower():
             return 400, {"error": "Use your account email in Profile setup, under About you, so the employer replies to an address you verified."}
@@ -675,7 +700,7 @@ def submit(p, user=None):
         if preview and plan:
             # the sandbox shows exactly what would go into the employer's hiring system once they connect; nothing is sent to them
             rec["to"] = "%s hiring system (simulated)" % job["co"]
-            rec["simulated"] = True
+            rec["simulated"] = rec["preview"] = True             # "preview": this employer has not connected, so the live app would hand off
             rec["status"] = "delivered_test"
             rec["channels"] = ["hiring system (simulated)"]
             APPS.append(rec)
@@ -687,10 +712,14 @@ def submit(p, user=None):
             APPS.append(rec)
             _append("applications.jsonl", rec)
         elif mode == "test":
-            rec["to"] = contact or _simulated_recipient(job["co"])
+            # the same channels the live app would use: email only when the employer gave an address (or, for an example listing, has no
+            # other channel), otherwise their hiring system or their webhook. The test inbox and the Applied list then say where it would go.
+            by_mail = bool(contact) or not (hook or ats)
+            rec["to"] = (contact or _simulated_recipient(job["co"])) if by_mail else (
+                "%s hiring system (simulated)" % job["co"] if ats else "%s's own system (simulated)" % job["co"])
             rec["simulated"] = True
             rec["status"] = "delivered_test"
-            rec["channels"] = ["email (simulated)"] + (["webhook (simulated)"] if hook else []) + (["hiring system (simulated)"] if ats else [])
+            rec["channels"] = (["email (simulated)"] if by_mail else []) + (["webhook (simulated)"] if hook else []) + (["hiring system (simulated)"] if ats else [])
             APPS.append(rec)
             _append("applications.jsonl", rec)
         else:
@@ -707,6 +736,8 @@ def submit(p, user=None):
                 send_args = (cfg, target if _smtp_ready(cfg) else "", dict(cand, answers=answers) if ats else cand, job, note, contact,
                              resume_meta, resume_bytes, hook, rec, ats)
             else:
+                if target:                     # an employer who agreed to receive email, but this server cannot send email: tell the owner
+                    sys.stderr.write("[uaply] application %s to %s became a hand-off because no email account is set up (see /setup)\n" % (rec["id"], job["co"]))
                 rec["status"] = "handoff"
                 APPS.append(rec)
                 _append("applications.jsonl", rec)
@@ -725,12 +756,14 @@ def submit(p, user=None):
         out["plan"] = summary
     if rec.get("error"):
         sys.stderr.write("[uaply] delivery of application %s failed: %s\n" % (rec["id"], rec["error"]))      # the real reason stays in the server's own log and applications.jsonl
-        out["error"] = ("The email could not be sent right now. Try again in a moment." if hide_errors
-                        else "The email could not be sent: " + rec["error"])
+        # say "email" only when email was the way it went; an application for a hiring system or a webhook is not an email
+        what = "The email" if all(e.startswith("email:") for e in rec["error"].split("; ")) else "Your application to %s" % job["co"]
+        out["error"] = ("%s could not be sent right now. Try again in a moment." % what if hide_errors
+                        else "%s could not be sent: %s" % (what, rec["error"]))
     if user and rec["status"] in ("delivered_test", "sent", "handoff"):
         # A real confirmation goes only to an address the person has proven is theirs (otherwise anyone could make UAply email a stranger).
         # With no real email connected nothing leaves this server: the confirmation is only saved in the test inbox, so it is made for any account.
-        out["receipt"] = (_receipt(cfg, user, cand, job, note, rec) if user.get("emailVerified") or not _smtp_ready(cfg)
+        out["receipt"] = (_receipt(cfg, user, cand, job, note, rec, site) if user.get("emailVerified") or not _smtp_ready(cfg)
                           else {"to": user["email"], "status": "unverified"})
     # the owner's copy: skipped when the person who swiped already got their own confirmation at that same address (one swipe, one email)
     already = out.get("receipt", {}).get("status") == "sent" and user and user["email"].lower() == _owner_copy(cfg).lower()

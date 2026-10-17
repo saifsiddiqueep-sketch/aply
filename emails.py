@@ -83,12 +83,39 @@ def subject_for(status, job, test):
     return ("[TEST] " if test else "") + s[:190]
 
 
-def _test_note(status, job, contact):
+def _test_note(status, job, contact, channels=(), preview=False):
+    """What the live app would have done with this swipe, said in the test banner. It follows the channels the server recorded, so a
+    hiring system is never described as an email and a sandbox preview never as a delivery."""
     if status == "handoff":
         return "This is a test email. It is sent because this copy of UAply is in test mode; the swipe itself behaves the same in the live app."
-    where = (" to %s" % contact) if contact else " to the employer"
-    return ("This is a test email. In test mode UAply does not send applications to employers. In the live app this swipe would have "
-            "emailed your application%s. Your test application is saved in the test inbox." % where)
+    co = job.get("co") or "the employer"
+    channels = [str(c) for c in channels or []]
+    if preview:
+        what = ("This test filled in %s's real application form to show what UAply would send once %s connects its hiring system to UAply. "
+                "Until then, in the live app this swipe sends you to %s's own site to finish." % (co, co, co))
+    elif any(c.startswith("email") for c in channels) or not channels:
+        what = "In the live app this swipe would have emailed your application%s." % ((" to %s" % contact) if contact else " to the employer")
+    elif any(c.startswith("hiring system") for c in channels):
+        what = "In the live app this swipe would have sent your application straight into %s's hiring system." % co
+    else:
+        what = "In the live app this swipe would have sent your application to %s's own system." % co
+    return "This is a test email. In test mode UAply does not send applications to employers. %s Your test application is saved in the test inbox." % what
+
+
+def _resume_rows(rows, status, co, owner=False):
+    """The resume line says where the file really went: no email from UAply to the applicant or the owner carries the file itself."""
+    where = {"sent": "sent to %s with the application" % co, "delivered_test": "included in the test application",
+             "handoff": "upload it on %s's form" % co}.get(status, "")
+    if owner and status in ("sent", "delivered_test"):
+        where += "; not attached to this copy"
+    elif owner and status == "handoff":
+        where = "the applicant uploads it on %s's form" % co
+    out = []
+    for k, v in rows:
+        if k == "Resume file" and str(v).endswith(" (attached)"):
+            v = str(v)[:-len(" (attached)")] + ((" (%s)" % where) if where else "")
+        out.append((k, v))
+    return out
 
 
 def applicant_receipt(ctx):
@@ -101,16 +128,18 @@ def applicant_receipt(ctx):
     track = (ctx.get("base_url") or "").rstrip("/")
     desc = (job.get("desc") or job.get("blurb") or "").strip()
     summary = _summary_rows(job, ctx.get("match") or 0)
-    rows = ctx.get("rows") or []
+    rows = _resume_rows(ctx.get("rows") or [], status, job.get("co") or "the employer")
     note = (ctx.get("note") or "").strip()
     name = cand.get("name") or "there"
     when = _when(ctx.get("at") or time.time())
+    when_label = "Swiped right on" if status == "handoff" else "Applied on"      # a hand-off is not an application yet
+    test_note = _test_note(status, job, ctx.get("to"), ctx.get("channels"), ctx.get("preview"))
 
     # ---- plain text ----
     t = []
     if test:
-        t += ["*** TEST EMAIL ***", _test_note(status, job, ctx.get("to")), ""]
-    t += ["Hi %s," % name, "", head, "", lead, "", "Applied on: %s" % when, ""]
+        t += ["*** TEST EMAIL ***", test_note, ""]
+    t += ["Hi %s," % name, "", head, "", lead, "", "%s: %s" % (when_label, when), ""]
     t += ["THE JOB"] + ["  %s: %s" % kv for kv in summary]
     if posting:
         t += ["  Posting: %s" % posting]
@@ -141,10 +170,10 @@ def applicant_receipt(ctx):
     parts = []
     if test:
         parts.append('<div style="background:#FFF4D6;border:1px solid #F0D58A;border-radius:10px;padding:12px 14px;margin-bottom:16px;color:#5A4300">'
-                     '<b>TEST EMAIL.</b> %s</div>' % e(_test_note(status, job, ctx.get("to"))))
+                     '<b>TEST EMAIL.</b> %s</div>' % e(test_note))
     parts.append('<h1 style="margin:0 0 8px;font:700 22px/1.25 Arial,sans-serif;color:#2A1218">%s</h1>' % e(head))
     parts.append('<p style="margin:0 0 4px;color:#2A1218">Hi %s,</p><p style="margin:0 0 6px;color:#2A1218">%s</p>' % (e(name), e(lead)))
-    parts.append('<p style="margin:0;color:#7B5560;font-size:13px">Applied on %s</p>' % e(when))
+    parts.append('<p style="margin:0;color:#7B5560;font-size:13px">%s %s</p>' % (e(when_label), e(when)))
     parts.append(h("THE JOB"))
     parts.append('<table role="presentation" style="border-collapse:collapse;font-size:14px">%s</table>' % card_rows(summary))
     if desc:
@@ -232,11 +261,12 @@ def owner_copy(ctx):
     where = {"delivered_test": "the simulated test inbox (nothing was sent to %s)" % job.get("co", "the employer"),
              "sent": ("%s's own hiring system" % job.get("co", "the employer")) if any(str(c).startswith("hiring system") for c in ctx.get("channels") or []) and not ctx.get("to") else "%s, by email" % (ctx.get("to") or "the employer"),
              "handoff": "no one: %s takes applications on its own site, so the applicant was pointed there" % job.get("co", "the employer")}.get(status, status)
-    subject = "[UAply copy] %s at %s: %s" % (job.get("role", ""), job.get("co", ""), {"delivered_test": "test application", "sent": "sent",
-                                                                                      "handoff": "applicant sent to the employer's site"}.get(status, status))
+    subject = "%s[UAply copy] %s at %s: %s" % ("[TEST] " if ctx.get("test") else "", job.get("role", ""), job.get("co", ""),
+                                               {"delivered_test": "test application", "sent": "sent", "handoff": "applicant sent to the employer's site"}.get(status, status))
     posting = _https(job.get("url"))
-    summary = _summary_rows(job, ctx.get("match") or 0)
-    rows = [("Name", cand.get("name")), ("Email", cand.get("email"))] + [r for r in (ctx.get("rows") or []) if r[0] not in ("Applicant", "Email")]
+    summary = [("Match", v) if k == "Your match" else (k, v) for k, v in _summary_rows(job, ctx.get("match") or 0)]     # this copy is read by the owner, not the applicant
+    rows = [("Name", cand.get("name")), ("Email", cand.get("email"))] + [r for r in _resume_rows(ctx.get("rows") or [], status, job.get("co") or "the employer", owner=True)
+                                                                         if r[0] not in ("Applicant", "Email")]
     t = ["This is a copy for you, the UAply owner.", "", "A swipe right on %s at %s" % (job.get("role"), job.get("co")),
          "Applied on: %s" % _when(ctx.get("at") or time.time()), "It went to: %s." % where, "", "THE JOB"]
     t += ["  %s: %s" % kv for kv in summary] + (["  Posting: %s" % posting] if posting else [])

@@ -77,8 +77,11 @@ function apply(w,host){
 /* ---------------- kit + submit ---------------- */
 function kitPatch(s){
   if(s.indexOf("__uaplyOnDecision")>-1)return s;
-  return once(s,"S.history.push(id);S.tips=false;save();busy=false;renderAll();",
+  s=once(s,"S.history.push(id);S.tips=false;save();busy=false;renderAll();",
     "S.history.push(id);S.tips=false;save();busy=false;renderAll();if(window.__uaplyOnDecision)window.__uaplyOnDecision(dir,job,m,S.profile,undo,S,save);");
+  /* Undo (the button or Z) on an application that already went out: say so, because undo only takes it off the list */
+  return once(s,"delete S.decisions[id];save();renderAll();clearToast();",
+    "var was=S.decisions[id];delete S.decisions[id];save();renderAll();clearToast();if(window.__uaplyUndone)window.__uaplyUndone(was,JOB_BY_ID[id]);");
 }
 
 function kitApply(w,host){
@@ -178,7 +181,7 @@ function kitApply(w,host){
         var j=r.j||{};
         if(!r.ok){setStatus(j.error||"Could not send.",true);if(sendBtn&&live)sendBtn.disabled=false;return}
         var dec=S&&S.decisions&&S.decisions[job.id];
-        if(dec&&j.status!=="duplicate"){dec.sent={at:Date.now(),to:j.to||"",status:j.status};if(save)save()}
+        if(dec&&(j.status!=="duplicate"||j.was)){dec.sent={at:Date.now(),to:j.to||"",status:j.status==="duplicate"?j.was:j.status};if(save)save()}
         if(j.status==="delivered_test")setStatus("Delivered to the test inbox as "+(j.to||"recruiter")+".");
         else if(j.status==="sent")setStatus("Sent to "+j.to+". Replies go to "+p.email+".");
         else if(j.status==="duplicate")setStatus("You already sent this application.");
@@ -319,9 +322,19 @@ function kitApply(w,host){
     d.getElementById("kaNo").onclick=function(){o.remove();cancel()};
     o.addEventListener("keydown",function(e){if(e.key==="Escape"){o.remove();cancel()}});
   }
-  /* applications that could not reach the server (offline): sent again when the connection is back, and on the next visit */
-  var queue=[];
-  w.addEventListener("online",function(){var q=queue;queue=[];q.forEach(function(f){f()})});
+  /* applications that could not reach the server: sent again when the connection is back, and on the next visit. The "online" event only
+     comes after the device itself was offline, so when the device is online but UAply's server did not answer, it tries again every 30 seconds. */
+  var queue=[],queueT=0;
+  function flushQueue(){w.clearTimeout(queueT);queueT=0;var q=queue;queue=[];q.forEach(function(f){f()})}
+  function waitToSend(f){queue.push(f);if(!queueT)queueT=w.setTimeout(flushQueue,30000)}
+  w.addEventListener("online",flushQueue);
+  function openAccount(){var b=d.getElementById("nb-prof");if(b){b.click();var it=d.querySelector('.nwrap[data-k=prof] .nitem[data-v=account]');if(it)it.click()}}
+  /* Undo or Withdraw on an application that already went out: it stays with the employer, so say so instead of letting it look taken back */
+  w.__uaplyUndone=function(was,job){
+    var st=was&&was.s==="applied"&&was.sent&&was.sent.status;if(!job||!st)return;
+    if(st==="sent")toast("Removed from your list. Your application to "+job.co+" was already sent, so "+job.co+" still has it.","","",9000);
+    else if(st==="delivered_test")toast("Removed from your list. The test application to "+job.co+" stays in the test inbox.","","",9000);
+  };
   function retryPending(){
     var A=w.__uaply;if(!A||!A.S||!A.S.decisions)return;
     A.JOBS.forEach(function(job){
@@ -330,6 +343,12 @@ function kitApply(w,host){
     });
   }
   w.__uaplyRetryPending=retryPending;
+  /* "Try again" / "Answer now" in the Applied list: the same as swiping right on that job again */
+  w.__uaplyResend=function(id){
+    var A=w.__uaply;if(!A||!A.S||!A.S.decisions[id])return;
+    var job=A.JOBS.filter(function(j){return j.id===id})[0];if(!job)return;
+    quietApply(job,{pct:A.S.decisions[id].pct||0},A.S.profile,function(){},A.S,A.save,false);
+  };
 
   function quietApply(job,m,p,undo,S,save,retry){
     var live=w.__uaplyMode==="live",auto=w.__uaplyAuto!==false;
@@ -341,7 +360,7 @@ function kitApply(w,host){
       delete S.decisions[job.id];var i=S.history?S.history.lastIndexOf(job.id):-1;if(i>-1)S.history.splice(i,1);
       if(save)save();try{w.__uaply.renderAll()}catch(e){}
     }
-    function mark(status,to){var dec=S&&S.decisions&&S.decisions[job.id];if(dec){dec.sent={at:Date.now(),to:to||"",status:status};if(save)save()}}
+    function mark(status,to){var dec=S&&S.decisions&&S.decisions[job.id];if(dec){dec.sent={at:Date.now(),to:to||"",status:status};if(save)save();if(w.__uaplyTrack)w.__uaplyTrack()}}   /* the Applied list, if it is open, shows the new state at once */
     if(!(p.name&&EMAIL.test(p.email||"")&&(!live||p.custom))){
       revert();toast("Add your name and email in Profile setup, under About you, so employers can reply. "+job.co+" is back in your deck.","Open Profile",function(){openProfile("about")},9000);return;
     }
@@ -356,7 +375,7 @@ function kitApply(w,host){
       /* the application is the profile itself: no cover note or message is written for the recruiter, unless the person
          turned on the opt-in "Message the hiring manager" preference (Plus and Pro; off by default) */
       var msgOn=!!(w.__uaplyAutoMsg&&w.__uaplyAutoMsg()&&w.__uaplyMessage);
-      if(!retry&&!(S&&S.decisions&&S.decisions[job.id]))return;   /* undone in the meantime: send nothing */
+      if(!(S&&S.decisions&&S.decisions[job.id]))return;   /* undone or withdrawn in the meantime (also while it waited for a connection): send nothing */
       post("/api/apply",{consent:true,confirm_real:live,match:m.pct,note:msgOn?w.__uaplyMessage(job,m,p):"",
         job:{id:job.id,co:job.co,role:job.role,url:job.url||"https://example.com/example-listing",source:job.source,loc:job.loc,contact:job.contact||"",mode:job.mode,type:job.type||"job",sal:job.sal,blurb:job.blurb},
         profile:{name:p.name,email:p.email,title:p.title,years:p.years,skills:p.skills,loc:p.loc,edu:p.edu,ext:(w.__uaplyApplyExt?w.__uaplyApplyExt():(p.ext||{}))},
@@ -365,20 +384,25 @@ function kitApply(w,host){
       }).then(function(r){
         var j=r.j||{};
         if(!r.ok){
-          /* nothing was sent (a limit, a missing detail, an unverified email): the job goes back to the deck rather than sitting in Applied */
-          if(retry){if(j.code!=="server")mark("");return}          /* a server hiccup keeps it waiting for the next try */
+          /* nothing was sent (a limit, a missing detail, an unverified email): the job goes back to the deck rather than sitting in Applied.
+             A waiting application sent again later stays in Applied, marked not sent, with Try again. */
+          if(retry){if(j.code!=="server")mark("failed");return}          /* a server hiccup keeps it waiting for the next try */
           revert();
           var act=j.code==="limit"?["See plans",function(){var b=d.getElementById("nb-prof");if(b){b.click();var it=d.querySelector('.nwrap[data-k=prof] .nitem[data-v=plan]');if(it)it.click()}}]
-                  :j.code==="slow_down"||j.code==="server"?["",null]:["Open Profile",openProfile];
+                  :j.code==="slow_down"||j.code==="server"?["",null]:(j.code==="signin"||j.code==="verify")?["Open Account",openAccount]:["Open Profile",openProfile];
           toast((j.error||"Could not send your application.")+" "+job.co+" is back in your deck.",act[0],act[1],9000);return;
         }
         if(j.status==="needs_answers"){
           var qs=Array.isArray(j.questions)?j.questions:[];
-          if(retry||!qs.length){mark("");return}
+          if(retry||!qs.length){mark("needs_answers");return}      /* asked when the person taps Answer now in Applied */
           askSheet(job,qs,j.filled||0,j.total||0,deliver,function(){revert();toast("Not sent. "+job.co+" is back in your deck.")});
           return;
         }
-        if(j.status!=="duplicate")mark(j.status,j.to);
+        if(j.status==="duplicate"){             /* sent before (then undone, or from another device): show what happened that time */
+          if(j.was)mark(j.was,j.to);
+          if(j.was==="handoff"){toast("Already in Applied, not sent yet: "+job.co+" takes applications on its own site.",job.url?"Finish now":"",function(){if(w.__uaplyOpen)w.__uaplyOpen(job.url)},12000);return}
+        }
+        else mark(j.status,j.to);
         var cp=receiptNote(j),pl=j.plan;
         var auto=pl&&pl.total?" UAply filled in "+pl.filled+" of "+pl.total+" answers.":"";
         if(j.status==="delivered_test")toast("Applied to "+job.co+" (test)."+auto+cp,"","",9000);
@@ -388,9 +412,11 @@ function kitApply(w,host){
         else if(j.status==="failed")toast(j.error||"The application could not be sent.","Try again",deliver,9000);
         else toast("Done.");
       }).catch(function(){
-        /* offline or the server did not answer: kept as waiting, and sent once the connection is back */
-        mark("pending");queue.push(deliver);
-        if(!retry)toast("You're offline. UAply will send your application to "+job.co+" when you're back online.","","",9000);
+        /* offline or the server did not answer: kept as waiting, and sent once the connection is back (said once, not on every new try) */
+        var first=!deliver.waiting;deliver.waiting=true;
+        mark("pending");waitToSend(deliver);
+        if(!retry&&first)toast(w.navigator.onLine===false?"You're offline. UAply will send your application to "+job.co+" when you're back online."
+                                                        :"UAply could not reach its server. It will send your application to "+job.co+" as soon as it can.","","",9000);
       });
     }
     var grace=Math.max(0,w.__uaplyGrace||0);
@@ -398,6 +424,9 @@ function kitApply(w,host){
     var left=grace,cancelled=false,timer=null,t=null;            /* live: send by itself, with a short window for Undo */
     function tick(){
       if(cancelled)return;
+      if(!(S&&S.decisions&&S.decisions[job.id])){    /* undone some other way (the Undo button, Z, Withdraw): stop and say nothing went */
+        cancelled=true;clearInterval(timer);toast("Cancelled. Nothing was sent to "+job.co+".");return;
+      }
       if(left<=0){clearInterval(timer);deliver();return}
       var msg="Applying to "+job.co+" in "+left+"…";
       if(t)t.set(msg);else t=toast(msg,"Undo",function(){cancelled=true;clearInterval(timer);revert();toast("Cancelled. Nothing was sent.")},0);
