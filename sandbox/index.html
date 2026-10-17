@@ -27,7 +27,7 @@ button{font:inherit;cursor:pointer}
 .stage{flex:1;min-height:0;display:flex;justify-content:center;padding:6px 10px 10px}
 .top.min .chips,.top.min #note{display:none}
 iframe{border:1px solid var(--line);border-radius:14px;background:var(--bg);width:100%;height:100%}
-.stage.phone iframe{width:390px}
+.stage.phone iframe{width:min(390px,100%)}   /* on a real phone the frame must not be wider than the screen, or the page scrolls sideways under a swipe */
 .log{display:none;height:90px;overflow:auto;margin:0 10px 10px;padding:8px 10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;font:12px/1.5 ui-monospace,Menlo,monospace;color:var(--muted)}
 .log.on{display:block}.log b{color:var(--ink)}
 </style>
@@ -42,7 +42,7 @@ iframe{border:1px solid var(--line);border-radius:14px;background:var(--bg);widt
 </div>
 <div class="stage" id="stage"><iframe id="app" title="UAply sandbox build" allow="geolocation"></iframe></div>
 <div class="log" id="log" aria-live="polite"></div>
-<script>window.UAplyOpts={nearMe:true};   /* sandbox only: ask for device location and show the commute slider */</script>
+<script>window.UAplyOpts={nearMe:true,transit:true,fields:true,phone:true};   /* sandbox only: device location and the commute slider; phone fixes (bottom-menu taps on iPhone); how you get to work (public transit, bike, walk); job fields and licenses (health care, dental, legal) in Profile setup, matching and Filters */</script>
 <script src="uaply-nav.js"></script>
 <script src="uaply-live.js"></script>
 <script src="uaply-profile.js"></script>
@@ -50,7 +50,7 @@ iframe{border:1px solid var(--line);border-radius:14px;background:var(--bg);widt
 <script src="uaply-envs.js"></script>
 <script>
 (function(){
-var KEY="hireswipe.sandbox.v1",E=window.UAplyEnv,on={nav:true,profile:true,live:true,kit:true,submit:true,smart:true,fit:true,anim:true,guide:true,tap:true,dates:true,hint:true,chat:true};
+var KEY="hireswipe.sandbox.v1",E=window.UAplyEnv,on={nav:true,profile:true,live:true,kit:true,submit:true,smart:true,fit:true,anim:true,guide:true,tap:true,dates:true,hint:true,chat:true,touch:true};
 var frame=document.getElementById("app"),noteEl=document.getElementById("note"),logEl=document.getElementById("log");
 function load(){logEl.classList.remove("on");logEl.innerHTML="";E.run(frame,on,KEY,function(err){if(err)noteEl.textContent="Problem: "+err})}
 function paint(n){document.querySelectorAll("#feats button").forEach(function(b){b.setAttribute("aria-pressed",on[b.dataset.k]?"true":"false")});if(n)noteEl.textContent=n}
@@ -70,7 +70,7 @@ var topEl=document.querySelector(".top"),fold=document.getElementById("fold");
 function setMin(m){topEl.classList.toggle("min",m);fold.textContent=m?"Show controls":"Hide controls";fold.setAttribute("aria-expanded",m?"false":"true")}
 fold.onclick=function(){setMin(!topEl.classList.contains("min"))};
 setMin(window.innerHeight<800);
-paint("On by default: Bottom navigation, Smarter matching, Compact fit, Card rise motion, Progress & profile notice, Bigger tap targets, Applied dates, Swipe hint.");
+paint("On by default: Phone swipe, Bottom navigation, Smarter matching, Compact fit, Card rise motion, Progress & profile notice, Bigger tap targets, Applied dates, Swipe hint.");
 load();
 })();
 </script>

@@ -23,6 +23,28 @@
       "port": 8766
     },
     {
+      "name": "sandbox-hiring-preview",
+      "runtimeExecutable": "py",
+      "runtimeArgs": [
+        "C:/Users/rumma/AppData/Local/Temp/uaply-employers/serve.py",
+        "18796",
+        "C:/Users/rumma/AppData/Local/Temp/uaply-employers/sandbox",
+        "--api"
+      ],
+      "port": 18796
+    },
+    {
+      "name": "sandbox-import-preview",
+      "runtimeExecutable": "py",
+      "runtimeArgs": [
+        "C:/Users/rumma/AppData/Local/Temp/uaply-import/serve.py",
+        "18806",
+        "C:/Users/rumma/AppData/Local/Temp/uaply-import/sandbox",
+        "--api"
+      ],
+      "port": 18806
+    },
+    {
       "name": "dev",
       "runtimeExecutable": "python",
       "runtimeArgs": [

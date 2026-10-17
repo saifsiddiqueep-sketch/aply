@@ -144,6 +144,14 @@ _AUTH = {"citizen": "US citizen or permanent resident", "authorized": "Authorize
          "none": "Not currently authorized"}
 _START = {"now": "Right away", "2w": "Within 2 weeks", "1m": "Within a month", "grad": "After graduation", "flex": "Flexible"}
 _TYPES = {"fulltime": "Full-time", "parttime": "Part-time", "internship": "Internship", "coop": "Co-op"}
+# licenses and certifications the applicant ticked in Profile setup (sandbox; the codes match jobs_api.LIC_RULES). Only the sandbox sends them.
+_LICS = {"rn": "Registered nurse (RN)", "lpn": "Licensed practical or vocational nurse (LPN, LVN)", "np": "Nurse practitioner (NP, APRN)",
+         "pa": "Physician assistant (PA-C)", "md": "Physician (MD or DO)", "pharm": "Pharmacist",
+         "bh": "Licensed therapist or counselor (LCSW, LPC, LMHC, LMFT, psychologist)", "pt": "Physical, occupational or speech therapist",
+         "cma": "Certified medical assistant (CMA, CCMA, RMA)", "phleb": "Certified phlebotomist", "emt": "EMT or paramedic",
+         "bls": "BLS or CPR", "acls": "ACLS", "dds": "Dentist (DDS or DMD)", "rdh": "Registered dental hygienist (RDH)",
+         "da": "Certified or expanded-function dental assistant (CDA, EFDA)", "bar": "Attorney admitted to a state bar",
+         "para": "Certified paralegal", "notary": "Notary public"}
 
 
 def _pick(v, allowed):
@@ -179,7 +187,8 @@ def _ext(raw):
             "resume": _https(x.get("resume")), "linkedin": _linkedin(x.get("linkedin")), "portfolio": _https(x.get("portfolio")),
             "school": _s(x.get("school"), 100), "major": _s(x.get("major"), 100), "grad": grad, "gpa": gpa,
             "employer": _s(x.get("employer"), 100), "auth": _pick(x.get("auth"), _AUTH),
-            "sponsor": _pick(x.get("sponsor"), ("yes", "no")), "start": _pick(x.get("start"), _START), "types": types}
+            "sponsor": _pick(x.get("sponsor"), ("yes", "no")), "start": _pick(x.get("start"), _START), "types": types,
+            "lic": [c for c in dict.fromkeys(v for v in x.get("lic") if isinstance(v, str)) if c in _LICS] if isinstance(x.get("lic"), list) else []}
 
 
 def _detail_rows(c, note=""):
@@ -196,7 +205,8 @@ def _detail_rows(c, note=""):
             ("Most recent employer", x.get("employer")),
             ("Work authorization", _AUTH.get(x.get("auth"), "") + ("; needs sponsorship" if x.get("sponsor") == "yes" else "; no sponsorship needed" if x.get("sponsor") == "no" else "") if x.get("auth") else ""),
             ("Earliest start", _START.get(x.get("start"), "")),
-            ("Looking for", ", ".join(_TYPES[t] for t in x.get("types", [])))]
+            ("Looking for", ", ".join(_TYPES[t] for t in x.get("types", []))),
+            ("Licenses and certifications (as stated by the applicant)", ", ".join(_LICS[c] for c in x.get("lic", []) if c in _LICS))]
     return [(k, str(v)) for k, v in rows if v and str(v) not in note]
 
 

@@ -6,6 +6,36 @@ production page and only changes when the owner decides.
 
 ## Unreleased (sandbox and dev)
 
+### How you get to work, fields and licenses, and phone fixes (sandbox only for now, 2026-10-15)
+- **How you get to work.** Profile setup (Where and pay) and Filters, above the commute slider, now ask Drive, Public transit, Bike or
+  Walk. Drive keeps the miles slider; the others switch it to minutes (Remote only, 5 to 120, Any time). Times are estimates, not a
+  trip planner: the straight-line distance plus a quarter for streets, at typical door-to-door speeds. The Location points in the
+  match use the time against your limit. In-person cards say "About N min by transit" (or by bike, on foot), and "Near transit (per
+  posting)" when the posting says so. The Benefits filter gains "Commuter or transit benefits". The choice is saved on the device.
+- **Fields and licenses for health care, dental and legal jobs.** Profile setup, under Jobs you want, adds "Fields you want to work
+  in" and a fold-out "Licenses and certifications" list. The server labels each real posting with its field (from the title) and, for
+  health care, dental and legal postings only, the licenses it requires: a licensed title counts, and in the text only wording about
+  holding a license counts, never "preferred" or "a plus". Licensed titles also raise the education a job asks for, and job titles
+  understand common equivalents (nurse and RN, attorney, lawyer and counsel).
+- In the match, picking fields adds a 10-point Field row, and a job that requires a license adds a 10-point License row (the points
+  come out of Skills, Title and Experience, so the total stays 100). A job is capped at a 40% match when you have added none of the
+  licenses it is for. BLS or CPR, ACLS and notary only lower the row. Filters adds "Hide fields I did not pick" and "Hide jobs that
+  need a license I have not added", both on by default. The licenses you tick are sent with your applications, labeled "as stated by
+  the applicant", and UAply does not verify them.
+- The sandbox also reads the public boards of One Medical, Oscar Health and Two Chairs (health care), Dental365, Premier Care Dental
+  Management and Apple Tree Dental (dental), and Everlaw, Harvey and Wilson Elser (legal). They link out only and are off unless the
+  owner switches feeds on. Ten example listings (health care, dental and legal, in and around Philadelphia) show when real postings
+  are not loaded, and each says it is an example.
+- **Phone swipe** (new experiment, on by default). On real phones a swipe that was not perfectly sideways was taken by the browser as
+  a scroll and the card snapped back. Now the gesture picks a direction after 8 pixels: a sideways one stops the page from scrolling,
+  so a slightly diagonal swipe still swipes, and an upward or downward one still scrolls the card. A swipe counts past 28% of the
+  card's width (110 pixels at most) or as a quick 40-pixel flick. Mouse swipes work as before. The sandbox's Phone view no longer
+  becomes wider than a real phone's screen.
+- Fixed: in the sandbox, on iPhones (Safari and every iPhone browser, including Brave), the bottom menu items (Services: Internships,
+  Coop; Dashboard: Applied, Accepted, Rejected, Interviews; Profile: Profile setup, Filters, Account, Plan and billing, Data and
+  privacy) could not be picked, because tapping a button on an iPhone does not focus it and the menu closed before the tap arrived.
+  The menu now stays open until you pick an item or tap outside it.
+
 ### Profile setup, and what really changes your matches
 - **Profile setup** is now one guided flow, five short steps (About you, Jobs you want, Where and pay, Background and links,
   Eligibility and extras), saved as you go, the same on phone and desktop. The old Settings, Resume and links, and Preferences

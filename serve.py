@@ -55,6 +55,7 @@ if api:
         alias.setdefault(url, os.path.join(HERE, rel))
     import jobs_api, uaply_api, auth_api, chat_api, google_auth, setup_api, billing_api
     uaply_api.init(os.path.basename(root))
+    jobs_api.ENV = os.path.basename(root)       # "sandbox" turns on job fields, licenses and the health care and legal employers (jobs_api.py)
     auth_api.init(os.path.basename(root))
     chat_api.init(os.path.basename(root))
     uaply_api.hide_errors = jobs_api.hide_errors = PUBLIC       # a hosted server never shows visitors raw error text; the owner's own computer still does

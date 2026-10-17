@@ -24,7 +24,61 @@ var ALIAS_NORM=`var ALIAS={js:"javascript",ts:"typescript",py:"python",postgres:
 function norm(s){var k=String(s).trim().toLowerCase();return ALIAS.hasOwnProperty(k)?ALIAS[k]:k}
 function locHit(a,b){a=norm(a);b=norm(b);if(!b)return false;var i=a.indexOf(b);while(i>-1){var pre=i===0||!/[a-z0-9]/.test(a.charAt(i-1));var post=i+b.length>=a.length||!/[a-z0-9]/.test(a.charAt(i+b.length));if(pre&&post)return true;i=a.indexOf(b,i+1)}return false}`;
 
+/* "Phone swipe": the production card listens only to pointer events and leaves vertical panning to the browser (touch-action: pan-y). On a
+   phone a real swipe is never perfectly sideways, so the browser often takes the touch as a scroll, fires pointercancel, and the card snaps
+   back. This version handles touch itself: after 8px the gesture picks a direction, and a sideways one stops the page from scrolling, so a
+   slightly diagonal swipe still swipes (an upward or downward one still scrolls the card). A swipe counts past 28% of the card's width (110px
+   at most) or as a quick 40px flick. Mouse and pen keep pointer events. */
+var BIND_TOUCH=`function bindDrag(card){
+  var sx=0,sy=0,dx=0,t0=0,drag=false,axis="",tid=null;
+  function begin(x,y){if(busy)return false;sx=x;sy=y;dx=0;t0=Date.now();axis="";drag=true;card.style.transition="none";return true}
+  function move(x,y,ev){
+    if(!drag)return;
+    var mx=x-sx,my=y-sy;
+    if(!axis){
+      if(Math.abs(mx)<8&&Math.abs(my)<8)return;
+      axis=Math.abs(mx)>=Math.abs(my)*0.8?"x":"y";
+      if(axis==="y"){drag=false;card.style.transition="";clearCardStyle(card);return}
+    }
+    if(ev&&ev.cancelable)ev.preventDefault();
+    dx=mx;setDrag(card,dx);
+  }
+  function end(cancel){
+    if(!drag)return;drag=false;card.style.transition="";
+    var dist=Math.abs(dx),v=dist/Math.max(1,Date.now()-t0),cw=card.getBoundingClientRect().width||360;
+    if(!cancel&&axis==="x"&&(dist>Math.min(110,cw*0.28)||(dist>40&&v>0.45))){
+      var b=document.getElementById(dx>0?"btnYes":"btnNo");
+      if(window.__uaplySwipeViaButton&&b){clearCardStyle(card);b.click()}else decide(dx>0?"applied":"passed");
+    }else clearCardStyle(card);
+    dx=0;axis="";
+  }
+  function touchOf(e){for(var i=0;i<e.changedTouches.length;i++)if(e.changedTouches[i].identifier===tid)return e.changedTouches[i];return null}
+  card.addEventListener("touchstart",function(e){
+    if(e.touches.length!==1){if(drag)end(true);return}
+    var t=e.touches[0];tid=t.identifier;begin(t.clientX,t.clientY);
+  },{passive:true});
+  card.addEventListener("touchmove",function(e){var t=touchOf(e);if(t)move(t.clientX,t.clientY,e)},{passive:false});
+  card.addEventListener("touchend",function(e){if(touchOf(e))end(false)});
+  card.addEventListener("touchcancel",function(){end(true)});
+  card.addEventListener("pointerdown",function(e){
+    if(e.pointerType==="touch"||(e.pointerType==="mouse"&&e.button!==0))return;
+    if(!begin(e.clientX,e.clientY))return;
+    axis="x";
+    try{card.setPointerCapture(e.pointerId)}catch(x){}
+  });
+  card.addEventListener("pointermove",function(e){if(e.pointerType!=="touch")move(e.clientX,e.clientY,null)});
+  card.addEventListener("pointerup",function(e){if(e.pointerType!=="touch")end(false)});
+  card.addEventListener("pointercancel",function(e){if(e.pointerType!=="touch")end(true)});
+}
+`;
+
 var FEATURES={
+ touch:{name:"Phone swipe",note:"Swiping works on real phones: a slightly diagonal swipe still swipes instead of scrolling the page, and a swipe counts at 28% of the card's width or as a quick flick. Mouse swipes work as before.",patch:function(s){
+   var a=s.indexOf("function bindDrag(card){"),b=s.indexOf("function decide(dir){");
+   if(a<0||b<0)throw new Error("bindDrag not found");
+   s=s.slice(0,a)+BIND_TOUCH+s.slice(b);
+   return once(s,"</style>","html,body{overscroll-behavior-x:none}</style>");   /* a sideways swipe never turns into the browser's back or forward gesture */
+ }},
  easy:{name:"Easy swipe",note:"Swipe commits at 60px, or a quick 30px flick, instead of 110px.",apply:function(w){
    var d=w.document,deck=d.getElementById("deck"),sx=0,dx=0,t0=0;
    deck.addEventListener("pointerdown",function(e){sx=e.clientX;dx=0;t0=performance.now()},true);
@@ -38,6 +92,7 @@ var FEATURES={
  }},
  confirm:{name:"Confirm apply",note:"Saving to Applied by swipe, button or → key asks for confirmation first. Passing stays instant.",apply:function(w){
    var d=w.document,ok=false,sx=0,dx=0;
+   w.__uaplySwipeViaButton=true;   /* Phone swipe then decides through the Apply button, so this confirmation still shows for touch swipes */
    function ask(){
      if(d.getElementById("stConfirm"))return;
      var card=d.querySelector(".card.top");if(!card)return;
@@ -151,7 +206,7 @@ var FEATURES={
  }}
 };
 FEATURES.chat={name:"Assistant and feedback",note:"A Help button (bottom right) opens UAply Assistant: answers from UAply's help articles (written by AI when an API key is set on the server, and labeled AI or Automated either way), one-question-at-a-time feedback, problem reports, a way to reach a person, and a one-tap rating after the third application in a visit. Needs this server's back end.",apply:function(w,host){window.UAplyChat.apply(w,host)}};
-var ORDER=["easy","confirm","axis","caps","smart","top2","nav","profile","live","kit","submit","fit","guide","notice","tap","dates","hint","anim","a11y","backend","chat"];   /* chat last: it wraps the apply hook set by kit */
+var ORDER=["touch","easy","confirm","axis","caps","smart","top2","nav","profile","live","kit","submit","fit","guide","notice","tap","dates","hint","anim","a11y","backend","chat"];   /* chat last: it wraps the apply hook set by kit */
 
 function build(on,key){
   return fetch("prod-index.html",{cache:"no-store"}).then(function(r){return r.text()}).then(function(src){
