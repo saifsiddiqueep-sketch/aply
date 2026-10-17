@@ -152,6 +152,7 @@ _AUTH = {"citizen": "US citizen or permanent resident", "authorized": "Authorize
          "none": "Not currently authorized"}
 _START = {"now": "Right away", "2w": "Within 2 weeks", "1m": "Within a month", "grad": "After graduation", "flex": "Flexible"}
 _TYPES = {"fulltime": "Full-time", "parttime": "Part-time", "internship": "Internship", "coop": "Co-op"}
+_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
 
 def _pick(v, allowed):
@@ -202,7 +203,9 @@ def _detail_rows(c, note=""):
     x = c.get("ext") or {}
     skills = ", ".join(c.get("skills") or [])
     exp = ("%s year%s" % (c["years"], "" if c.get("years") == 1 else "s")) if c.get("years") else ""
-    edu =", ".join(v for v in (x.get("school"), x.get("major"), x.get("grad"), ("GPA %s" % x["gpa"]) if x.get("gpa") != "" and x.get("gpa") is not None else "") if v)
+    grad = re.match(r"^(\d{4})-(\d{2})$", x.get("grad") or "")
+    grad = "graduation %s %s" % (_MONTHS[int(grad.group(2)) - 1], grad.group(1)) if grad else ""      # "graduation June 2027", not "2027-06"
+    edu = ", ".join(v for v in (x.get("school"), x.get("major"), grad, ("GPA %s" % x["gpa"]) if x.get("gpa") != "" and x.get("gpa") is not None else "") if v)
     rows = [("Applicant", c.get("name")), ("Email", c.get("email")), ("Current or target title", c.get("title")),
             ("Experience", exp), ("Location", c.get("loc")), ("Skills", skills),
             ("Phone", x.get("phone")), ("Headline", x.get("headline")), ("Resume", x.get("resume")),
@@ -410,7 +413,8 @@ def _mail_ctx(cfg, rec, note, user_email=""):
     """Everything emails.py needs to write the receipt or the owner copy of one application."""
     return {"test": rec["mode"] != "live", "status": rec["status"], "cand": rec["candidate"], "job": rec["job"], "at": rec["at"],
             "match": rec.get("match", 0), "to": rec.get("to", ""), "rows": _detail_rows(rec["candidate"], note), "note": note,
-            "channels": rec.get("channels") or [], "user_email": user_email, "base_url": _site_base(cfg), "support_email": _s(cfg.get("support_email"), 120)}
+            "channels": rec.get("channels") or [], "user_email": user_email, "base_url": _site_base(cfg), "support_email": _s(cfg.get("support_email"), 120),
+            "preview": rec.get("preview") is True}
 
 
 def _copy_message(cfg, rec):
@@ -661,7 +665,7 @@ def submit(p, user=None):
         if preview and plan:
             # the sandbox shows exactly what would go into the employer's hiring system once they connect; nothing is sent to them
             rec["to"] = "%s hiring system (simulated)" % job["co"]
-            rec["simulated"] = True
+            rec["simulated"] = rec["preview"] = True             # "preview": this employer has not connected, so the live app would hand off
             rec["status"] = "delivered_test"
             rec["channels"] = ["hiring system (simulated)"]
             APPS.append(rec)
