@@ -86,7 +86,7 @@
    "title": "Adding my resume",
    "tags": "resume cv upload file pdf word link document",
    "body": "Open Profile, then Profile setup, step 4 (Background and links). Upload your resume file (PDF, Word or text, up to 1 MB), or add a link to it, such as a Google Drive link anyone can open. The file is saved on your device and goes along with each application UAply sends to an employer; UAply's server does not keep a copy. For jobs you finish on the employer's own site, upload it there.",
-   \"go\": \"prof:back\"
+   "go": "prof:back"
   },
   {
    "id": "dashboard",
