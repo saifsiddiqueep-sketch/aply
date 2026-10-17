@@ -6,6 +6,27 @@ production page and only changes when the owner decides.
 
 ## Unreleased (sandbox and dev)
 
+### Google sign-in and Stripe ready for real accounts and real cards
+- **Continue with Google uses Google's full-page sign-in on every device** once the client secret is set (not only iPhone and iPad).
+  The app runs inside a srcdoc frame whose `location.origin` is "null", which Google's pop-up button script reads, and the pop-up also
+  depends on third-party cookies and Chrome's FedCM prompt; the full-page sign-in depends on none of these. The request to Google now also
+  says `access_type=online`. Setup problems (wrong secret, Google error words) are written to the server log with what to change, and the
+  start line says `Google sign-in: on`.
+- **Google's token checks** forgive a minute of clock difference, refuse tokens claiming to last more than a day, fetch Google's key list
+  at most once a minute for unknown key ids, and keep working with known keys during an outage at Google.
+- **Stripe: a plan needs a real, successful payment.** Every event is re-read from Stripe (late or out-of-order events cannot switch a plan
+  on), only our exact Plus and Pro prices count, a live server ignores test-mode events (test cards cannot unlock a plan on the real site),
+  handled event ids are kept in the database (a restart does not forget them), and every call pins the Stripe API version. `invoice.paid`
+  and `invoice.payment_failed` are handled: after the third failed renewal the plan pauses and the Plan screen says to update the card; it
+  comes back when a payment works. Deleting an account first cancels its subscription at Stripe, immediately (nobody is left to use or manage the rest of the month); if Stripe refuses, the account is kept and the person is told to cancel in Manage billing first, and the delete screen says the plan will be cancelled. The Plan screen no longer shows "Pro is active"
+  for a typed `?billing=success&plan=pro` address where real payments are on, and says so if Stripe has not confirmed a payment.
+- **Owner's guides:** DEPLOY.md section 3 (Google, with the exact addresses, the JSON to paste and an "if you see X, do Y" table) and new
+  section 4 (Stripe go-live: prices, portal, retries, webhook events, keys, Radar rules, test cards); `/setup` matches. `render.yaml` lists the
+  four Stripe settings for dev.
+- Tests: `test-billing.py` 29 -> 70 (declined, fake and Radar-blocked cards, forged, tampered, old, future and replayed events, live/test
+  mode, a foreign price, failed renewals, portal cancel, account deletion with an active plan, a Stripe failure that keeps the account); `test-google.py`, `test-google-token.py`, `test-public-auth.py`,
+  `test-setup.py` and `ui-google-ios.js` (a computer now uses the full-page sign-in too) extended.
+
 ### Sign-in ready for the live site (uaply.net), iPhones and Google
 - **Continue with Google on iPhone and iPad** now uses Google's full-page sign-in (a white "Continue with Google" button with
   Google's G), because Google says its pop-up button needs that on iPhone (Safari's tracking protection breaks the pop-up).

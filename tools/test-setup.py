@@ -168,7 +168,9 @@ t("with UAPLY_DATA_DIR set the employer list is written there, and the one next 
 # the setup page is the owner's guide to switching test mode off: clickable steps, the exact addresses to give Google, and anchors the sign-in screen links to
 page = setup_api.page("localhost:8767", "http").decode("utf-8")
 t("the page tells Google both local addresses (Google needs the bare localhost one too)", all(("<code>%s</code>" % o) in page for o in ("http://localhost:8767", "http://localhost")), True)
-t("each address has a Copy button", page.count('class="cp"'), 2)
+t("each address has a Copy button (2 local and 3 live origins, 4 redirect URIs)", page.count('class="cp"'), 9)
+t("the live site's exact redirect URIs are listed", all(("<code>%s/api/auth/google/callback</code>" % o) in page for o in ("https://uaply.net", "https://www.uaply.net", "https://uaply.onrender.com", "http://localhost:8767")), True)
+t("...but never one on the bare localhost (nothing listens there)", "<code>http://localhost/api/auth/google/callback</code>" in page, False)
 t("the Google and Gmail boxes have anchors for the sign-in screen's links", ('id="google"' in page, 'id="gmail"' in page), (True, True))
 t("the steps are clickable links to Google's own pages", all(('href="%s"' % u) in page for u in (
     "https://console.cloud.google.com/auth/overview", "https://console.cloud.google.com/auth/clients",      # Google Auth Platform (Google's current console)
