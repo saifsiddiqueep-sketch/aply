@@ -20,6 +20,9 @@ How a question is answered, in order:
   5. Voluntary self-identification (gender, race, veteran, disability) is never answered. Greenhouse keeps those in separate optional sections,
      which UAply does not send; any such question inside the main form is skipped.
 
+Ashby and SmartRecruiters show a posting's form only to the employer's own key, so ats_api.py reads those and hands them here as a plain list of
+questions (plan_questions). Both planners answer each question through _answer, so the rules above are written once for every hiring system.
+
 Nothing here sends anything. Reading a public form is the same request the employer's own careers page makes.
 """
 import json
@@ -242,6 +245,117 @@ def _label_of(values, value):
     return str(value)
 
 
+def _answer(label, key, kind, values, answers, rules, ext):
+    """One question answered from the person's saved answer to it, or else from the profile (legal notices only with "acknowledge for me").
+    kind: select or multi (values are [{label, value}] and the option's value is returned), boolean, number, date, or anything else for text.
+    Returns (value, what to show the person, came from a saved answer) or None when only the person can answer. Shared by every hiring system,
+    so the rules table above is the one place that decides what a profile answers."""
+    want = answers.get(key)
+    saved = want not in (None, "")
+    if not saved:
+        if _ACK.search(label):
+            want = "yes" if ext.get("ack") is True else None
+        else:
+            want = None
+            for rx, fn in rules:
+                if rx.search(label):
+                    want = fn()
+                    break
+    if want in (None, "", []):
+        return None
+    tries = want if isinstance(want, list) else [want]
+    if kind in ("select", "multi"):
+        val = None
+        for w in tries:
+            val = _option(values, w)
+            if val is not None:
+                break
+        if val is None and tries[0] == "yes" and _ACK.search(label):      # "I acknowledge", "I agree", or a single box to tick
+            val = (_option(values, "acknowledge") or _option(values, "agree") or _option(values, "understand") or _option(values, "consent")
+                   or (values[0].get("value") if len(values) == 1 and isinstance(values[0], dict) else None))
+        return None if val is None else (val, _label_of(values, val), saved)
+    w = str(tries[0]).strip()
+    if kind == "boolean":                       # a yes/no box: only a plain yes or no counts, never a sentence that happens to start with one
+        yn = {"yes": True, "true": True, "no": False, "false": False}.get(w.lower())
+        return None if yn is None else (yn, "Yes" if yn else "No", saved)
+    if kind == "number":
+        if not re.match(r"^-?\d+(\.\d+)?$", w):
+            return None
+        return (float(w) if "." in w else int(w)), w, saved
+    if kind == "date":                          # only a whole date is sent; "June 2027" is not one, so the person is asked
+        return (w, w, saved) if re.match(r"^\d{4}-\d{2}-\d{2}$", w) else None
+    text = ("UAply" if w == "uaply" else "Yes" if w == "yes" else "No" if w == "no" else w)[:2000]
+    return text, (text if len(text) < 80 else text[:77] + "..."), saved
+
+
+def plan_questions(questions, cand, job, note="", resume_meta=None, answers=None, company=""):
+    """Work out an application for a hiring system whose form arrives as a plain list of questions (Ashby, SmartRecruiters). Each question is
+    {"id", "label", "req", "kind", "options": [{label, value}], "role", "voluntary"}:
+      kind      text, textarea, select, multi, boolean, number, date, file, or "other" for a type UAply does not know how to fill
+      role      for the standard fields: name, first, last, email, phone, resume, cover (the person's message). Others use the rules.
+      voluntary true for self-identification (gender, race, veteran, disability): never answered, whatever the label says
+    Returns {"values": [(id, value)], "resume": [ids that take the resume file], "items", "missing", "filled", "total", "required"},
+    with items and missing in the same shape plan_greenhouse gives, so the app asks a missing question the same way for every system."""
+    ext = cand.get("ext") or {}
+    answers = answers if isinstance(answers, dict) else {}
+    rules = [(re.compile(p, re.I), f) for p, f in _rules(cand, ext, job)]
+    first, last = _first_last(cand.get("name"))
+    values, resume, items, missing = [], [], [], []
+    for q in questions:
+        label = re.sub(r"\s+", " ", str(q.get("label") or "")).strip()
+        req, kind, role, opts = bool(q.get("req")), q.get("kind") or "text", q.get("role") or "", q.get("options") or []
+        key = norm(label, company)
+        if q.get("voluntary") or _EEO.search(label):          # voluntary self-identification: never answered
+            items.append({"q": label, "key": key, "req": req, "a": "", "need": False, "skip": "voluntary"})
+            continue
+        val = shown = None
+        if role == "name":
+            val = cand.get("name") or None
+        elif role == "first":
+            val = first or None
+        elif role == "last":
+            val = last or None
+        elif role == "email":
+            val = cand.get("email") or None
+        elif role == "phone":
+            val = ext.get("phone") or answers.get(key) or None    # the profile's number, or the one the person typed when this was asked
+        elif role == "resume":
+            if resume_meta:
+                resume.append(q["id"])
+                shown = resume_meta["name"]
+        elif role == "cover":
+            val = note or _fill_template(ext.get("why"), job) or ext.get("summary") or None
+            if val:
+                shown = "Your message to the hiring manager" if note else "Your 'why you want to work there' text" if ext.get("why") else "Your About you text"
+        elif kind not in ("file", "other"):                   # a file other than the resume, or a type UAply cannot fill, is left to the person
+            got = _answer(label, key, kind, opts, answers, rules, ext)
+            if got is not None:
+                val, shown, saved = got
+                if kind == "multi":
+                    val = [val]
+                if saved:
+                    shown = shown + "  (your saved answer)"
+        if val not in (None, "", []):
+            values.append((q["id"], val))
+            if shown is None:
+                shown = str(val) if len(str(val)) < 80 else str(val)[:77] + "..."
+        ok = shown is not None
+        need = req and not ok
+        # how the app asks it: "file" tells the person to upload a resume; "other" cannot be asked in the app at all (a file other than the
+        # resume, or a type UAply cannot fill), so the person finishes on the employer's page
+        sheet = ("file" if role == "resume" else "other" if kind in ("file", "other") else kind if kind in ("text", "textarea", "select", "multi")
+                 else "select" if kind == "boolean" else "text")
+        item = {"q": label, "key": key, "req": req, "a": shown if ok else "", "need": need, "kind": sheet}
+        if need:
+            if sheet in ("select", "multi"):
+                item["opts"] = ["Yes", "No"] if kind == "boolean" else [str(o.get("label", "")) for o in opts[:60] if isinstance(o, dict)]
+            missing.append(item)
+        items.append(item)
+    total = sum(1 for i in items if not i.get("skip"))
+    return {"values": values, "resume": resume, "items": items, "missing": missing, "total": total,
+            "filled": sum(1 for i in items if not i.get("skip") and i["a"]), "required": sum(1 for i in items if i["req"] and not i.get("skip"))}
+
+
 def plan_greenhouse(form, cand, job, note="", resume_meta=None, resume_bytes=None, answers=None):
     """Work out the whole application for one Greenhouse form. See the module notes for the result's shape."""
     ext = cand.get("ext") or {}
@@ -312,38 +426,13 @@ def plan_greenhouse(form, cand, job, note="", resume_meta=None, resume_bytes=Non
                 else:
                     ok = ok or not req
             else:
-                want = answers.get(key)
-                src = "saved"
-                if want in (None, ""):
-                    src = "profile"
-                    if _ACK.search(label):
-                        want = "yes" if ext.get("ack") is True else None
-                    else:
-                        want = None
-                        for rx, fn in rules:
-                            if rx.search(label):
-                                want = fn()
-                                break
-                if want in (None, "", []):
+                got = _answer(label, key, kind, values, answers, rules, ext)
+                if got is None:
                     continue
-                tries = want if isinstance(want, list) else [want]
-                if kind in ("select", "multi"):
-                    val = None
-                    for w in tries:
-                        val = _option(values, w)
-                        if val is not None:
-                            break
-                    if val is None and tries[0] == "yes" and _ACK.search(label):      # "I acknowledge", "I agree", or a single box to tick
-                        val = (_option(values, "acknowledge") or _option(values, "agree") or _option(values, "understand") or _option(values, "consent")
-                               or (values[0].get("value") if len(values) == 1 and isinstance(values[0], dict) else None))
-                    if val is not None and put(name + ("[]" if kind == "multi" and not name.endswith("[]") else ""), val):
-                        ok = True; shown = _label_of(values, val)
-                else:
-                    w = tries[0]
-                    text = "UAply" if w == "uaply" else ("Yes" if w == "yes" else "No" if w == "no" else str(w))
-                    if put(name, text[:2000]):
-                        ok = True; shown = text if len(text) < 80 else text[:77] + "..."
-                if ok and src == "saved":
+                val, said, saved = got
+                if put(name + ("[]" if kind == "multi" and not name.endswith("[]") else ""), val):
+                    ok = True; shown = said
+                if ok and saved:
                     shown = shown + "  (your saved answer)"
         need = req and not ok
         f0 = fl[0]

@@ -6,6 +6,25 @@ production page and only changes when the owner decides.
 
 ## Unreleased (sandbox and dev)
 
+### Swipe right applies straight into Ashby and SmartRecruiters, for employers who connect
+- **Employers on Ashby or SmartRecruiters can now connect** the same way as Greenhouse and Lever: they create a key in their own system (Ashby:
+  Admin, Integrations, API Keys, with Candidates write and Jobs read; SmartRecruiters: Settings, Admin, Credential Manager, an Application API
+  key) and the owner pastes it into the Connect box on the setup page, or into the host's settings. Their real postings then say **Apply
+  instantly**, and a swipe right puts the application into their pipeline with the resume attached.
+- **The posting's own questions are answered from the profile**, with the same rules Greenhouse uses (work authorization, sponsorship, LinkedIn,
+  how they heard, why this company, and the rest). A required question the profile cannot answer is asked once and remembered; one the app cannot
+  ask (a file other than the resume, or a kind of field UAply does not know) means nothing is sent and the person finishes on the employer's page.
+  UAply never guesses.
+- **Voluntary questions stay unanswered**: SmartRecruiters' diversity questions and any gender, race, veteran or disability question on an Ashby
+  form are skipped. A privacy consent the employer requires is given only when the person switched on "Acknowledge employers' notices for me" or
+  answered it themselves, and optional consents (talent pool, text messages) are never given.
+- **Test mode never uses an employer's key**: their form is read only for a live send.
+- The real City of Philadelphia and Ashby feeds already record where each posting lives, so a connected employer's listed jobs work without
+  extra setup; SmartRecruiters postings now remember the id its application service needs.
+- New tests: `tools/test-ats-ashby.py` (29 checks) and `tools/test-ats-smartrecruiters.py` (29 checks) against a stand-in that checks every request
+  against the two systems' published documentation, plus new end-to-end checks in `tools/test-ats-flow.py` and `tools/test-setup.py`. A real key
+  has not been tried yet: the first connected employer should start with a test posting.
+
 ### Sign-in ready for the live site (uaply.net), iPhones and Google
 - **Continue with Google on iPhone and iPad** now uses Google's full-page sign-in (a white "Continue with Google" button with
   Google's G), because Google says its pop-up button needs that on iPhone (Safari's tracking protection breaks the pop-up).

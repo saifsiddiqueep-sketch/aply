@@ -45,6 +45,8 @@ jobs:
           python tools/test-emails.py
           python tools/test-support.py
           python tools/test-ats.py
+          python tools/test-ats-ashby.py
+          python tools/test-ats-smartrecruiters.py
           python tools/test-ats-flow.py
           python tools/test-billing.py
           python tools/test-autofill.py
