@@ -16,6 +16,7 @@ Serves ROOT; each urlpath=file alias maps one URL to a file outside ROOT (e.g. /
   POST /api/auth/change-password   signed in: change the password (needs the current one)
   GET  /setup             owner checklist: Google keys, email login, test email (setup_api.py)
   POST /api/setup/test-mail   send the owner one test email
+  POST /api/setup/save-feed-keys   the Job feed keys box (this computer only): save the USAJOBS and The Muse API keys; never echoed back
   POST /api/setup/save-mail   the Connect Gmail form (this computer only): save the Gmail address and App Password, then send a test
   GET  /api/auth/providers      which sign-in methods are on (google_auth.py)
   GET  /api/auth/google/start   "Continue with Google": send the browser to Google
@@ -274,7 +275,7 @@ class H(http.server.SimpleHTTPRequestHandler):
             return self._send(code, out)
         if not api or p not in ("/api/apply", "/api/decision", "/api/auth/signup", "/api/auth/login", "/api/auth/logout",
                                 "/api/auth/delete", "/api/auth/forgot", "/api/auth/reset", "/api/auth/change-password",
-                                "/api/setup/test-mail", "/api/setup/save-mail", "/api/setup/save-google", "/api/setup/save-ats", "/api/setup/remove-ats", "/api/setup/save-stripe", "/api/auth/google/token", "/api/auth/verify", "/api/auth/resend", "/api/chat", "/api/feedback", "/api/billing/checkout", "/api/billing/portal",
+                                "/api/setup/test-mail", "/api/setup/save-mail", "/api/setup/save-google", "/api/setup/save-ats", "/api/setup/remove-ats", "/api/setup/save-stripe", "/api/setup/save-feed-keys", "/api/auth/google/token", "/api/auth/verify", "/api/auth/resend", "/api/chat", "/api/feedback", "/api/billing/checkout", "/api/billing/portal",
                                 "/api/employer/company", "/api/employer/job", "/api/employer/job/status", "/api/employer/applicant",
                                 "/api/employer/import"):
             return self._refuse(404, {"error": "not found"})
@@ -331,6 +332,13 @@ class H(http.server.SimpleHTTPRequestHandler):
                 if PUBLIC:                                      # a host keeps keys in its dashboard (UAPLY_ATS_JSON), not in a file a page can write
                     return self._send(403, {"ok": False, "message": "On a hosted server, add employers' keys in the host's dashboard (UAPLY_ATS_JSON), not here."})
                 code, out = (setup_api.save_ats if p.endswith("save-ats") else setup_api.remove_ats)(payload)
+                return self._send(code, out)
+            if p == "/api/setup/save-feed-keys":
+                if not self._owner_ok():
+                    return self._send(403, {"error": "Owner pages are off or need the owner password."})
+                if PUBLIC:                                      # a hosted server keeps its keys in its dashboard, not in a file the page can write
+                    return self._send(403, {"ok": False, "message": "On a hosted server, add the job feed keys in the host's dashboard (UAPLY_CONFIG_JSON, feed_keys), not here."})
+                code, out = setup_api.save_feed_keys(payload)
                 return self._send(code, out)
             if p == "/api/setup/save-mail":
                 if not self._owner_ok():

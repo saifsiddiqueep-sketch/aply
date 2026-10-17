@@ -5,6 +5,7 @@ public server, needs OWNER_PASSWORD.
 
   GET  /setup                 the checklist
   POST /api/setup/test-mail   send one test email to the owner (owner_copy, else the SMTP from address)
+  POST /api/setup/save-feed-keys   the Job feed keys box: save the USAJOBS and The Muse API keys (this computer only)
 """
 import html
 import re
@@ -91,6 +92,13 @@ def checks(host, proto):
         {"name": "Copy of every application to you", "ok": bool(owner),
          "detail": ("Every swipe right is also emailed to " + owner + (" once email sending is on." if not smtp_ok else ".")) if owner else "Off. Set owner_copy to your email.",
          "todo": [] if owner else ["Run: python tools/setup-config.py and enter your email when it asks."]},
+        {"name": "More jobs: USAJOBS and The Muse keys", "ok": all(feed_status().values()),
+         "detail": "USAJOBS key: %s. The Muse key: %s. Without the USAJOBS key federal jobs are skipped; without The Muse key its jobs still load, but its terms ask for one." % (
+             "saved" if feed_status()["usajobs"] else "not added yet", "saved" if feed_status()["muse"] else "not added yet"),
+         "todo": [t for t, need in (
+             ("Request a free USAJOBS key at https://developer.usajobs.gov/APIRequest/ (name, the email you will use, and what UAply does). The key arrives by email.", not feed_status()["usajobs"]),
+             ("Register a free The Muse key at https://www.themuse.com/developers/api/v2 (it asks you to sign in to The Muse).", not feed_status()["muse"]),
+             ("Paste them in the Job feed keys box below.", not all(feed_status().values()))) if need]},
         {"name": "AI answers in UAply Assistant (optional)", "ok": _real(cfg.get("anthropic_api_key"), ("optional", "sk-ant-...")) and str(cfg.get("anthropic_api_key")).startswith("sk-ant-"),
          "detail": "Without a key the assistant answers with the best matching help article.", "todo": []},
     ]
@@ -188,6 +196,54 @@ def save_stripe(payload):
     return 200, {"ok": True, "saved": True, "message": "Saved. Plus and Pro can now be bought in Profile, Plan" + ("" if cfg["stripe"]["webhook_secret"] else "; add the webhook signing secret so plans switch on after payment") + "."}
 
 
+FEED_NAMES = {"usajobs": "USAJOBS key", "muse": "The Muse key"}
+
+
+def feed_status():
+    """Which job feed keys are set (in uaply-config.json or the host's UAPLY_CONFIG_JSON). Only yes or no; a key is never read back out."""
+    k = uaply_api.config().get("feed_keys")
+    k = k if isinstance(k, dict) else {}
+    return {n: isinstance(k.get(n), str) and bool(jobs_api.KEY_RE.match(k[n].strip())) for n in FEED_NAMES}
+
+
+def save_feed_keys(payload):
+    """The "Job feed keys" box: save the USAJOBS and The Muse API keys (and the email the USAJOBS key was requested with) into the
+    git-ignored uaply-config.json on this computer, under "feed_keys". A blank field keeps what is saved; "remove" drops a key.
+    The keys are never sent back, never logged and never shown on the page again (it only says "saved"). Returns (status, body)."""
+    g = lambda k: "".join((payload.get(k) if isinstance(payload.get(k), str) else "").split())      # noqa: E731  (pasted keys may carry spaces or a line break)
+    new = {n: g(n) for n in FEED_NAMES if g(n)}
+    mail = (payload.get("usajobs_email") if isinstance(payload.get("usajobs_email"), str) else "").strip()
+    remove = [n for n in (payload.get("remove") if isinstance(payload.get("remove"), list) else []) if n in FEED_NAMES]
+    for n, v in new.items():
+        if not jobs_api.KEY_RE.match(v):
+            return 400, {"ok": False, "message": "That does not look like a %s. Paste the whole key from the email or page it came on (letters and digits, 16 or more)." % FEED_NAMES[n]}
+    if mail and not uaply_api.EMAIL_RE.match(mail):
+        return 400, {"ok": False, "message": "The USAJOBS email is not a valid email address. Use the one you requested the key with."}
+    if not (new or mail or remove):
+        return 400, {"ok": False, "message": "Paste at least one key."}
+    try:
+        with open(uaply_api.CONFIG_PATH, encoding="utf-8") as f:
+            cfg = json.load(f)
+    except (OSError, ValueError):
+        cfg = {}
+    fk = cfg.get("feed_keys") if isinstance(cfg.get("feed_keys"), dict) else {}
+    fk.update(new)
+    if mail:
+        fk["usajobs_email"] = mail
+    for n in remove:
+        fk.pop(n, None)
+    cfg["feed_keys"] = fk
+    tmp = uaply_api.CONFIG_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline=chr(10)) as f:
+        json.dump(cfg, f, indent=2)
+    os.replace(tmp, uaply_api.CONFIG_PATH)
+    said = [FEED_NAMES[n] for n in FEED_NAMES if n in new] + (["USAJOBS email"] if mail else [])
+    gone = [FEED_NAMES[n] for n in remove]
+    return 200, {"ok": True, "saved": True, "message": " ".join(x for x in (
+        ("Saved: %s. New jobs appear on the next refresh of the job list." % ", ".join(said)) if said else "",
+        ("Removed: %s." % ", ".join(gone)) if gone else "") if x)}
+
+
 BREVO_KEY_RE = re.compile(r"^xsmtpsib-[A-Za-z0-9-]{20,200}$")
 
 
@@ -283,6 +339,14 @@ def page(host, proto):
                        'and cannot send real email, so sign-up codes and receipts are saved in the <a href="/outbox">test inbox</a> instead. Connect both and the app behaves like the live site: '
                        'Google\'s own "Continue with Google" button, and real emails in real inboxes.</p></article>')
     conn_html = "".join('<p class="m">%s / %s <button type="button" class="rm" data-k="%s" data-b="%s">Disconnect</button></p>' % (e(k.capitalize()), e(b), e(k), e(b)) for k, b in connections()).replace("%", "%%")
+    fs = feed_status()
+    feeds_html = ("".join('<p class="m">%s: <b>%s</b>%s</p>' % (e(label), "saved" if fs[n] else "not added yet",
+                                                                 (' <button type="button" class="fx" data-n="%s">Remove</button>' % n) if fs[n] else "")
+                          for n, label in FEED_NAMES.items())).replace("%", "%%")
+    feeds_help = _linkify("USAJOBS lists every federal job near Philadelphia, internships included: request a free key at https://developer.usajobs.gov/APIRequest/ "
+                          "(it arrives by email; give the email you used below). The Muse asks every app to register: get a key at https://www.themuse.com/developers/api/v2 . "
+                          "Keys are saved only in uaply-config.json on this computer and are never shown again. On a hosted server, put them in UAPLY_CONFIG_JSON "
+                          "as feed_keys instead.").replace("%", "%%")
     origin_html = "".join('<p><code>%s</code> <button type="button" class="cp" data-v="%s">Copy</button></p>' % (e(o), e(o)) for o in origins(host, proto)).replace("%", "%%")
     try:
         n = auth_api.counts()
@@ -323,6 +387,12 @@ code{background:var(--bg);padding:1px 5px;border-radius:5px}
 <p><input id="sw" type="password" placeholder="Webhook signing secret whsec_..." autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><input id="sp1" type="text" placeholder="Plus price id price_..." style="width:200px;padding:8px;border:1px solid var(--line);border-radius:8px"> <input id="sp2" type="text" placeholder="Pro price id price_..." style="width:200px;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><button id="sb" type="button">Save Stripe</button> <span id="sbr" class="m" role="status"></span></p></article>
+<article id="feeds"><b>Job feed keys</b><p class="m">@@FEEDHELP@@</p>
+@@FEEDS@@
+<p><input id="fu" type="password" placeholder="USAJOBS API key" autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p><input id="fe" type="email" placeholder="Email you requested the USAJOBS key with (optional)" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p><input id="fm" type="password" placeholder="The Muse API key" autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p><button id="fs" type="button">Save feed keys</button> <span id="fr" class="m" role="status"></span></p></article>
 <article><b>Send a test email</b><p class="m">Sends one message to your copy address so you can see that real email works.</p>
 <p><button id="t" type="button">Send test email</button> <span id="r" class="m" role="status"></span></p></article>
 <p class="m">%d accounts and %d emails recorded on this server. <a href="/outbox">Test inbox</a></p></main>
@@ -338,5 +408,8 @@ fetch('/api/setup/save-ats',{method:'POST',headers:{'Content-Type':'application/
 document.querySelectorAll('.rm').forEach(function(b){b.onclick=function(){fetch('/api/setup/remove-ats',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:b.getAttribute('data-k'),board:b.getAttribute('data-b')})}).then(function(){location.reload()})}})
 document.getElementById('sb').onclick=function(){var r=document.getElementById('sbr'),g=function(i){return document.getElementById(i).value};r.textContent='Saving...';
 fetch('/api/setup/save-stripe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret_key:g('ss'),webhook_secret:g('sw'),price_plus:g('sp1'),price_pro:g('sp2')})}).then(function(x){return x.json()}).then(function(j){if(j.saved){document.getElementById('ss').value='';document.getElementById('sw').value=''}r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
+document.getElementById('fs').onclick=function(){var r=document.getElementById('fr'),g=function(i){return document.getElementById(i).value};r.textContent='Saving...';
+fetch('/api/setup/save-feed-keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usajobs:g('fu'),usajobs_email:g('fe'),muse:g('fm')})}).then(function(x){return x.json()}).then(function(j){if(j.saved){document.getElementById('fu').value='';document.getElementById('fm').value='';setTimeout(function(){location.reload()},900)}r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
+document.querySelectorAll('.fx').forEach(function(b){b.onclick=function(){fetch('/api/setup/save-feed-keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({remove:[b.getAttribute('data-n')]})}).then(function(){location.reload()})}})
 document.querySelectorAll('.cp').forEach(function(b){b.onclick=function(){var v=b.getAttribute('data-v');(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(function(){b.textContent='Copied'},function(){b.textContent='Select the address and copy it'})}})</script>
-</body></html>""".replace("@@ORIGINS@@", origin_html).replace("@@CONNS@@", conn_html) % ("".join(rows), n["users"], n["mail"])).encode("utf-8")
+</body></html>""".replace("@@ORIGINS@@", origin_html).replace("@@CONNS@@", conn_html).replace("@@FEEDS@@", feeds_html).replace("@@FEEDHELP@@", feeds_help) % ("".join(rows), n["users"], n["mail"])).encode("utf-8")
