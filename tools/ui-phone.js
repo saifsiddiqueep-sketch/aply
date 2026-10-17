@@ -14,13 +14,24 @@ module.exports = async ({ ev, sleep, nav, send, logs, shot }) => {
   const topKey = () => ev("(()=>{const c=" + F + ".querySelector('.card.top');return c?c.getAttribute('data-id'):'none'})()");
 
   // a finger: touch events at page coordinates, moved in small steps like a real swipe
+  // (each step goes out msPerStep after the last without waiting for Chrome's answer: waiting adds 20 to 40 ms a step, which made
+  // the "quick flick" below a slow 200 ms drag)
   const touch = async (points, msPerStep) => {
-    await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: points[0][0], y: points[0][1], id: 1 }] });
-    for (let i = 1; i < points.length; i++) { await send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: points[i][0], y: points[i][1], id: 1 }] }); await sleep(msPerStep); }
-    await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    const P = [send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: points[0][0], y: points[0][1], id: 1 }] })];
+    for (let i = 1; i < points.length; i++) { await sleep(msPerStep); P.push(send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: points[i][0], y: points[i][1], id: 1 }] })); }
+    await sleep(Math.min(msPerStep, 10)); P.push(send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] }));
+    await Promise.all(P);
   };
   const tap = async (x, y) => { await touch([[x, y]], 0); await sleep(60); };
-  const cardCenter = async () => JSON.parse(await ev("JSON.stringify((()=>{const c=" + F + ".querySelector('.card.top');const f=document.querySelector('iframe').getBoundingClientRect();if(!c)return null;const b=c.getBoundingClientRect();return {x:f.left+b.left+b.width/2,y:f.top+b.top+b.height*0.45,w:b.width}})())"));
+  // where a thumb would start: a spot on the card that is on screen and not under the bottom bar or a button inside the card
+  // (on a short screen the middle of the card can sit under the bottom bar, and a touch there never reaches the card)
+  const cardCenter = async () => JSON.parse(await ev("JSON.stringify((()=>{const d=" + F + ",c=d.querySelector('.card.top');const f=document.querySelector('iframe').getBoundingClientRect();if(!c)return null;const b=c.getBoundingClientRect();" +
+    "for(const fy of [.45,.35,.25,.55,.18,.65])for(const fx of [.5,.3,.7]){const x=b.left+b.width*fx,y=b.top+b.height*fy;if(y<0||y>" + FW + ".innerHeight-4)continue;const h=d.elementFromPoint(x,y);if(h&&h.closest('.card.top')&&!h.closest('button,a,summary,input,select'))return {x:f.left+x,y:f.top+y,w:b.width}}" +
+    "return {x:f.left+b.left+b.width/2,y:f.top+b.top+b.height*0.45,w:b.width}})())"));
+  // the application requests the page sends (the frame's fetch, wrapped from outside), and links it opens (noted, not opened)
+  const watch = () => ev("(()=>{const w=" + FW + ";if(w.__t2)return;w.__t2={apply:[],opens:[]};const f=w.fetch;w.fetch=function(u,o){if(/[/]api[/]apply$/.test(String(u))){try{w.__t2.apply.push(JSON.parse(o.body).job.id)}catch(e){}}return f.apply(this,arguments)};w.__uaplyOpen=function(u){w.__t2.opens.push(String(u))}})()");
+  const sentFor = (id) => ev("(" + FW + ".__t2.apply||[]).filter(x=>String(x)===" + JSON.stringify(String(id)) + ").length");
+  const opens = () => ev(FW + ".__t2.opens.length");
   const path = (x, y, dx, dy, steps, bend) => {   // bend: how much of the vertical part happens first (a curved thumb path)
     const p = [];
     for (let i = 0; i <= steps; i++) { const t = i / steps; const ty = bend ? Math.min(1, t * 2.5) : t; p.push([x + dx * t, y + dy * ty]); }
@@ -94,14 +105,17 @@ module.exports = async ({ ev, sleep, nav, send, logs, shot }) => {
   await menu("nb-svc", "Full-time"); await sleep(600);
   const swipe = async (name, dx, dy, steps, ms, bend, expect) => {
     const c = await cardCenter(); if (!c) { check(name, false, "no card"); return; }
-    const k0 = await topKey(), d0 = await decisions();
+    await watch();
+    const k0 = await topKey(), d0 = await decisions(), s0 = await sentFor(k0);
     const at = await ev("(()=>{const f=document.querySelector('iframe').getBoundingClientRect();const e=" + F + ".elementFromPoint(" + c.x + "-f.left," + c.y + "-f.top);return e?(e.closest('.card.top')?'card':(e.id||e.className||e.tagName)):'none'})()");
     if (at !== "card") console.log("   (the finger lands on " + at + ", not the card)");
     await touch(path(c.x, c.y, dx, dy, steps, bend), ms); await sleep(1100);
     await ev("(()=>{const m=" + F + ".getElementById('kcYes');if(m)m.click()})()"); await sleep(300);
     await ev("(()=>{const o=" + F + ".getElementById('kitAsk');if(o){const n=" + F + ".getElementById('kaNo');if(n)n.click()}})()"); await sleep(300);
     const d1 = await decisions(), k1 = await topKey();
-    const did = (d1.applied || 0) > (d0.applied || 0) ? "applied" : (d1.passed || 0) > (d0.passed || 0) ? "passed" : (k1 !== k0 ? "moved" : "nothing");
+    // a swipe right counts as understood when it was recorded, or when the application went out for that job even if the employer's
+    // form then put it back (the sandbox's example profile has no resume file, and "Not now" above returns the job to the deck)
+    const did = (d1.applied || 0) > (d0.applied || 0) || (await sentFor(k0)) > s0 ? "applied" : (d1.passed || 0) > (d0.passed || 0) ? "passed" : (k1 !== k0 ? "moved" : "nothing");
     check(name, did === expect, "did: " + did);
   };
   await ev("(()=>{const d=" + F + ";d.scrollingElement.scrollTop=0;document.scrollingElement.scrollTop=0})()"); await sleep(300);
@@ -116,6 +130,30 @@ module.exports = async ({ ev, sleep, nav, send, logs, shot }) => {
   const c = await cardCenter(); const k0 = await topKey();
   await tap(c.x, c.y); await sleep(500);
   check("a plain tap on the card does not swipe", (await topKey()) === k0);
+  // two fast swipes, the second starting 150 ms after the first lifts (while the first card is still flying off): both count
+  {
+    const d0 = await decisions(), p = await cardCenter();
+    const fast = async () => {                          // events paced like a real finger, without waiting for each answer
+      const P = [send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: p.x, y: p.y, id: 1 }] })];
+      for (let i = 1; i <= 10; i++) { await sleep(14); P.push(send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: p.x - 20 * i, y: p.y, id: 1 }] })); }
+      await sleep(8); P.push(send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] })); await Promise.all(P);
+    };
+    await fast(); await sleep(150); await fast(); await sleep(1100);
+    const d1 = await decisions();
+    check("two quick swipes left, 150 ms apart, both pass", (d1.passed || 0) - (d0.passed || 0) === 2, "passed " + ((d1.passed || 0) - (d0.passed || 0)));
+  }
+  // a swipe that starts on the card's "View original posting" link is a swipe, and does not open the employer's site
+  {
+    await watch();
+    const l = JSON.parse(await ev("JSON.stringify((()=>{const d=" + F + ",c=d.querySelector('.card.top'),l=c&&c.querySelector('[data-open]');if(!l)return null;l.scrollIntoView({block:'center'});const n=d.getElementById('uaNudge');if(n&&!n.hidden)n.querySelector('.x').click();const f=document.querySelector('iframe').getBoundingClientRect(),r=l.getBoundingClientRect();const h=d.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return h&&l.contains(h)?{x:f.left+r.left+r.width/2,y:f.top+r.top+r.height/2}:null})())"));
+    if (l) {
+      const d0 = await decisions(), o0 = await opens();
+      await touch(path(l.x, l.y, -200, 0, 12, false), 16); await sleep(1100);
+      const d1 = await decisions();
+      check("a swipe left that starts on the posting link passes and opens nothing", (d1.passed || 0) - (d0.passed || 0) === 1 && (await opens()) === o0, "passed " + ((d1.passed || 0) - (d0.passed || 0)) + ", opened " + ((await opens()) - o0));
+      await ev("(()=>{const c=" + F + ".querySelector('.card.top');if(c)c.scrollTop=0})()");
+    } else check("the top card has a posting link to swipe from", false);
+  }
   check("no script errors", logs.length === 0, logs.join(" / ").slice(0, 200));
   console.log(bad ? "\n" + bad + " check(s) failed" : "\nEverything works on the phone");
 };

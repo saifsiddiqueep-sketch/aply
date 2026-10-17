@@ -23,36 +23,78 @@ var CRIT_TOP2=`function critHTML(m){
 /* the swipe, rebuilt for phones. Touch is handled with touch events and a direction lock: the first few pixels decide whether the
    person means sideways (swipe) or up and down (scroll the card), and once it is sideways the browser is told not to scroll, so
    Safari can no longer take a curved thumb swipe over and cancel it. A swipe counts at 18% of the card's width (at most 80px) or as a
-   quick flick. Mouse and pen keep pointer events. Replaces bindDrag in index.html. */
+   quick flick. Mouse and pen keep pointer events. Replaces bindDrag in index.html.
+   A second swipe that starts while the last card is still flying off (the quarter second before the next card is on top) counts
+   too: the deck follows that finger, moves the next card once it is on top, and swipes it when the finger lifts (glideLate). */
 var GLIDE=`window.__uaplyGlide=true;
+/* one drag: where it started, how far it went, which way it is locked ("x" swipe, "y" scroll) and its recent path, for the speed */
+function glideTrack(x,y){return {sx:x,sy:y,dx:0,dy:0,lock:"",trail:[[performance.now(),x]]}}
+function glideMove(g,x,y){
+  g.dx=x-g.sx;g.dy=y-g.sy;
+  g.trail.push([performance.now(),x]);if(g.trail.length>12)g.trail.shift();
+  if(!g.lock){var ax=Math.abs(g.dx),ay=Math.abs(g.dy);if(ax<6&&ay<6)return "";g.lock=ax>=ay*0.6?"x":"y"}
+  return g.lock;
+}
+/* the finger's speed over its last tenth of a second (px per ms); 0 if it paused before lifting */
+function glideSpeed(g){
+  var t=g.trail,n=t.length,now=performance.now();if(n<2||now-t[n-1][0]>120)return 0;
+  var i=n-1;while(i>0&&t[n-1][0]-t[i-1][0]<=100)i--;
+  var dt=t[n-1][0]-t[i][0];return dt>0?(t[n-1][1]-t[i][1])/dt:0;
+}
+/* "applied", "passed" or "" (not a swipe): sideways past 18% of the card's width (56 to 80px), or a quick flick past 28px */
+function glideDir(g,card){
+  var v=glideSpeed(g),flick=Math.abs(v)>0.4&&Math.abs(g.dx)>28&&(v>0)===(g.dx>0);
+  var need=Math.min(80,Math.max(56,(card?card.offsetWidth:360)*0.18));
+  return g.lock==="x"&&(Math.abs(g.dx)>need||flick)?(g.dx>0?"applied":"passed"):"";
+}
+/* a box that asks something (consent, an employer's questions, the paywall) is open over the deck: no swipe goes through it */
+function glideBoxOpen(){return !!(document.getElementById("kitConsent")||document.getElementById("kitAsk")||document.getElementById("kitSheet")||document.getElementById("paywall")||document.getElementById("stConfirm"))}
+function glideLate(deck){
+  deck.addEventListener("touchstart",function(e){
+    /* only while the last card is still on its way out; otherwise the top card handles its own swipes. The cards under the top one
+       do not take touches (pointer-events:none), so this finger is on the flying card or on the deck itself */
+    if(!busy||e.touches.length!==1)return;
+    var hit=e.target.closest&&e.target.closest(".card");
+    var t=e.touches[0],g=glideTrack(t.clientX,t.clientY),node=e.target,moved=null;
+    /* the touch keeps going to the element it started on, even after the deck redraws it away, so listen there */
+    function top(){return busy?null:deck.querySelector(".card.top")}
+    function off(){node.removeEventListener("touchmove",mv);node.removeEventListener("touchend",up);node.removeEventListener("touchcancel",cancel)}
+    function mv(ev){
+      if(ev.touches.length!==1){cancel();return}
+      var p=ev.touches[0];if(glideMove(g,p.clientX,p.clientY)!=="x")return;
+      if(ev.cancelable)ev.preventDefault();
+      var c=top();if(c){if(c!==moved){moved=c;c.style.transition="none"}setDrag(c,g.dx)}
+    }
+    function cancel(){off();if(moved&&moved.isConnected){moved.style.transition="";clearCardStyle(moved)}}
+    function up(){
+      off();var dir=glideDir(g,top()||hit),tries=0;
+      if(moved)moved.style.transition="";
+      (function commit(){
+        if(busy&&tries++<60){setTimeout(commit,25);return}         /* the last card is still on its way out */
+        var c=deck.querySelector(".card.top");if(!c)return;
+        if(dir&&!busy&&!glideBoxOpen())decide(dir);else if(moved&&moved.isConnected)clearCardStyle(moved);
+      })();
+    }
+    node.addEventListener("touchmove",mv,{passive:false});node.addEventListener("touchend",up);node.addEventListener("touchcancel",cancel);
+  },{passive:true});
+}
 function bindDrag(card){
-  var sx=0,sy=0,dx=0,dy=0,lock="",drag=false,trail=[];
-  function need(){return Math.min(80,Math.max(56,card.offsetWidth*0.18))}
-  function start(x,y){if(busy)return false;drag=true;lock="";sx=x;sy=y;dx=0;dy=0;trail=[[performance.now(),x]];card.style.transition="none";return true}
-  /* the finger's speed over its last tenth of a second (px per ms); 0 if it paused before lifting */
-  function speed(){
-    var n=trail.length,now=performance.now();if(n<2||now-trail[n-1][0]>120)return 0;
-    var i=n-1;while(i>0&&trail[n-1][0]-trail[i-1][0]<=100)i--;
-    var dt=trail[n-1][0]-trail[i][0];return dt>0?(trail[n-1][1]-trail[i][1])/dt:0;
-  }
+  var drag=false,g=null;
+  if(card.parentNode&&!card.parentNode.__glideLate){card.parentNode.__glideLate=true;glideLate(card.parentNode)}
+  function start(x,y){if(busy)return false;drag=true;g=glideTrack(x,y);card.style.transition="none";return true}
   function move(x,y,e){
     if(!drag)return;
-    dx=x-sx;dy=y-sy;
-    trail.push([performance.now(),x]);if(trail.length>12)trail.shift();
-    if(!lock){var ax=Math.abs(dx),ay=Math.abs(dy);if(ax<6&&ay<6)return;lock=ax>=ay*0.6?"x":"y"}
-    if(lock!=="x")return;
+    if(glideMove(g,x,y)!=="x")return;
     if(e&&e.cancelable)e.preventDefault();
-    setDrag(card,dx);
+    setDrag(card,g.dx);
   }
   function end(){
     if(!drag)return;
     drag=false;card.style.transition="";
-    var v=speed(),flick=Math.abs(v)>0.4&&Math.abs(dx)>28&&(v>0)===(dx>0);
-    if(lock==="x"&&(Math.abs(dx)>need()||flick))decide(dx>0?"applied":"passed");
-    else clearCardStyle(card);
-    dx=0;lock="";trail=[];
+    var dir=glideDir(g,card);
+    if(dir)decide(dir);else clearCardStyle(card);
   }
-  function cancel(){if(!drag)return;drag=false;lock="";card.style.transition="";clearCardStyle(card)}
+  function cancel(){if(!drag)return;drag=false;card.style.transition="";clearCardStyle(card)}
   card.addEventListener("touchstart",function(e){if(e.touches.length!==1){cancel();return}var t=e.touches[0];start(t.clientX,t.clientY)},{passive:true});
   card.addEventListener("touchmove",function(e){if(e.touches.length!==1)return;var t=e.touches[0];move(t.clientX,t.clientY,e)},{passive:false});
   card.addEventListener("touchend",end);
