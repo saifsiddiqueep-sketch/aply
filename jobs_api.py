@@ -225,6 +225,7 @@ def feed_keys():
     cfg = _cfg()
     k = cfg.get("feed_keys") if isinstance(cfg.get("feed_keys"), dict) else {}
     out = {n: k[n].strip() for n in ("usajobs", "muse") if isinstance(k.get(n), str) and KEY_RE.match(k[n].strip())}
+    EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")   # one plain address (the module-level one was removed as unused)
     mail = next((m.strip() for m in (k.get("usajobs_email"), cfg.get("owner_copy")) if isinstance(m, str) and EMAIL_RE.fullmatch(m.strip())), "")
     out["usajobs_email"] = mail or USAJOBS_EMAIL
     return out
