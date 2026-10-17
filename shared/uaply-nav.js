@@ -626,11 +626,14 @@ function apply(w,host){
     return c;
   }
   function nearAsk(c){   /* shows the browser's own "Allow location?" prompt; the card says what is happening and what came of it */
-    var yes=c.querySelector('[data-near="yes"]');
+    var yes=c.querySelector('[data-near="yes"]'),was=c.querySelector("b").textContent;
     yes.disabled=true;yes.textContent="Waiting for your browser…";
     askDevice(function(ok,why){
       if(ok||!c.isConnected)return;
-      nearBox(why==="denied"?"blocked":why==="nofix"?"nofix":"again");
+      var mode=why==="denied"?"blocked":why==="nofix"?"nofix":"again";
+      nearBox(mode);
+      /* Try again that ends the same way used to redraw the same words, so the button looked dead: say it was tried */
+      if(mode!=="again"&&was.indexOf(LOC_TXT[mode][0])===0)c.querySelector("b").textContent=LOC_TXT[mode][0]+" (still, tried again at "+new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit",second:"2-digit"})+")";
     });
   }
   if(NEAR){

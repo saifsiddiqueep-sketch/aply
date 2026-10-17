@@ -414,6 +414,11 @@ function apply(w,host){
     else{if(!quiet)syncDeck();if(w.__uaplyAskConsent)w.__uaplyAskConsent()}
   }
   sw.addEventListener("click",function(){setMode(!d.body.classList.contains("hire"))});
+  /* in Hiring mode the job deck is hidden but still the page's current screen: ArrowRight, ArrowLeft and Z used to apply to,
+     pass and undo jobs the employer could not see. They now stay with Hiring mode (moving the cursor in a field still works). */
+  d.addEventListener("keydown",function(e){
+    var k=e.key;if(d.body.classList.contains("hire")&&(k==="ArrowRight"||k==="ArrowLeft"||k==="z"||k==="Z"))e.stopPropagation();
+  },true);
 
   /* ================= data ================= */
   var H={mode:"loading",company:null,jobs:[],apps:[],verified:false,email:"",view:"overview",edit:null,appJob:"all",mustOnly:false,sort:"match",pendingLogo:null,L:null};
