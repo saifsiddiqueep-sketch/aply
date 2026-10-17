@@ -105,25 +105,49 @@ def public_config():
             "autoSend": cfg.get("auto_send", True) is not False, "graceSeconds": grace}
 
 
-def _append(name, obj):
+def append_line(path, text):
+    """Add one record (one line) to a records file. If the last write was cut short (a full disk, a forced stop), the file does not end in a
+    line break: one is added first, so the new record never gets glued to the broken one. Never raises; a failure is written to the server's log."""
     try:
-        os.makedirs(DATA, exist_ok=True)
-        with open(os.path.join(DATA, name), "a", encoding="utf-8") as f:
-            f.write(json.dumps(obj) + "\n")
-    except Exception as e:    # keep working from memory if the disk is not writable, but tell the owner: these records are lost on restart
-        sys.stderr.write("[uaply] could not save to %s: %s: %s\n" % (name, type(e).__name__, str(e)[:200]))
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "a+b") as f:
+            if f.tell():
+                f.seek(-1, os.SEEK_END)
+                if f.read(1) != b"\n":
+                    f.write(b"\n")
+            f.write(text.encode("utf-8") + b"\n")
+    except Exception as e:
+        sys.stderr.write("[uaply] could not save a record to %s: %s: %s\n" % (path, type(e).__name__, str(e)[:200]))      # kept in memory only
+
+
+def read_lines(path):
+    """Every readable record of a records file. A broken line (a write that was cut short) is skipped instead of hiding every record after it."""
+    out, bad = [], 0
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                if line.strip():
+                    try:
+                        rec = json.loads(line)
+                    except ValueError:
+                        bad += 1
+                        continue
+                    if isinstance(rec, dict):
+                        out.append(rec)
+    except OSError:
+        pass
+    if bad:
+        sys.stderr.write("[uaply] skipped %d broken line(s) in %s\n" % (bad, path))
+    return out
+
+
+def _append(name, obj):
+    append_line(os.path.join(DATA, name), json.dumps(obj))        # keep working from memory if the disk is not writable
 
 
 def _load():
     for name, store in (("applications.jsonl", APPS), ("decisions.jsonl", DECISIONS)):
-        try:
-            with open(os.path.join(DATA, name), encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if line:
-                        store.append(json.loads(line))
-        except Exception:
-            pass
+        store.extend(read_lines(os.path.join(DATA, name)))
 
 
 hide_errors = False        # serve.py sets this on a hosted server: visitors then see a plain sentence, never a mail server's or an employer's raw error text
@@ -710,6 +734,15 @@ def submit(p, user=None):
     return 200, out
 
 
+def _line_user(line):
+    """The account a stored application line belongs to (None for a broken line, which is kept as it is: it cannot be read either way)."""
+    try:
+        rec = json.loads(line)
+        return rec.get("user") if isinstance(rec, dict) else None
+    except ValueError:
+        return None
+
+
 def forget_user(user_id):
     """Remove every application record made while signed in as this account (used when the account is deleted)."""
     if not user_id:
@@ -721,8 +754,8 @@ def forget_user(user_id):
         path = os.path.join(DATA, "applications.jsonl")
         try:
             if os.path.exists(path):
-                with open(path, encoding="utf-8") as f:
-                    lines = [ln for ln in f if ln.strip() and json.loads(ln).get("user") != user_id]
+                with open(path, encoding="utf-8", errors="replace") as f:
+                    lines = [ln if ln.endswith("\n") else ln + "\n" for ln in f if ln.strip() and _line_user(ln) != user_id]
                 tmp = path + ".tmp"
                 with open(tmp, "w", encoding="utf-8") as f:
                     f.writelines(lines)

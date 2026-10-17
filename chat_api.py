@@ -88,13 +88,7 @@ def init(instance):
     DATA = os.path.join(uaply_api.data_root(), re.sub(r"[^A-Za-z0-9_-]", "", instance) or "default")
     with _lock:
         FEEDBACK.clear()
-        try:
-            with open(os.path.join(DATA, "feedback.jsonl"), encoding="utf-8") as f:
-                for line in f:
-                    if line.strip():
-                        FEEDBACK.append(json.loads(line))
-        except Exception:
-            pass
+        FEEDBACK.extend(uaply_api.read_lines(os.path.join(DATA, "feedback.jsonl")))       # a broken line is skipped, not every line after it
 
 
 def _s(v, n):
@@ -361,12 +355,7 @@ def feedback(p, ip, user=None, notify=None):
     rec["delivery"] = delivery
     with _lock:
         FEEDBACK.append(rec)
-        try:
-            os.makedirs(DATA, exist_ok=True)
-            with open(os.path.join(DATA, "feedback.jsonl"), "a", encoding="utf-8") as f:
-                f.write(json.dumps(rec) + "\n")
-        except Exception as e:                       # kept in memory for the Feedback page, but lost on restart: tell the owner
-            print("UAply Assistant: could not save feedback to disk (%s: %s)" % (type(e).__name__, str(e)[:160]), file=sys.stderr)
+        uaply_api.append_line(os.path.join(DATA, "feedback.jsonl"), json.dumps(rec))
     return 200, {"ok": True, "id": rec["id"], "delivery": delivery}
 
 

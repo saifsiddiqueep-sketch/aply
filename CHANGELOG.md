@@ -28,6 +28,27 @@ production page and only changes when the owner decides.
   (21 checks in a real browser as an iPhone, through a stand-in Google). The /setup page's Google steps use Google's current
   console pages (Google Auth Platform).
 
+### Ready for Render: proven start, stop and restart
+- **Deploys no longer cut a swipe off half-way.** Render stops the server (SIGTERM) at every deploy. The server now stops taking new
+  requests, finishes the ones in progress (a sign-up, a swipe sending its email), writes `[uaply] stopped` in the log and exits normally.
+  Before, it died at once and the request in progress was lost.
+- **One line in Render's log says what the server will do:** public or not, where records are kept and whether that folder is really
+  Render's persistent disk, which job feeds, email, owner pages, AI answers and payments are on, and whether `UAPLY_CONFIG_JSON` is valid
+  JSON. Never a secret, only on or off. A data folder that is not a disk gets a WARNING line (everything there vanishes at the next deploy).
+- **A data folder that cannot be written** (the disk is not attached) stops the server with a plain reason instead of a traceback;
+  a blank port number does the same.
+- **A record cut short** (a full disk, a forced stop) no longer hides every application after it at the next start, and the next record
+  is never glued onto it. The log names any broken line it skipped.
+- **The job list is read about 5 times faster** (25.6 to 5.1 CPU seconds for the 24 boards): only the postings that can be shown are
+  worked through. The list is identical (checked on the same 5,632 postings). The first start on an empty disk went from 33 to 24 seconds,
+  which matters on Render's half-CPU Starter plan.
+- `render.yaml`: the start command uses `${PORT:-10000}`, both services run in Virginia (nearest to Philadelphia; cannot change later), the
+  sandbox gets the same job feeds as dev, and the comments say what the free plan lacks and that secrets are asked for only once.
+- `DEPLOY.md`: the full Render steps checked against the code: the settings line with `public_url`, why `feeds` stays out of it, the log
+  line to check after deploying, the Cloudflare records, and what a deploy does.
+- New test `tools/test-render.py` (74 checks, about 10 seconds, also in GitHub's checks on Render's Python 3.12): starts the server exactly as
+  Render does, stops it with SIGTERM mid-request, restarts it on the same disk and checks everything above.
+
 ### Post a job from an existing job post (sandbox) — Mohammed
 - **Post a job** shows two options on one page. Option 1, at the top: "Start from your existing job post": paste a link, or
   paste the job text, and UAply fills in the form (title, job type, work style, place, pay, years, education, skills, majors,
