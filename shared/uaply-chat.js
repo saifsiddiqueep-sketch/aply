@@ -280,6 +280,9 @@ function apply(w,host){
   var prevDecision=w.__uaplyOnDecision;
   w.__uaplyOnDecision=function(dir){
     var r=prevDecision?prevDecision.apply(this,arguments):undefined;
+    /* someone who keeps swiping instead of answering has said "not now": the question goes, so it never sits on the card they
+       are swiping (on a small phone it covers the middle of the card). It was already noted as asked when it opened. */
+    hideNudge(false);
     if(dir==="applied"){applied++;setTimeout(maybeNudge,2500)}
     return r;
   };
