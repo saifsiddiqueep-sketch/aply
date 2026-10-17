@@ -31,6 +31,7 @@ Serves ROOT; each urlpath=file alias maps one URL to a file outside ROOT (e.g. /
   POST /api/setup/save-google, save-stripe, save-ats, remove-ats   the other boxes on /setup (this computer only)
   GET  /api/billing/status, POST /api/billing/checkout, /api/billing/portal, /api/billing/webhook   Plus and Pro (billing_api.py)
   GET  /api/employer/me, /api/employer/logo/<id>, POST /api/employer/...   Hiring mode, sandbox only (employers_api.py)
+  POST /api/profile/resume   read a resume (PDF, Word or text, up to 5 MB) and answer with the profile fields found; nothing is kept (resume_parse.py)
   GET  /healthz           for the host's health check
 Accounts use an HttpOnly session cookie. When a signed-in user swipes right, a receipt goes to their email."""
 import sys, os, re, json, http.server, base64, hmac, threading, time, signal
@@ -93,11 +94,11 @@ if api:
     for url, rel in (("/uaply-envs.js", "shared/uaply-envs.js"), ("/uaply-nav.js", "shared/uaply-nav.js"),
                      ("/uaply-live.js", "shared/uaply-live.js"), ("/uaply-profile.js", "shared/uaply-profile.js"),
                      ("/uaply-chat.js", "shared/uaply-chat.js"), ("/uaply-employers.js", "shared/uaply-employers.js"),
-                     ("/uaply-learn.js", "shared/uaply-learn.js"),
+                     ("/uaply-learn.js", "shared/uaply-learn.js"), ("/uaply-resume.js", "shared/uaply-resume.js"),
                      ("/help/articles.json", "help/articles.json"),
                      ("/prod-index.html", "prod/index.html")):
         alias.setdefault(url, os.path.join(HERE, rel))
-    import jobs_api, uaply_api, auth_api, chat_api, google_auth, setup_api, billing_api, employers_api
+    import jobs_api, uaply_api, auth_api, chat_api, google_auth, setup_api, billing_api, employers_api, resume_parse
     uaply_api.init(os.path.basename(root))
     employers_api.init(os.path.basename(root))                    # Hiring mode: on for the sandbox only
     auth_api.init(os.path.basename(root))
@@ -120,8 +121,9 @@ MAX_APPLY_BODY = 1500000
 MAX_COMPANY_BODY = 200000
 
 # Swipes per visitor per minute. A person swipes a few times a minute; a script hammering the server would otherwise fill its disk and memory.
-SWIPE_LIMITS = {"/api/apply": 40, "/api/decision": 150}
+SWIPE_LIMITS = {"/api/apply": 40, "/api/decision": 150, "/api/profile/resume": 12}   # a person reads a resume once or twice
 _swipes, _swipes_lock = {}, threading.Lock()
+_resume_count, _resume_count_lock = [0], threading.Lock()          # resumes read since the start: the only thing the log says about them
 
 
 def too_fast(path, ip):
@@ -342,7 +344,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                                 "/api/auth/delete", "/api/auth/forgot", "/api/auth/reset", "/api/auth/change-password",
                                 "/api/setup/test-mail", "/api/setup/save-mail", "/api/setup/save-google", "/api/setup/save-ats", "/api/setup/remove-ats", "/api/setup/save-stripe", "/api/setup/save-feed-keys", "/api/auth/google/token", "/api/auth/verify", "/api/auth/resend", "/api/chat", "/api/feedback", "/api/billing/checkout", "/api/billing/portal",
                                 "/api/employer/company", "/api/employer/job", "/api/employer/job/status", "/api/employer/applicant",
-                                "/api/employer/import"):
+                                "/api/employer/import", "/api/profile/resume"):
             return self._refuse(404, {"error": "not found"})
         # Only accept requests made by this site's own pages (blocks cross-site forms and scripts).
         origin = self.headers.get("Origin")
@@ -350,6 +352,8 @@ class H(http.server.SimpleHTTPRequestHandler):
         if origin not in ("http://" + host, "https://" + host) or (PUBLIC and origin != "https://" + host and
                                                                   self.headers.get("X-Forwarded-Proto") == "https"):
             return self._refuse(403, {"error": "cross-site request refused"})
+        if p == "/api/profile/resume":
+            return self._resume_upload()
         try:
             n = int(self.headers.get("Content-Length") or 0)
             if n <= 0:                                                                     # nothing was sent: a bad request, not a too-large one
@@ -501,6 +505,34 @@ class H(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             log_oops(p, e)
             code, out = 500, {"error": OOPS}
+        self._send(code, out)
+
+    def _resume_upload(self):
+        """Fill from your resume: the file (JSON with a data: URL, or a multipart form) is read in memory and the fields found go back to the
+        page. No account is needed (the profile lives on the device), the file and its text are never written anywhere, and the log gets only
+        a count."""
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            n = -1
+        if n <= 0:
+            return self._refuse(400, {"error": resume_parse.MESSAGES["bad_request"], "code": "bad_request"})
+        if n > resume_parse.MAX_BODY:
+            return self._refuse(413, {"error": resume_parse.MESSAGES["too_big"], "code": "too_big"})
+        ip = self.client_address[0]
+        if PUBLIC and self.headers.get("X-Forwarded-For"):
+            ip = self.headers["X-Forwarded-For"].split(",")[0].strip()[:64] or ip
+        if too_fast("/api/profile/resume", ip):
+            return self._refuse(429, {"error": "You have read several resumes in a minute. Wait a moment and try again.", "code": "slow_down"})
+        try:
+            body = self.rfile.read(n)
+            code, out = resume_parse.handle(body, self.headers.get("Content-Type") or "")
+        except Exception as e:
+            log_oops("/api/profile/resume", e)
+            code, out = 500, {"error": OOPS}
+        with _resume_count_lock:
+            _resume_count[0] += 1
+            sys.stderr.write("[uaply] resume read #%d: %s\n" % (_resume_count[0], ("%s, %d fields" % (out.get("kind"), out.get("found", 0))) if code == 200 else out.get("code", code)))
         self._send(code, out)
 
     def end_headers(self):

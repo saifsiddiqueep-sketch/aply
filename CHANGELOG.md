@@ -6,6 +6,30 @@ production page and only changes when the owner decides.
 
 ## Unreleased (sandbox and dev)
 
+### Fill Profile setup from your resume (sandbox only)
+- **Profile setup, Background and links has a new "Fill from your resume" box.** Choose your resume (PDF, Word .docx or text, up to
+  5 MB) and UAply fills every empty field it finds: name, email, phone, LinkedIn, portfolio or GitHub, headline, About you, school,
+  major, graduation month, GPA, most recent employer and title, skills, city, state and ZIP. Before this, a resume file was only
+  attached to applications and never read.
+- **Nothing you typed is changed.** Where your resume says something different, the list offers Replace (or Add them, for skills).
+  Each answer shows the line of your resume it came from, unsure ones say "Check this", and the filled fields are outlined until you
+  change them. Nothing is saved until you save the step, as with typing.
+- **The same file becomes the resume sent with your applications** when you have none yet (through the existing resume file box, so
+  there is still one place it is kept, on your device). If you already added a different file, you are asked first. A file over 1 MB
+  is read but not kept for applications, as before.
+- **The file is read on the server for a moment and not kept**: `POST /api/profile/resume` (no account needed, 12 a minute per
+  address) answers with the fields only, never the file or its text, and the log says only "resume read #N". The Privacy Policy and
+  the assistant's resume answer say so. PDFs are read by `pypdf` (new in `requirements.txt`, pure Python) in a separate process with a
+  15-second and memory limit; Word files are read as plain XML from the zip; nothing in a file is ever run.
+- **Plain sentences when a file cannot be read:** over 5 MB, an older .doc, a photo, a scanned PDF (no text in it), a password-protected
+  PDF, or a file with no readable text. Without `pypdf` installed, a PDF gets "use a Word or text file for now".
+- New `resume_parse.py` handles one- and two-column layouts, headings in any case, letter-spaced or with the list on the same line
+  ("Skills: Python, SQL"), and dates such as "Jan 2024 – Present", "01/2024 - 05/2025", "Summer 2024", "2023-2025", dates before or
+  after the job. It cannot read scanned resumes (no OCR) or PDFs whose columns were drawn line by line across the page.
+- New tests: `tools/test-resume.py` (250 checks: six made-up resumes in `tools/fixtures/resumes/`, all 88 of their fields found; layouts
+  and date styles; every refused file; the endpoint on a real server, nothing written to disk, rate limit) and `tools/ui-resume.js`
+  (22 checks at iPhone size). Both run in `tools/run-all-tests.sh`; the Python test also runs in GitHub's checks, which now install pypdf.
+
 ### Swipe right applies straight into Ashby and SmartRecruiters, for employers who connect
 - **Employers on Ashby or SmartRecruiters can now connect** the same way as Greenhouse and Lever: they create a key in their own system (Ashby:
   Admin, Integrations, API Keys, with Candidates write and Jobs read; SmartRecruiters: Settings, Admin, Credential Manager, an Application API
