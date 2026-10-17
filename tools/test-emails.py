@@ -99,9 +99,13 @@ sub, text, page = emails.owner_copy(ctx("handoff"))
 t("owner copy: says where the application went", "no one: Acme Robotics takes applications on its own site" in text, True)
 t("owner copy: lists the applicant and the job", "Sam Rivera" in text and "THE JOB" in text and "THE APPLICANT" in text, True)
 
+# ---- the date and time read naturally: no leading zero on the day or the hour ----
+t("the applied-on time drops the zero of a one-digit day AND hour (Oct 5, 9:05 AM)", emails._when(1791191100), "Oct 5, 2026 at 9:05 AM UTC")
+t("...and keeps two-digit ones and midnight as 12", (emails._when(1791932764), emails._when(1791158400)), ("Oct 13, 2026 at 11:06 PM UTC", "Oct 5, 2026 at 12:00 AM UTC"))
+
 # ---- a real send through the stand-in mail server ----
 mail_file = os.path.join(TMP, "mail.jsonl")
-port = 2527
+port = int(sys.argv[1]) if len(sys.argv) > 1 else 2527          # a free port can be given: python tools/test-emails.py PORT
 proc = subprocess.Popen([sys.executable, os.path.join(HERE, "fake-smtp.py"), str(port), mail_file], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 try:
     time.sleep(1.5)
