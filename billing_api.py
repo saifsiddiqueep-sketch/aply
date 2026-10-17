@@ -81,7 +81,7 @@ def limit_reached(user):
         return None
     p = PLANS[plan_of(user)]
     if p["cap"] and _week_used(user["id"]) >= p["cap"]:
-        return "You've used your %d applications this week on %s. Choose a bigger plan in Profile, Plan to keep applying." % (p["cap"], p["name"])
+        return "You've used your %d applications this week on %s. Choose a bigger plan in Profile, Plan and billing to keep applying." % (p["cap"], p["name"])
     return None
 
 

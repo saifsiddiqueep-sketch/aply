@@ -27,6 +27,15 @@ CLIENT_RE = re.compile(r"^\d+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$")
 URL_RE = re.compile(r"https://[A-Za-z0-9./_?=&#%-]+[A-Za-z0-9/_-]")
 
 
+TEST_RUN = {"ok": False, "message": "This server was started for testing (UAPLY_CONFIG_FILE=none): it never reads or writes uaply-config.json, so nothing was saved."}
+
+
+def _test_run():
+    """A test run ignores the owner's uaply-config.json (uaply_api.config), so saving into it would change the owner's real settings and
+    still show nothing here. Tests that save point uaply_api.CONFIG_PATH at a file of their own instead."""
+    return os.environ.get("UAPLY_CONFIG_FILE") == "none" and uaply_api.CONFIG_PATH == uaply_api.REAL_CONFIG_PATH
+
+
 def _real(v, placeholder_starts=()):
     return isinstance(v, str) and bool(v.strip()) and not any(v.strip().lower().startswith(p) for p in placeholder_starts)
 
@@ -85,7 +94,7 @@ def checks(host, proto):
          "todo": ["Create a Stripe account at https://dashboard.stripe.com/register (start in test mode).",
                   "Product catalog: add a product Plus with a monthly price of 9.99 USD and a product Pro at 19.99 USD. Copy both price ids (price_...).",
                   "Developers, API keys: copy the secret key (sk_test_...).",
-                  "Developers, Webhooks: add an endpoint " + proto + "://" + host + "/api/billing/webhook with the events checkout.session.completed and customer.subscription.updated, created and deleted; copy its signing secret (whsec_...). On this computer use the Stripe CLI: stripe listen --forward-to localhost:8767/api/billing/webhook.",
+                  "Developers, Webhooks: add an endpoint " + proto + "://" + host + "/api/billing/webhook with the events checkout.session.completed and customer.subscription.updated, created and deleted; copy its signing secret (whsec_...). On this computer use the Stripe CLI: stripe listen --forward-to " + host + "/api/billing/webhook.",
                   "Settings, Billing, Customer portal: turn it on so people can switch plans and cancel.",
                   "Paste the four values in the Connect Stripe box below."] if not billing_api.settings()["on"] else []},
         {"name": "Copy of every application to you", "ok": bool(owner),
@@ -101,6 +110,8 @@ def save_google(payload):
     cid = (payload.get("client_id") if isinstance(payload.get("client_id"), str) else "").strip()
     if not CLIENT_RE.match(cid):
         return 400, {"ok": False, "message": "That does not look like a Google client ID. It ends in .apps.googleusercontent.com and starts with numbers and a dash."}
+    if _test_run():
+        return 409, dict(TEST_RUN)
     try:
         with open(uaply_api.CONFIG_PATH, encoding="utf-8") as f:
             cfg = json.load(f)
@@ -174,6 +185,8 @@ def save_stripe(payload):
         return 400, {"ok": False, "message": "Paste the two price ids (they start with price_) of the monthly Plus and Pro prices you made in Stripe, Product catalog."}
     if wh and not wh.startswith("whsec_"):
         return 400, {"ok": False, "message": "The webhook signing secret starts with whsec_."}
+    if _test_run():
+        return 409, dict(TEST_RUN)
     try:
         with open(uaply_api.CONFIG_PATH, encoding="utf-8") as f:
             cfg = json.load(f)
@@ -185,7 +198,7 @@ def save_stripe(payload):
     with open(tmp, "w", encoding="utf-8", newline=chr(10)) as f:
         json.dump(cfg, f, indent=2)
     os.replace(tmp, uaply_api.CONFIG_PATH)
-    return 200, {"ok": True, "saved": True, "message": "Saved. Plus and Pro can now be bought in Profile, Plan" + ("" if cfg["stripe"]["webhook_secret"] else "; add the webhook signing secret so plans switch on after payment") + "."}
+    return 200, {"ok": True, "saved": True, "message": "Saved. Plus and Pro can now be bought in Profile, Plan and billing" + ("" if cfg["stripe"]["webhook_secret"] else "; add the webhook signing secret so plans switch on after payment") + "."}
 
 
 BREVO_KEY_RE = re.compile(r"^xsmtpsib-[A-Za-z0-9-]{20,200}$")
@@ -213,6 +226,8 @@ def save_mail(payload):
         return 400, {"ok": False, "message": "That does not look like a Gmail App Password (16 letters, shown in four groups). Create one at myaccount.google.com/apppasswords."}
     if copy_to.strip() and not uaply_api.EMAIL_RE.match(copy_to.strip()):
         return 400, {"ok": False, "message": "The address for copies is not a valid email."}
+    if _test_run():
+        return 409, dict(TEST_RUN)
     try:
         with open(uaply_api.CONFIG_PATH, encoding="utf-8") as f:
             cfg = json.load(f)
@@ -241,7 +256,7 @@ def test_mail():
     s = cfg.get("smtp") if isinstance(cfg.get("smtp"), dict) else {}
     to = uaply_api._owner_copy(cfg) or (s.get("from_addr") or "")
     if not (s.get("host") and s.get("from_addr")):
-        return 200, {"ok": False, "message": "Email sending is not set up yet. Run python tools/setup-config.py first."}
+        return 200, {"ok": False, "message": "Email sending is not set up yet. Fill in the Connect email box on this page first."}
     if not uaply_api.mail_ready():
         return 200, {"ok": False, "message": "Email sending has no password or key yet. Add one in the Connect email box on this page."}
     if not to:

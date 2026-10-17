@@ -121,6 +121,23 @@ t("a real-looking client ID is saved (trimmed) and other settings are kept", (s,
   (200, True, "123456789012-abcdefg1234567.apps.googleusercontent.com", ["greenhouse"], "keep-me"))
 uaply_api.CONFIG_PATH = os.path.join(TMP, "uaply-config.json")
 
+# a server started for testing (UAPLY_CONFIG_FILE=none) never reads the owner's uaply-config.json, so it must not write it either
+real_env, real_path = os.environ.get("UAPLY_CONFIG_FILE"), uaply_api.CONFIG_PATH
+os.environ["UAPLY_CONFIG_FILE"] = "none"
+uaply_api.CONFIG_PATH = uaply_api.REAL_CONFIG_PATH
+before = os.path.exists(uaply_api.REAL_CONFIG_PATH) and os.stat(uaply_api.REAL_CONFIG_PATH).st_mtime_ns
+got = [setup_api.save_google({"client_id": "123456789012-abcdefg1234567.apps.googleusercontent.com"})[0],
+       setup_api.save_mail({"email": "uaply.sender@gmail.com", "password": PW})[0],
+       setup_api.save_stripe({"secret_key": "sk_test_abcdefgh1234", "price_plus": "price_a", "price_pro": "price_b"})[0]]
+after = os.path.exists(uaply_api.REAL_CONFIG_PATH) and os.stat(uaply_api.REAL_CONFIG_PATH).st_mtime_ns
+t("a test run refuses to save Google, email or Stripe settings into the owner's real file, and the file is untouched", (got, before == after), ([409, 409, 409], True))
+t("...but it still checks what was typed first (the setup page test relies on that)", setup_api.save_mail({})[1]["message"].startswith("Enter the Gmail address"), True)
+uaply_api.CONFIG_PATH = real_path
+if real_env is None:
+    os.environ.pop("UAPLY_CONFIG_FILE", None)
+else:
+    os.environ["UAPLY_CONFIG_FILE"] = real_env
+
 # without a password the test button says why
 os.remove(uaply_api.CONFIG_PATH)
 uaply_api.config = lambda: {"smtp": {"host": "smtp.gmail.com", "from_addr": "a@gmail.com", "user": "a@gmail.com", "password": ""}, "delivery": "test"}
