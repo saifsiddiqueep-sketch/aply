@@ -13,7 +13,10 @@
    "title": "How do I apply to a job? (What happens when I swipe right)",
    "tags": "how to apply apply applying application send submit employer recruiter swipe right undo consent",
    "body": "Swiping right applies for you. The first time, UAply explains what is sent and asks you to agree. If the employer has agreed to receive applications through UAply, your profile details are sent to them. Otherwise UAply opens the employer's own application page so you can finish there. Every application is saved in Dashboard, Applied, and you can tap Undo right after a swipe. In this test version, applications go to a test inbox and nothing reaches a real company.",
-   "go": "dash:applied"
+   "go": "dash:applied",
+   "release": {
+    "body": "Swiping right applies for you. The first time, UAply explains what is sent and asks you to agree. If the employer has agreed to receive applications through UAply (the card says Apply instantly), your profile details are sent to them. For every other job (the card says Opens employer site) nothing is sent: the job is kept in Dashboard, Applied as Not sent yet, and Finish now opens the employer's own application page so you can finish there. You can tap Undo right after a swipe."
+   }
   },
   {
    "id": "match-score",
@@ -50,7 +53,7 @@
    "body": "Three things can hide jobs. Your filters (Profile, Filters) may be too strict: try Clear all filters. Your target titles hide roles that don't match: add more titles or turn that filter off. And UAply currently lists jobs from employers that agreed to work with it, plus example listings, so there are not many real openings yet. More employers are being added.",
    "go": "prof:filters",
    "release": {
-    "body": "Three things can hide jobs. Your filters (Profile, Filters) may be too strict: try Clear all filters. Your target titles hide roles that don't match: add more titles or turn that filter off. And UAply lists real postings from employers' own public career pages, so the mix changes as employers add and remove openings. Internships and part-time roles are shown first, and Coop roles are rare."
+    "body": "Three things can hide jobs. Your filters (Profile, Filters) may be too strict: try Clear all filters. Your target titles hide roles that don't match: add more titles or turn that filter off. And UAply lists real postings from employers' own public career pages, so the mix changes as employers add and remove openings. Most listings are full-time jobs and internships; part-time and Coop roles are rare, so those lists can be short or empty."
    }
   },
   {
@@ -81,7 +84,7 @@
    "id": "resume",
    "title": "Adding my resume",
    "tags": "resume cv upload file pdf word link document",
-   "body": "Open Profile, then Profile setup, step 4 (Background and links). Upload your resume file (PDF, Word or text, up to 1 MB), or add a link to it, such as a Google Drive link anyone can open. The file stays on your device, so add the link too if you want employers to be able to open your resume.",
+   "body": "Open Profile, then Profile setup, step 4 (Background and links). Upload your resume file (PDF, Word or text, up to 1 MB), or add a link to it, such as a Google Drive link anyone can open. The file is saved on your device and goes along with each application UAply sends to an employer; UAply's server does not keep a copy. For jobs you finish on the employer's own site, upload it there.",
    "go": "prof:preferences"
   },
   {
@@ -95,14 +98,14 @@
    "id": "account",
    "title": "Accounts, signing in and email receipts",
    "tags": "account sign in sign up log in login create password email receipt confirmation google apple",
-   "body": "Tap Sign in at the top right to create an account with your email and a password. You must be 18 or older. Once you are signed in, every swipe right sends a receipt to your email. Google sign-in appears when it has been switched on for this server. Apple, phone and email-link sign-in are not available yet.",
+   "body": "Tap Sign in at the top right to create an account with your email and a password. You must be 18 or older. Once you are signed in and have confirmed your email with the 6-digit code, every swipe right sends a receipt to your email. Google sign-in appears when it has been switched on for this server. Apple, phone and email-link sign-in are not available yet.",
    "go": "prof:account"
   },
   {
    "id": "forgot-password",
    "title": "I forgot my password",
    "tags": "forgot password reset change locked out can't log in",
-   "body": "Password reset isn't available yet. Use Talk to a person to contact the UAply team. After too many wrong tries, wait a few minutes before trying again.",
+   "body": "Open Profile, then Account, tap I already have an account, then Forgot password?. Enter your account email and UAply emails you a link that works for one hour. Open it and choose a new password; that signs you out on every device, so log in again with the new password. If no email arrives, check spam, then use Talk to a person. After too many wrong tries, wait a few minutes before trying again.",
    "go": "prof:account"
   },
   {
@@ -143,14 +146,14 @@
    "body": "There are three plans. Free: 50 applications a week. Plus ($9.99 a month): 250 a week, plus extra filters and Message the hiring manager. Pro ($19.99 a month): unlimited applications. Limits count the last 7 days. Open Profile, then Plan and billing to see your usage, switch or cancel. In this test version no real payments are taken: choosing a plan only records a test payment and no card is ever asked for.",
    "go": "prof:plan",
    "release": {
-    "hide": true
+    "body": "Open Profile, then Plan and billing. Free includes 50 applications a week; Plus ($9.99 a month) gives 250 a week, extra filters and Message the hiring manager; Pro ($19.99 a month) has unlimited applications. Limits count the last 7 days, and jobs you finish on the employer's own site do not count. You need an account to choose a plan. Payments are made on Stripe's own secure page, so UAply never sees your card number, and you can cancel any time in Manage billing. If the screen says payments are not switched on yet, every account is on Free with no weekly limit and nothing can be charged."
    }
   },
   {
    "id": "privacy",
    "title": "What data does UAply keep, and does it sell my data?",
    "tags": "privacy data personal information stored keep share sell cookies",
-   "body": "Your profile is saved on your device. If you create an account, your email and a scrambled form of your password are kept on UAply's server, along with your receipts. Employers only receive your details when you apply to one that agreed to receive applications. UAply does not sell your information. The Privacy Policy, linked at the bottom of the app, has the details.",
+   "body": "Your profile is saved on your device. Each time you swipe right, UAply's server keeps a record of that application (the job and the details sent with it) so it can deliver it and show what happened. If you create an account, your email, a scrambled form of your password and your receipts are kept too; deleting your account removes them and the applications you made while signed in. Employers only receive your details when you apply to one that agreed to receive applications. UAply does not sell your information. The Privacy Policy, linked at the bottom of the app, has the details.",
    "go": "prof:data"
   },
   {
@@ -185,7 +188,7 @@
    "id": "google-sign-in",
    "title": "Signing in with Google",
    "tags": "google gmail sign in continue with google account password saved browser login",
-   "body": "Tap Continue with Google under Profile, Account. Google shows the accounts already signed in on your browser, and you pick one. UAply never sees your Google password, only your name and verified email. If you already made a UAply account with the same email and a password, Google signs you into that same account. Use the same way to sign in each time. You can also sign in with any email and a password; UAply then checks the email with a 6-digit code.",
+   "body": "Tap Continue with Google under Profile, Account. Google shows the accounts already signed in on your browser, and you pick one. UAply never sees your Google password, only your verified email address. If you already made a UAply account with the same email and a password, Google signs you into that same account. Use the same way to sign in each time. You can also sign in with any email and a password; UAply then checks the email with a 6-digit code.",
    "go": "prof:account"
   }
  ]

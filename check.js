@@ -66,7 +66,14 @@ console.log("Release build (dev)");
   /<title>UAply<\/title>/.test(dev) ? ok("the tab title is UAply") : bad("dev/index.html title should be exactly UAply");
   const art = JSON.parse(fs.readFileSync("help/articles.json", "utf8")).articles;
   const plans = art.find((a) => a.id === "plans");
-  plans && plans.release && plans.release.hide ? ok("the assistant's plans article is hidden in the release build") : bad("help/articles.json: the plans article must carry release.hide");
+  /* dev shows Plan & billing (backed by Stripe), so the article may stay, but the release wording must never talk about test payments */
+  const relPlans = plans && plans.release ? (plans.release.hide ? "" : plans.release.body || "") : null;
+  relPlans === "" || (relPlans && !/\btest\b/i.test(relPlans)) ? ok("the assistant's plans article is hidden or has its own release wording (no test payments)")
+    : bad("help/articles.json: the plans article needs release.hide or a release.body without test-payment wording");
+  /* nothing the release assistant says may call the app a test version or send people to a test inbox */
+  const relText = art.filter((a) => !(a.release && a.release.hide)).map((a) => a.id + ": " + ((a.release && a.release.body) || a.body));
+  const testy = relText.filter((t) => /test version|test inbox|sandbox|simulated|isn't available yet|claude|anthropic/i.test(t));
+  testy.length ? bad("help/articles.json: release answers with test or developer wording: " + testy.map((t) => t.split(":")[0]).join(", ")) : ok("no release answer mentions a test version, a test inbox or the coding tools");
 }
 
 console.log("Python lint (pyflakes, when installed)");

@@ -26,7 +26,9 @@ Serves ROOT; each urlpath=file alias maps one URL to a file outside ROOT (e.g. /
   GET  /feedback          the feedback summary page (this server only listens on this computer)
   GET  /help/articles.json  the help articles the assistant answers from
 Accounts use an HttpOnly session cookie. When a signed-in user swipes right, a receipt goes to their email."""
-import sys, os, json, http.server, base64, hmac, threading, time
+import sys, os, re, json, http.server, base64, hmac, threading, time
+
+LEGAL_NAME = re.compile(r"^[A-Za-z0-9_-]+\.(html|css|png)$")       # the files in legal/: terms.html, style.css, favicon-32.png ...
 
 port = int(sys.argv[1])
 # Locally the server only listens on this computer. A host sets HOST=0.0.0.0 so the public can reach it (always behind HTTPS).
@@ -112,8 +114,11 @@ class H(http.server.SimpleHTTPRequestHandler):
 
     def translate_path(self, path):
         p = path.split("?", 1)[0].split("#", 1)[0]
-        if api and p.startswith("/legal/") and ".." not in p:           # Terms, Privacy, AI disclosure, Copyright
-            return os.path.join(HERE, "legal", p[len("/legal/"):] or "index.html")
+        if api and p.startswith("/legal/"):                              # Terms, Privacy, AI disclosure, Copyright
+            # only a plain file name inside legal/. Joining the raw rest of the address once let /legal//etc/passwd (or
+            # /legal/C:/...) read ANY file on the server, because joining onto an absolute path throws the folder away.
+            name = p[len("/legal/"):] or "index.html"
+            return os.path.join(HERE, "legal", name if LEGAL_NAME.match(name) else "not-a-legal-page")
         return alias.get(p) or super().translate_path(path)
 
     def _send(self, code, body, ctype="application/json", headers=()):
@@ -220,6 +225,8 @@ class H(http.server.SimpleHTTPRequestHandler):
         p = self.path.split("?", 1)[0]
         if p == "/healthz":                                                 # for the host's health check
             return self._send(200, {"ok": True})
+        if api and p == "/legal":                                           # a typed uaply.net/legal (no slash) finds the legal pages too
+            return self._redirect("/legal/")
         if api and p in OWNER_PAGES and not self._owner_ok():
             if not OWNER_PASSWORD:
                 return self._send(403, {"error": "Owner pages are off on this server. Set OWNER_PASSWORD to use them."})

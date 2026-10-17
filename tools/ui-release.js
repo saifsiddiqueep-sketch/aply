@@ -12,9 +12,15 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   const setVal = (id, v) => ev("(()=>{const e=" + F + ".getElementById('" + id + "');if(!e)return false;e.value=" + JSON.stringify(v) + ";e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
   // words that must never reach a real user of the release build
   const BANNED = /SANDBOX|TEST MODE|\(test\)|simulated|Sandbox controls|Northwind|Calloway|Ironbridge|Seaside Software|Redwood Marketing|Atlas Robotics|Harbor Bank|Summit Health|Corner Table|Brightpath|Lumen Labs|Release candidate|Choose Plus|Choose Pro|Jordan Lee/i;
+  // words no visitor may see on any screen, even on the owner's own computer: developer addresses, filler, coding-tool names,
+  // promises the app does not keep (no profile sync between devices, password reset exists)
+  const NEVER = /localhost|127\.0\.0\.1|example\.com|lorem|\bTODO\b|test version|Claude|Anthropic|follow you to any device|isn't available yet/i;
+  // owner-only hints ("test inbox", "on this computer") are fine on the owner's own computer, never on a hosted server
+  const owner = JSON.parse(await (async () => { try { return JSON.stringify((await (await fetch("http://127.0.0.1:" + PORT + "/api/chat/config")).json()).owner === true); } catch (e) { return "false"; } })());
+  const OWNER_ONLY = /test inbox|on this computer|Connect Gmail|Connect Stripe/i;
   const scan = async (where) => {
     const t = await pageText();
-    const m = t.match(BANNED);
+    const m = t.match(BANNED) || t.match(NEVER) || (!owner && t.match(OWNER_ONLY));
     check("no test or developer wording on " + where, !m, m ? "found: " + m[0] : "");
   };
 
@@ -55,6 +61,36 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
     if (s === "Data") { await sleep(700);  const n = await ev(F + ".querySelectorAll('[data-legal]').length"); check("Data & privacy lists the legal pages", n === 5, "found " + n); }
   }
 
+  // every link a visitor can tap here (Data & privacy, the fine print under the menu) opens the right page, and so does every link
+  // inside those legal pages. The legal pages must also not name screens that no longer exist.
+  const hrefs = JSON.parse(await ev("JSON.stringify([...new Set([...(" + F + ").querySelectorAll('a[href]'),...document.querySelectorAll('a[href]')].map(a=>a.href))])"));
+  const TITLES = { "terms.html": "Terms of Service", "privacy.html": "Privacy Policy", "ai-and-employment.html": "AI and matching", "copyright.html": "Copyright and content", "index.html": "UAply legal", "": "UAply legal" };
+  const OLD_SCREENS = /Profile, Settings|Profile, Preferences|Resume and links|Profile, Resume|Settings screen/;
+  const seen = new Set(), queue = hrefs.filter((u) => u.includes("/legal/"));
+  check("the legal links are there to tap", queue.length >= 5, queue.length + " legal links");
+  while (queue.length) {
+    const u = queue.shift().split("#")[0];
+    if (seen.has(u)) continue;
+    seen.add(u);
+    const r = JSON.parse(await ev("fetch(" + JSON.stringify(u) + ").then(async r=>JSON.stringify({s:r.status,t:await r.text()})).catch(e=>JSON.stringify({s:0,t:e.message}))"));
+    const want = TITLES[u.split("/legal/")[1]];
+    const title = (r.t.match(/<title>([^<]*)<\/title>/) || [])[1] || "";
+    const old = r.t.match(OLD_SCREENS);
+    check("legal page " + u.split("/").slice(-2).join("/") + " opens with the right title" + (old ? "" : " and names only screens that exist"),
+      r.s === 200 && (!want || title.includes(want)) && !old, r.s + " " + title + (old ? " | names an old screen: " + old[0] : ""));
+    for (const m of r.t.matchAll(/href="([^"#]+)"/g)) {
+      const next = new URL(m[1], u).href;
+      if (next.startsWith("http://127.0.0.1:" + PORT + "/legal/") && !seen.has(next)) queue.push(next);
+    }
+  }
+
+  // the help assistant's answers to its own starter questions, as the release build gives them
+  const ask = (q) => ev("fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:" + JSON.stringify(q) + "}]})}).then(r=>r.json()).then(j=>JSON.stringify({a:j.answer||j.error||'',src:(j.sources||[]).map(s=>s.id)}))");
+  for (const [q, want] of [["How do I apply?", "swipe-right"], ["Why don't I see any jobs?", "no-jobs"], ["How do plans and billing work?", "plans"], ["I forgot my password", "forgot-password"], ["How do I upload my resume?", "resume"], ["What data do you keep?", "privacy"]]) {
+    const r = JSON.parse(await ask(q));
+    const m = r.a.match(BANNED) || r.a.match(NEVER) || r.a.match(/test inbox|simulated|sandbox/i);
+    check("assistant answers \"" + q + "\" from the right article, in release wording", r.src[0] === want && !m, (r.src[0] || "no article") + (m ? " | says: " + m[0] : "") + " | " + r.a.slice(0, 90));
+  }
   // saving only a name and email must not hide the real jobs
   await sub("Profile setup"); await sleep(400);
   await setVal("pName", "Release Tester"); await setVal("pEmail", "release.tester@example.com");
@@ -87,6 +123,11 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   // swiping right on a real job: consent once, then the hand-off to the employer's own page, and it appears under Applied
   await pick("nb-svc", "Internships"); await sleep(800);
   await ev(F + ".getElementById('btnYes').click()"); await sleep(1200);
+  // the first-swipe agreement says what really happens: the resume file goes too, voluntary answers never do, nobody unasked is emailed
+  const agree = String(await ev("((" + F + ").getElementById('kitConsent')||{}).innerText||''"));
+  check("the first-swipe agreement says what is sent (resume file included), that voluntary answers are never sent, and links the legal pages",
+    /resume file/.test(agree) && /voluntary answers .* are never sent/.test(agree) && /never emails a company that has not agreed/.test(agree) &&
+    (await ev("(" + F + ").querySelectorAll('#kitConsent a[href*=\"legal/\"]').length")) === 3, agree.slice(0, 120));
   await ev("(()=>{const m=" + F + ".getElementById('kcYes');if(m)m.click()})()"); await sleep(2200);
   const after = await pageText();
   check("swiping right on a real job says plainly what happened (applied, or finish at the employer)", /Saved\. Finish applying at|Not sent yet: .* takes applications on its own site|Applied to/i.test(after), after.slice(-160));

@@ -64,6 +64,16 @@ t("the Connect Google box is refused on a hosted server", req("POST", "/api/setu
 for p in ("/../serve.py", "/..%2fserve.py", "/%2e%2e/serve.py", "/legal/../serve.py", "/legal/..%2f..%2fserve.py", "/../uaply-config.json", "/data/uaply.db"):
     s, _, body = req("GET", p)
     t("path %s leaks nothing" % p, s != 200 or b"import " not in body and b"smtp" not in body.lower(), True)
+# an absolute path after /legal/ once read any file on the server (on a host: /legal//proc/self/environ, the accounts database...)
+import os  # noqa: E402
+me = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "serve.py")).replace(os.sep, "/")
+for p in ("/legal/" + me, "/legal//" + me.split(":", 1)[-1].lstrip("/"), "/legal//etc/passwd", "/legal/%2Fetc%2Fpasswd", "/legal/C:/Windows/win.ini"):
+    s, _, body = req("GET", p)
+    t("absolute path %s after /legal/ reads nothing" % p[:60], s == 404 and b"import " not in body and b"root:" not in body, True)
+s, h, _ = req("GET", "/legal")
+t("a typed /legal (no slash) goes to the legal pages", (s, h.get("location")), (302, "/legal/"))
+for p in ("/legal/", "/legal/terms.html", "/legal/privacy.html", "/legal/style.css", "/legal/favicon-32.png"):
+    t("legal file %s still opens" % p, req("GET", p)[0], 200)
 t("a made-up path is a plain 404", req("GET", "/nope.html")[0], 404)
 t("POST to an unknown path is refused", req("POST", "/api/secret", {})[0], 404)
 t("oversized body is refused", req("POST", "/api/auth/login", {"email": "a@b.co", "password": "x" * 50000})[0], 413)
