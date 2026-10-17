@@ -472,7 +472,9 @@ class H(http.server.SimpleHTTPRequestHandler):
                 auth_api.logout(self._token())
                 return self._send(200, {"ok": True}, headers=self._cookie(""))
             if p == "/api/auth/delete":
-                code, out, uid = auth_api.delete_account(self._token(), payload.get("password"), ip, payload.get("confirm") or "")
+                # the Stripe subscription is cancelled first; if Stripe refuses, the account is kept (billing_api.cancel_on_delete)
+                code, out, uid = auth_api.delete_account(self._token(), payload.get("password"), ip, payload.get("confirm") or "",
+                                                         before_delete=billing_api.cancel_on_delete)
                 if uid:
                     out["applicationsRemoved"] = uaply_api.forget_user(uid)
                     chat_api.forget_user(uid)
@@ -561,13 +563,12 @@ def startup_summary():
         cfg_note = "valid" if os.environ.get("UAPLY_CONFIG_JSON") else "not set"
     except ValueError:
         cfg_note = "NOT VALID JSON, ignored"
-    bill = billing_api.settings()
     disk = {True: "persistent disk", False: "NOT a persistent disk: everything is lost at the next deploy", None: "local folder"}[PERSISTENT]
-    return ("[uaply] %s on %s:%d (%s) | data: %s (%s) | feeds: %s | email: %s | owner pages: %s | AI answers: %s | payments: %s | UAPLY_CONFIG_JSON: %s"
+    return ("[uaply] %s on %s:%d (%s) | data: %s (%s) | feeds: %s | email: %s | owner pages: %s | AI answers: %s | Google sign-in: %s | payments: %s | UAPLY_CONFIG_JSON: %s"
             % (os.path.basename(root), BIND, port, "public" if PUBLIC else "this computer only", DATA_DIR, disk,
                ",".join(sorted(jobs_api.feeds_allowed())) or "off", "on" if uaply_api.mail_ready() else "off (test inbox only)",
                ("on" if OWNER_PASSWORD else "off (no OWNER_PASSWORD)") if PUBLIC else "on", "on" if chat_api.ai_ready() else "off",
-               ("on, %s mode" % ("test" if bill["test"] else "LIVE")) if bill["on"] else "off", cfg_note))
+               google_auth.summary(), billing_api.summary(), cfg_note))
 
 
 _busy, _busy_lock = [0], threading.Lock()

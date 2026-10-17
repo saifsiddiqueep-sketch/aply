@@ -1336,7 +1336,11 @@ function apply(w,host){
       '<small>Nothing is charged and no card is ever asked for. Before any paid plan starts, you will see its price here first.</small></div>';
     var keys=["free","plus","pro"],cur=BILL.plan||"free",P=BILL.plans;
     var h='<div class="plan" style="display:flex;flex-direction:column;gap:6px">'+(testMode()?'<span class="tag">Test mode: no real charges</span>':'')+'<b>Current plan: '+E(P[cur].name)+(BILL.canceling?' (ends '+new Date(BILL.renews*1000).toLocaleDateString()+')':'')+'</b>'+
-      (BILL.signedIn?'<small>'+(P[cur].cap?(BILL.used||0)+' of '+P[cur].cap+' applications used this week':(BILL.used||0)+' applications this week, no limit')+(cur!=="free"&&BILL.renews&&!BILL.canceling?' · renews '+new Date(BILL.renews*1000).toLocaleDateString():'')+'</small>'+(P[cur].cap?'<div class="bar"><i style="width:'+Math.min(100,Math.round((BILL.used||0)/P[cur].cap*100))+'%"></i></div>':''):'<small>Sign in to choose a plan. Your plan is saved to your account.</small>')+'</div><div class="plans">';
+      (BILL.signedIn?'<small>'+(P[cur].cap?(BILL.used||0)+' of '+P[cur].cap+' applications used this week':(BILL.used||0)+' applications this week, no limit')+(cur!=="free"&&BILL.renews&&!BILL.canceling?' · renews '+new Date(BILL.renews*1000).toLocaleDateString():'')+'</small>'+(P[cur].cap?'<div class="bar"><i style="width:'+Math.min(100,Math.round((BILL.used||0)/P[cur].cap*100))+'%"></i></div>':''):'<small>Sign in to choose a plan. Your plan is saved to your account.</small>')+
+      /* a renewal failed (billing_api._problem): Stripe retries the card; after the third failed try the plan is paused until a payment works */
+      (BILL.problem==="retrying"?'<small role="alert"><b>Your last payment did not go through.</b> Stripe will try your card again. To keep your plan, update your card in Manage billing.</small><div class="acts"><button type="button" class="btn ghost" data-bill="portal">Update card</button></div>':
+       BILL.problem==="paused"?'<small role="alert"><b>Your plan is paused because your card was declined.</b> Update your card in Manage billing and it comes back as soon as the payment goes through. Nothing extra is charged.</small><div class="acts"><button type="button" class="btn" data-bill="portal">Update card</button></div>':'')+
+      '</div><div class="plans">';
     keys.forEach(function(k){
       var p=PLANS[k==="free"?"trial":k==="plus"?"starter":"pro"],isCur=cur===k;
       var btn=k==="free"?(isCur?'<small>Your current plan</small>':''):
@@ -1344,7 +1348,7 @@ function apply(w,host){
           (!BILL.enabled&&BILL.buttons&&PAYLINK[LINKOF[k]]?'<button type="button" class="btn" data-bill="'+k+'">Choose '+p.name+'</button>':
           !BILL.enabled?'<small>Payments are not switched on yet.'+(SRV.testInbox?' Connect Stripe in <a href="/setup#billing" target="_blank" rel="noopener noreferrer">setup</a>.':'')+'</small>':
           (!BILL.signedIn?'<button type="button" class="btn" data-bill="signin">Sign in to choose '+p.name+'</button>':
-          (cur!=="free"?'<button type="button" class="btn ghost" data-bill="portal">Switch in Manage billing</button>':'<button type="button" class="btn" data-bill="'+k+'">Choose '+p.name+'</button>'))));
+          (cur!=="free"||BILL.problem?'<button type="button" class="btn ghost" data-bill="portal">Switch in Manage billing</button>':'<button type="button" class="btn" data-bill="'+k+'">Choose '+p.name+'</button>'))));
       h+='<div class="plan" data-cur="'+isCur+'"><b>'+p.name+'</b><span class="pr">'+(p.price?"$"+p.price.toFixed(2)+'<small>/month</small>':"$0")+'</span><ul>'+p.perks.map(function(x){return '<li>'+E(x)+'</li>'}).join("")+'</ul>'+btn+'</div>';
     });
     return h+'</div><p class="note">Payments are handled by Stripe on its own secure page. UAply never sees or stores your card number. Cancel any time in Manage billing; the plan stays until the end of the paid month.</p>';
@@ -1375,14 +1379,26 @@ function apply(w,host){
     var b=q.get("billing");if(!b)return;
     try{w.top.history.replaceState(null,"",w.top.location.pathname)}catch(e){}
     var pk=q.get("plan");
-    if(b==="success"&&pk!=="trial"&&PLANS[pk]&&PAYLINK[pk]){   /* hosted sandbox: a Stripe Payment Link sent the person back after paying */
-      acct.plan=pk;acct.since=Date.now();acct.renews=acct.since+30*DAY;acct.canceled=false;
-      acct.pay.push({at:acct.since,plan:pk,amt:PLANS[pk].price,stripe:true});saveA();
-      setTimeout(function(){sub.prof="plan";cur="prof";go("prof");renderAcct("plan");msg("Payment received by Stripe (test mode). "+PLANS[pk].name+" is active.")},300);
-      return;
-    }
-    setTimeout(function(){sub.prof="plan";cur="prof";go("prof");BILL._note=b==="success"?"Thank you! Your plan is being activated; it shows here in a few seconds.":b==="cancel"?"Checkout canceled. Nothing was charged.":"Billing updated.";renderAcct("plan");msg(BILL._note);
-      var n=0,t=setInterval(function(){loadBilling();if(++n>=5)clearInterval(t)},2000)},300);
+    loadBilling().then(function(){
+      /* only a server WITHOUT Stripe keys uses the Payment Links simulation (nothing is saved on a server, and a typed ?billing=success&plan=pro
+         address must never look like a paid plan where real payments are on) */
+      if(b==="success"&&!BILL.enabled&&pk!=="trial"&&PLANS[pk]&&PAYLINK[pk]){   /* a Stripe Payment Link (test mode) sent the person back after paying */
+        acct.plan=pk;acct.since=Date.now();acct.renews=acct.since+30*DAY;acct.canceled=false;
+        acct.pay.push({at:acct.since,plan:pk,amt:PLANS[pk].price,stripe:true});saveA();
+        setTimeout(function(){sub.prof="plan";cur="prof";go("prof");renderAcct("plan");msg("Payment received by Stripe (test mode). "+PLANS[pk].name+" is active.")},300);
+        return;
+      }
+      var was=BILL.plan||"free";
+      function say(t){BILL._note=t;if(!acctSec.hidden&&sub.prof==="plan")renderAcct("plan");msg(t)}
+      setTimeout(function(){sub.prof="plan";cur="prof";go("prof");renderAcct("plan");
+        say(b==="success"?(was!=="free"?"Thank you! "+((BILL.plans[was]||{}).name||"Your plan")+" is active.":"Thank you! Stripe is confirming the payment; your plan shows here in a few seconds."):b==="cancel"?"Checkout canceled. Nothing was charged.":"Billing updated.");
+        if(b!=="success"||was!=="free")return;
+        /* the plan switches on only when Stripe's signed message reaches the server (billing_api.webhook), usually within seconds */
+        var n=0,t=setInterval(function(){loadBilling().then(function(){
+          if(BILL.plan&&BILL.plan!=="free"){clearInterval(t);say("Thank you! "+((BILL.plans[BILL.plan]||{}).name||"Your plan")+" is active.");return}
+          if(++n>=10){clearInterval(t);say("Stripe has not confirmed the payment yet. If your card was declined, nothing was charged and you are still on Free; otherwise your plan appears here within a few minutes.")}
+        })},3000)},300);
+    });
   })();
   /* message to the hiring manager on swipe right: opt-in (off by default), Plus and Pro only. It goes out with the
      application, so only to employers that agreed to receive applications through UAply (the server decides that).
@@ -1667,7 +1683,8 @@ function apply(w,host){
      so the phone apps hide the Google button until a native Google sign-in is added. Phone and computer browsers keep it. */
   function noGoogle(){if(iosShell())return true;try{var c=w.top.Capacitor;return !!(c&&c.isNativePlatform&&c.isNativePlatform())}catch(e){return false}}
   /* iPhone and iPad (every browser there is Safari underneath): Google says its button needs the full-page sign-in there, because
-     Safari's tracking protection breaks the pop-up. iPadOS reports itself as a Mac, so a touch screen gives it away. */
+     Safari's tracking protection breaks the pop-up. iPadOS reports itself as a Mac, so a touch screen gives it away. Only matters when
+     the server has no client secret (otherwise every device already uses the full-page sign-in). */
   function iosWeb(){var n=w.navigator||{};return /iPhone|iPad|iPod/.test(n.userAgent||"")||(n.platform==="MacIntel"&&n.maxTouchPoints>1)}
   var GBTN='<button type="button" class="btn" data-auth="gsign" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#1f1f1f;border:1px solid #747775">'+
     '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>'+
@@ -1706,7 +1723,12 @@ function apply(w,host){
     function fallback(){
       box.innerHTML=SRV.googleRedirect?GBTN:'<small>Google sign-in could not load. Use your email and password.</small>';
     }
-    if(iosWeb()&&SRV.googleRedirect){box.innerHTML=GBTN;return}      /* iPhone and iPad: the full-page sign-in (needs the client secret on the server) */
+    /* With the client secret on the server, every device uses Google's full-page sign-in: a plain page change that needs no third-party
+       cookies, pop-ups or FedCM prompt, works on iPhone and iPad (where Google says its button needs it anyway) and is not affected by this
+       app running inside a srcdoc frame, whose location.origin is "null" (Google's button script reads it). Google's own button is only
+       used when just the public client ID is set (the owner's own computer). */
+    if(SRV.googleRedirect){box.innerHTML=GBTN;return}
+    if(iosWeb()){box.innerHTML='<small>Google sign-in on iPhone and iPad needs the full-page sign-in, which is not switched on here yet. Use your email and password.</small>';return}
     function draw(){
       try{
         var g=w.google.accounts.id;
@@ -1762,6 +1784,8 @@ function apply(w,host){
       return '<div class="svform"><b>Delete your account</b>'+
         '<div class="field"><label for="sDelPw">'+(nopw?'Type DELETE to confirm':'Enter your password to confirm')+'</label><input type="'+(nopw?'text':'password')+'" id="sDelPw" autocomplete="'+(nopw?'off':'current-password')+'" maxlength="128"></div>'+
         '<p class="note" style="margin:0">This removes your account, your receipts and your application records from UAply\'s server. It cannot be undone. Your profile on this device stays until you delete it in Data and privacy.</p>'+
+        /* billing_api.cancel_on_delete: the subscription is cancelled with Stripe first; if Stripe refuses, the account is kept */
+        (BILL.enabled&&BILL.signedIn&&(BILL.plan!=="free"||BILL.problem)?'<p class="note" id="delPlan" style="margin:0"><b>Your '+E((BILL.plans[BILL.plan]||{}).name||"paid")+' plan is cancelled right away</b> when the account is deleted, so your card is never charged again. The current month is not refunded automatically; ask support if you want it back.</p>':'')+
         '<div class="checks"><label><input type="checkbox" id="sDelAck"> I understand this cannot be undone</label></div>'+
         '<div class="acts"><button type="button" class="btn danger" data-auth="sdelgo">Delete my account</button><button type="button" class="btn ghost" data-auth="sdelno">Keep my account</button></div></div>';
     }
@@ -1843,7 +1867,7 @@ function apply(w,host){
       return;
     }
     if(a==="sout"){apiPost("/api/auth/logout",{}).then(function(){SRV.user=null;AUI.delOpen=false;AUI.survey=false;paintHeader();renderAcct("account");msg("Signed out.")});return}
-    if(a==="sdel"){AUI.survey=true;AUI.delOpen=false;renderAcct("account");var f1=d.querySelector("#acctSec .svform input");if(f1)f1.focus();return}
+    if(a==="sdel"){loadBilling();AUI.survey=true;AUI.delOpen=false;renderAcct("account");var f1=d.querySelector("#acctSec .svform input");if(f1)f1.focus();return}
     if(a==="sdelno"){AUI.delOpen=false;AUI.survey=false;renderAcct("account");return}
     if(a==="sdelskip"){AUI.survey=false;AUI.delOpen=true;renderAcct("account");var dp=d.getElementById("sDelPw");if(dp)dp.focus();return}
     if(a==="sdelsend"){
@@ -1866,11 +1890,12 @@ function apply(w,host){
       if(!dpw){msg(nopw?"Type DELETE to confirm.":"Enter your password.");return}
       if(!(d.getElementById("sDelAck")||{}).checked){msg("Tick the box to confirm you understand this cannot be undone.");return}
       b.disabled=true;msg("Deleting your account…");
+      var hadPlan=!!(BILL.enabled&&BILL.signedIn&&BILL.plan!=="free");
       apiPost("/api/auth/delete",nopw?{confirm:dpw}:{password:dpw}).then(function(r){
         b.disabled=false;
         if(!r.ok){msg((r.j&&r.j.error)||"Could not delete the account. Try again.");return}
-        SRV.user=null;AUI.delOpen=false;AUI.survey=false;paintHeader();renderAcct("account");
-        msg("Your account was deleted"+(r.j.applicationsRemoved?", along with "+r.j.applicationsRemoved+" application record"+(r.j.applicationsRemoved===1?"":"s")+" on the server":"")+".");
+        SRV.user=null;AUI.delOpen=false;AUI.survey=false;paintHeader();renderAcct("account");loadBilling();
+        msg("Your account was deleted"+(r.j.applicationsRemoved?", along with "+r.j.applicationsRemoved+" application record"+(r.j.applicationsRemoved===1?"":"s")+" on the server":"")+"."+(hadPlan?" Your plan was cancelled with Stripe; you will not be charged again.":""));
       });
       return;
     }
