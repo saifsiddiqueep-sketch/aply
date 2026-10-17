@@ -367,7 +367,7 @@ t("replay: learning ranks liked jobs above passed ones better than the match sco
 asm = ask(("assemble",))[0]
 t("sandbox: every feature that is on (learn included) patches the production page and the result parses", asm["parses"] and not asm["err"], asm["err"])
 t("sandbox: learn is on, its hooks are in the page, and it runs last in ORDER (right after chat)", asm["learnOn"] and asm["hooks"] and asm["learnLast"], asm)
-t("sandbox loads shared/uaply-learn.js; dev neither loads it nor lists it in PROMOTED", asm["sandboxLoads"] and not asm["devLoads"] and not asm["devPromoted"], asm)
+t("sandbox and dev both load shared/uaply-learn.js, and dev lists learn in PROMOTED (promoted October 17)", asm["sandboxLoads"] and asm["devLoads"] and asm["devPromoted"], asm)
 
 shutil.rmtree(TMP, ignore_errors=True)
 ok = sum(R)

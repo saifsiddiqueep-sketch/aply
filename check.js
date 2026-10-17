@@ -100,6 +100,11 @@ try {
   /* sandbox-only: Hiring mode, the pretend back end, and the "Save to Applied?" question the sandbox removed */
   const leak = P.filter((k) => ["employers", "backend", "confirm"].includes(k));
   leak.length ? bad("sandbox-only features in the release build: " + leak.join(", ")) : ok("no sandbox-only feature (Hiring mode, Mock back end, Confirm apply) is in the release build");
+  /* allowed in dev since October 17: Learns from your swipes (its file must load) and consent before the first swipe. Still sandbox-only:
+     Hiring mode's file and the sandbox's controls bar (All on / All off / Clear saved swipes) */
+  !P.includes("learn") || dev.includes('<script src="uaply-learn.js"></script>') ? ok("Learns from your swipes is promoted and its file loads in dev") : bad("dev promotes learn but does not load uaply-learn.js");
+  !dev.includes("uaply-employers.js") && !/id="(all|none|reset|feats)"/.test(dev) ? ok("dev loads neither Hiring mode nor the sandbox's controls") : bad("dev loads uaply-employers.js or the sandbox controls");
+  /consentFirst:\s*true/.test(dev) ? ok("dev asks for the agreement before the first swipe (consentFirst)") : bad("dev/index.html lost consentFirst:true");
   const devErr = build(P.concat(NEEDS.submit));
   devErr ? bad("the release build does not assemble: " + devErr) : ok("the release build (dev's PROMOTED list) assembles and parses");
   /* "Take me there" under an assistant answer: each article's destination must be a real menu item or Profile setup step, reached

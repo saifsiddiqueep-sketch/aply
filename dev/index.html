@@ -28,10 +28,13 @@ iframe{flex:1;min-height:0;border:0;width:100%;background:var(--bg)}
 <script src="uaply-live.js"></script>
 <script src="uaply-profile.js"></script>
 <script src="uaply-chat.js"></script>
+<script src="uaply-learn.js"></script>
 <script src="uaply-envs.js"></script>
 <script>
-window.UAplyOpts={hideServiceCounts:true,release:true,nearMe:true};   /* dev is the release build: no counters, no test controls, no simulated sign-in, no sample data, no paid plans; nearMe: the location prompt, commute slider and nearby jobs first */
-var PROMOTED=["glide","nav","profile","live","kit","submit","caps","smart","fit","tap","dates","hint","a11y","anim","notice","chat"];   /* "guide" is left out on purpose: it shows "N jobs left" counters; "notice" is only the example-profile banner; "glide" (Phone swipe) replaces "axis" */
+window.UAplyOpts={hideServiceCounts:true,release:true,nearMe:true,consentFirst:true,
+  /* Stripe Payment Links (TEST mode, the "UAply sandbox" Stripe account): offered only where the server shows the buy buttons without keys (the owner's own computer, billing_api.buttons) */
+  stripeLinks:{starter:"https://buy.stripe.com/test_00w6oA7S25nWcZUcEDcEw00",pro:"https://buy.stripe.com/test_dRm9AM8W6aIgcZU8oncEw01"}};   /* consentFirst: the agreement is asked once, before the first swipe */   /* dev is the release build: no counters, no test controls, no simulated sign-in, no sample data, buy buttons only where billing_api.buttons() says; nearMe: the location prompt, commute slider and nearby jobs first */
+var PROMOTED=["glide","nav","profile","live","kit","submit","caps","smart","fit","tap","dates","hint","a11y","anim","notice","chat","learn"];   /* "guide" is left out on purpose: it shows "N jobs left" counters; "notice" is only the example-profile banner; "glide" (Phone swipe) replaces "axis" */
 var KEY="hireswipe.dev.v1",on={};
 PROMOTED.forEach(function(k){on[k]=true});
 document.getElementById("what").textContent="Release candidate: "+PROMOTED.map(function(k){return UAplyEnv.FEATURES[k].name}).join(", ");

@@ -1304,10 +1304,12 @@ function apply(w,host){
 
   /* ---------- real plans: the server keeps the plan, Stripe takes the payment ---------- */
   var BILL={enabled:false,plan:"free",signedIn:false,plans:{free:{name:"Free",price:0,cap:50},plus:{name:"Plus",price:9.99,cap:250},pro:{name:"Pro",price:19.99,cap:0}}};
-  function loadBilling(){return w.fetch("/api/billing/status",{credentials:"same-origin"}).then(function(r){return r.ok?r.json():null}).then(function(j){if(j){j._asked=BILL._asked;BILL=j;if(!acctSec.hidden&&sub.prof==="plan")renderAcct("plan")}}).catch(function(){})}
+  function loadBilling(){return w.fetch("/api/billing/status",{credentials:"same-origin"}).then(function(r){return r.ok?r.json():null}).then(function(j){if(j){j._asked=BILL._asked;j._note=BILL._note;BILL=j;if(!acctSec.hidden&&sub.prof==="plan")renderAcct("plan")}}).catch(function(){})}
   loadBilling();
   var EARLY="Paid plans are coming. UAply is free during early access.";
-  function earlyAccess(){return REL&&!BILL.enabled}   /* the release build without live Stripe keys: no prices to choose, no checkout, no payment links */
+  function earlyAccess(){return BILL.early===true}   /* the server says so: a public server with no Stripe keys (billing_api.buttons). No prices to choose, no checkout, no payment links */
+  var LINKOF={plus:"starter",pro:"pro"};   /* the Payment Links fallback (OPTS.stripeLinks), used when the server has no Stripe keys but offers the buttons (the owner's own computer) */
+  function testMode(){return !!BILL.test||(!BILL.enabled&&!!BILL.buttons&&!!(PAYLINK.starter||PAYLINK.pro))}
   function billingHTML(){
     var who=SRV.user?SRV.user.id:0;
     if(!!BILL.signedIn!==!!SRV.user&&BILL._asked!==who){BILL._asked=who;loadBilling()}       /* signed in or out since the plan was last read: read it again (the screen redraws when it arrives) */
@@ -1315,21 +1317,34 @@ function apply(w,host){
       '<ul><li>No weekly limit on applications</li><li>Full dashboard and tracking</li><li>Every filter</li><li>Message the hiring manager</li></ul>'+
       '<small>Nothing is charged and no card is ever asked for. Before any paid plan starts, you will see its price here first.</small></div>';
     var keys=["free","plus","pro"],cur=BILL.plan||"free",P=BILL.plans;
-    var h='<div class="plan" style="display:flex;flex-direction:column;gap:6px">'+(BILL.test?'<span class="tag">TEST PAYMENTS</span>':'')+'<b>Current plan: '+E(P[cur].name)+(BILL.canceling?' (ends '+new Date(BILL.renews*1000).toLocaleDateString()+')':'')+'</b>'+
+    var h='<div class="plan" style="display:flex;flex-direction:column;gap:6px">'+(testMode()?'<span class="tag">Test mode: no real charges</span>':'')+'<b>Current plan: '+E(P[cur].name)+(BILL.canceling?' (ends '+new Date(BILL.renews*1000).toLocaleDateString()+')':'')+'</b>'+
       (BILL.signedIn?'<small>'+(P[cur].cap?(BILL.used||0)+' of '+P[cur].cap+' applications used this week':(BILL.used||0)+' applications this week, no limit')+(cur!=="free"&&BILL.renews&&!BILL.canceling?' · renews '+new Date(BILL.renews*1000).toLocaleDateString():'')+'</small>'+(P[cur].cap?'<div class="bar"><i style="width:'+Math.min(100,Math.round((BILL.used||0)/P[cur].cap*100))+'%"></i></div>':''):'<small>Sign in to choose a plan. Your plan is saved to your account.</small>')+'</div><div class="plans">';
     keys.forEach(function(k){
       var p=PLANS[k==="free"?"trial":k==="plus"?"starter":"pro"],isCur=cur===k;
       var btn=k==="free"?(isCur?'<small>Your current plan</small>':''):
         (isCur?'<button type="button" class="btn ghost" data-bill="portal">Manage billing</button>':
-          (!BILL.enabled?'<small>Payments are not switched on yet.'+(SRV.testInbox?' Connect Stripe in <a href="/setup#billing" target="_blank" rel="noopener noreferrer">setup</a>.':'')+'</small>':
+          (!BILL.enabled&&BILL.buttons&&PAYLINK[LINKOF[k]]?'<button type="button" class="btn" data-bill="'+k+'">Choose '+p.name+'</button>':
+          !BILL.enabled?'<small>Payments are not switched on yet.'+(SRV.testInbox?' Connect Stripe in <a href="/setup#billing" target="_blank" rel="noopener noreferrer">setup</a>.':'')+'</small>':
           (!BILL.signedIn?'<button type="button" class="btn" data-bill="signin">Sign in to choose '+p.name+'</button>':
           (cur!=="free"?'<button type="button" class="btn ghost" data-bill="portal">Switch in Manage billing</button>':'<button type="button" class="btn" data-bill="'+k+'">Choose '+p.name+'</button>'))));
       h+='<div class="plan" data-cur="'+isCur+'"><b>'+p.name+'</b><span class="pr">'+(p.price?"$"+p.price.toFixed(2)+'<small>/month</small>':"$0")+'</span><ul>'+p.perks.map(function(x){return '<li>'+E(x)+'</li>'}).join("")+'</ul>'+btn+'</div>';
     });
     return h+'</div><p class="note">Payments are handled by Stripe on its own secure page. UAply never sees or stores your card number. Cancel any time in Manage billing; the plan stays until the end of the paid month.</p>';
   }
+  /* Data and privacy: "You agreed to the Terms and Privacy Policy on <date>" (the date this browser said yes) */
+  function agreedLine(){
+    var c=w.__uaplyConsentInfo?w.__uaplyConsentInfo():null;
+    if(c&&c.current&&c.at)return "You agreed to the Terms and Privacy Policy on "+new Date(c.at).toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"})+".";
+    if(c)return "You agreed to an earlier version of the Terms and Privacy Policy. UAply asks you again before your next swipe right.";
+    return "You have not agreed to the Terms and Privacy Policy on this device yet. UAply asks before your first swipe right.";
+  }
   function billingAction(k,btn){
     if(k==="signin"){sub.prof="account";renderAcct("account");return}
+    if(!BILL.enabled&&PAYLINK[LINKOF[k]]){   /* no keys on this server: Stripe's own test Payment Link (test mode, no real money) */
+      var u=PAYLINK[LINKOF[k]],em=(d.getElementById("pEmail")||{}).value||"";
+      if(/^[^@\s]{1,64}@[^@\s]+\.[A-Za-z]{2,}$/.test(em))u+="?prefilled_email="+encodeURIComponent(em);
+      msg("Opening Stripe's secure checkout (test mode)…");try{w.top.location.href=u}catch(x){w.location.href=u}return;
+    }
     btn.disabled=true;msg(k==="portal"?"Opening billing…":"Opening secure checkout…");
     apiPost(k==="portal"?"/api/billing/portal":"/api/billing/checkout",k==="portal"?{}:{plan:k}).then(function(r){
       btn.disabled=false;
@@ -1348,7 +1363,7 @@ function apply(w,host){
       setTimeout(function(){sub.prof="plan";cur="prof";go("prof");renderAcct("plan");msg("Payment received by Stripe (test mode). "+PLANS[pk].name+" is active.")},300);
       return;
     }
-    setTimeout(function(){sub.prof="plan";cur="prof";go("prof");renderAcct("plan");msg(b==="success"?"Thank you! Your plan is being activated; it shows here in a few seconds.":b==="cancel"?"Checkout canceled. Nothing was charged.":"Billing updated.");
+    setTimeout(function(){sub.prof="plan";cur="prof";go("prof");BILL._note=b==="success"?"Thank you! Your plan is being activated; it shows here in a few seconds.":b==="cancel"?"Checkout canceled. Nothing was charged.":"Billing updated.";renderAcct("plan");msg(BILL._note);
       var n=0,t=setInterval(function(){loadBilling();if(++n>=5)clearInterval(t)},2000)},300);
   })();
   /* message to the hiring manager on swipe right: opt-in (off by default), Plus and Pro only. It goes out with the
@@ -1448,12 +1463,13 @@ function apply(w,host){
       h+='<h3 style="font-size:15px">Back up</h3><p class="note" style="margin:0">Your profile, applications and details in one file you keep.</p><div class="acts"><button type="button" class="btn" data-a="exp">Download backup (JSON)</button><button type="button" class="btn ghost" data-csv="1">Applications (CSV)</button></div>'+
         '<h3 style="font-size:15px">Restore</h3><input type="file" id="aImp" accept=".json,application/json"><small>Replaces what is on this device with the file. Only files made by UAply are accepted.</small>'+
         '<h3 style="font-size:15px">Privacy</h3><p class="note" style="margin:0">'+(REL?"Your profile and swipes are saved on this device. Each application you send (the job and the details sent with it) is kept on UAply's server; if you make an account, your account and the receipts we email you are too. You can delete your data here and your account under Account.":"Everything above is stored in this browser only. In sandbox, applications go to a simulated inbox unless you turned on live sending.")+'</p>'+
+        (w.__uaplyConsentAgain?'<h3 style="font-size:15px">Your agreement</h3><p class="note" style="margin:0" id="aAgreed">'+agreedLine()+'</p><div class="acts"><button type="button" class="btn ghost" data-a="reconsent">Show it again</button></div>':'')+
         '<h3 style="font-size:15px">Legal</h3><p class="note" style="margin:0">The rules and promises behind UAply. These are drafts that a lawyer has not reviewed yet.</p>'+
         '<div class="legallist" style="display:flex;flex-direction:column;gap:6px">'+[["terms.html","Terms of Service","The rules for using UAply."],["privacy.html","Privacy Policy","What we collect, who sees it, and your rights."],["ai-and-employment.html","AI and matching","How the match score works and what it is not."],["copyright.html","Copyright and content","Ownership, job listing sources, fonts, and takedown requests."],["index.html","All legal pages","Everything in one place."]]
           .map(function(l){return '<a class="btn ghost" data-legal="'+l[0]+'" href="'+LB+l[0]+'" target="_blank" rel="noopener noreferrer" style="display:block;text-align:left;text-decoration:none"><b>'+l[1]+'</b><br><small>'+l[2]+'</small></a>'}).join("")+'</div>'+
         '<h3 style="font-size:15px">Delete everything</h3><button type="button" class="btn ghost" data-a="wipe" style="align-self:flex-start">Delete all my data</button>';
     }
-    acctSec.innerHTML=h+'<p class="note" id="aMsg" role="status"></p>';
+    acctSec.innerHTML=h+'<p class="note" id="aMsg" role="status">'+(v==="plan"&&BILL._note?E(BILL._note):'')+'</p>';   /* the message after coming back from Stripe survives the plan being re-read */
   }
   function readFile(file,asText,cb){
     var r=new w.FileReader();r.onload=function(){cb(r.result)};r.onerror=function(){cb(null)};
@@ -1489,6 +1505,7 @@ function apply(w,host){
     if(a==="cancel"){acct.canceled=true;saveA();renderAcct("plan");msg("Plan canceled. It stays active until the end of the period.")}
     else if(a==="resub"){acct.canceled=false;if(acct.renews<Date.now())acct.renews=Date.now()+30*DAY;saveA();renderAcct("plan");msg("Subscription resumed.")}
     else if(a==="rtrial"){acct.plan="trial";acct.since=Date.now();acct.canceled=false;acct.renews=0;saveA();renderAcct("plan");msg("You're on Free.")}
+    else if(a==="reconsent"){w.__uaplyConsentAgain(function(ok){renderAcct("data");msg(ok?"Thanks. Your agreement is saved.":"You have not agreed yet. UAply asks again before your next swipe right.")})}
     else if(a==="exp"){
       download("uaply-backup.json","application/json",JSON.stringify({app:"uaply",v:1,exported:new Date().toISOString(),profile:A.S.profile,decisions:A.S.decisions,acct:acct}));
     }

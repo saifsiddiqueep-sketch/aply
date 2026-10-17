@@ -1,4 +1,4 @@
-// Swipe learning on the sandbox at iPhone size: 30 real finger swipes with a clear pattern (right on remote, left on on-site), then
+// Swipe learning on the sandbox or dev (PORT) at iPhone size: 30 real finger swipes with a clear pattern (right on remote, left on on-site), then
 // the deck must put remote jobs first, the card must say what it learned with the right counts, 1 card in 5 must still be something
 // else, Filters must have a Reset that clears it, and nothing may throw a script error.
 //   W=390 H=844 PORT=19801 node tools/cdp.js tools/ui-learn.js        (SHOTS=<folder> also saves screenshots)
@@ -31,11 +31,12 @@ module.exports = async ({ ev, sleep, nav, send, logs, shot }) => {
   await nav("http://127.0.0.1:" + PORT + "/?app=1");
   await sleep(3500);
   if (await ev("!!" + F + ".getElementById('kcYes')")) { await ev(F + ".getElementById('kcYes').click()"); await sleep(400); }
-  check("the sandbox has the learner on", await ev("!!(" + FW + ".__uaplyLearn&&" + FW + ".__uaplyLearnOrder)"));
+  check("this build (sandbox or dev) has the learner on", await ev("!!(" + FW + ".__uaplyLearn&&" + FW + ".__uaplyLearnOrder)"));
   check("a new visitor starts with nothing learned", (await J(FW + ".__uaplyLearn.state().ev.length")) === 0);
   // the same run every time: wait until the real feeds (if this server has them) have loaded, so no late redraw lands mid-swipe,
   // and fix the learner's random seed (a new visitor otherwise gets a random one)
-  for (let i = 0; i < 60; i++) { if (await ev("/^(Real postings|Could not load)/.test((document.getElementById('note')||{}).textContent||'')")) break; await sleep(500); }
+  // (the sandbox says so in its controls bar; dev has no bar, so there it waits until the app stops loading jobs)
+  for (let i = 0; i < 60; i++) { if (await ev("(()=>{const n=document.getElementById('note');return n?/^(Real postings|Could not load)/.test(n.textContent||''):!" + FW + ".__uaplyLoadingJobs})()")) break; await sleep(500); }
   await ev(FW + ".__uaplyLearn.state().seed=20261016");
 
   // 80 made-up jobs: 40 on-site in New York asking for skills the example profile has (they match best), 40 remote asking for half of them
