@@ -122,6 +122,8 @@ Swipe right fills in the employer's real application form, asks only what the pe
 - Messages and the privacy policy pointed to screens that no longer exist ("Profile, Settings", "Profile, Resume and links"). They now
   name the Profile setup step: About you, Jobs you want, Where and pay, Background and links, or Eligibility and extras.
 - Five browser tests still opened the old Settings, Resume and Preferences screens; they now fill in Profile setup step by step.
+- **A removed employer connection is really removed.** The server remembered employer connections until the file's time changed; two
+  quick writes on a busy computer could share a time, so a removed connection kept being used. It now also compares the size and a finer time.
 
 ## 1.0.0-rc.8 (release candidate)
 

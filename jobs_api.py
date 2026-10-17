@@ -522,12 +522,19 @@ def partners_file(for_writing=False):
     return found or (places[-1] if for_writing else None)
 
 
+def _file_stamp(path):
+    """What tells a changed file from an unchanged one: the modification time to the nanosecond and the size. The time alone can stay the
+    same across two quick writes (a busy computer, a coarse file system), so a removed connection or employer could keep being served."""
+    st = os.stat(path)
+    return (st.st_mtime_ns, st.st_size)
+
+
 def ats_connections():
     """{(kind, board): api_key} for employers who connected their own hiring system (Greenhouse or Lever) with a key they created. Read from the
     UAPLY_ATS_JSON setting (a host's dashboard) and from 'ats_connections' in the employer list. Anything malformed is skipped."""
     env, path = os.environ.get("UAPLY_ATS_JSON") or "", partners_file()
     try:
-        stamp = (env, path, os.path.getmtime(path) if path else None)
+        stamp = (env, path, _file_stamp(path) if path else None)
     except OSError:
         stamp = (env, path, None)
     if _ats_conn["stamp"] == stamp:
@@ -570,7 +577,7 @@ def _file_partner_jobs():
     if not path:
         return []
     try:
-        mtime = os.path.getmtime(path)
+        mtime = _file_stamp(path)
         if _partners["path"] == path and _partners["mtime"] == mtime:
             return _partners["jobs"]
         with open(path, encoding="utf-8") as f:
