@@ -157,8 +157,8 @@ evny = {"L": 20, "D": 20, "like": {"r:product design": 8}, "dis": {"r:product de
         "cnt": {"r:product design": {"yes": 8, "no": 1}, "m:onsite": {"yes": 0, "no": 6}, "l:new york": {"yes": 0, "no": 6}}, "n": 40}
 sny = ask(("score", nyc, 72, evny))[0]
 pn = {p["a"]: p for p in sny["parts"]}
-t("worked example, on-site New York: 0 likes and 6 dislikes add log(1/7) = -1.95 (the design's formula caps only the plus side)",
-  round(pn["m:onsite"]["c"], 2) == -1.95 and round(pn["l:new york"]["c"], 2) == -1.95, pn)
+t("worked example, on-site New York: 0 likes and 6 dislikes is log(1/7) = -1.95, held at -1.50 (the minus side is capped like the plus side)",
+  round(pn["m:onsite"]["raw"], 2) == -1.95 and pn["m:onsite"]["c"] == -1.5 and pn["l:new york"]["c"] == -1.5, pn)
 t("worked example, on-site New York: remote is absent and the card drops (72%% -> %d%%)" % sny["shown"], "m:remote" not in pn and sny["shown"] < 72, sny["shown"])
 t("worked example, on-site New York line: 'You've passed on 6 of 6 on-site jobs.' (or New York)",
   sny["explain"]["why"] in ("You've passed on 6 of 6 on-site jobs.", "You've passed on 6 of 6 jobs in New York."), sny["explain"])
@@ -214,6 +214,8 @@ t("never more than 300 swipes are kept on the device", len(st["ev"]) == 300 and 
 huge = {"like": {"m:remote": 1000, "t:job": 1000, "o:board": 1000, "r:analyst": 1000}, "dis": {}, "cnt": {}, "n": 10}
 s10, s50 = ask(("score", J, 50, huge), ("score", J, 50, dict(huge, n=50)))
 t("no attribute adds more than +1.5, however strong the evidence", all(p["c"] <= 1.5 for p in s10["parts"]) and max(p["raw"] for p in s10["parts"]) > 6)
+sneg = ask(("score", J, 60, {"like": {}, "dis": {"m:remote": 1000, "t:job": 1000}, "cnt": {}, "n": 50}))[0]
+t("and no attribute takes away more than 1.5, however many passes", all(p["c"] >= -1.5 for p in sneg["parts"]) and min(p["raw"] for p in sneg["parts"]) < -6, sneg["parts"])
 t("before 30 swipes the learned part is at most +25 points (50% -> 75%)", s10["shown"] == 75, s10["shown"])
 t("from 30 swipes on it is at most +40 points (50% -> 90%)", s50["shown"] == 90, s50["shown"])
 neg = {"like": {}, "dis": {"m:remote": 1000, "t:job": 1000}, "cnt": {}, "n": 50}
