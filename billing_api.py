@@ -42,6 +42,16 @@ def settings():
     return s
 
 
+RELEASE = False          # serve.py sets this for the release build (dev): there only real (live) Stripe keys switch paid plans on
+
+
+def usable(s=None):
+    """Paid plans can be bought here: Stripe keys are set, and in the release build they are live keys (test keys never take real
+    people's money, so dev treats them as off and everyone stays on Free during early access; the sandbox keeps its test checkout)."""
+    s = s or settings()
+    return bool(s["on"] and not (RELEASE and s["test"]))
+
+
 def _stripe(method, path, params=None):
     s = settings()
     data = urllib.parse.urlencode(params or {}).encode() if method == "POST" else None
@@ -67,7 +77,7 @@ def _week_used(user_id):
 
 def plan_of(user):
     """The plan that is in force for an account right now ("free" when payments are off, the subscription lapsed, or there is no account)."""
-    if not user or not settings()["on"]:
+    if not user or not usable():
         return "free"
     r = auth_api.billing_row(user["id"]) or {}
     if r.get("plan") in ("plus", "pro") and (r.get("plan_status") in ACTIVE or (r.get("plan_renews") or 0) > time.time()):
@@ -77,7 +87,7 @@ def plan_of(user):
 
 def limit_reached(user):
     """None, or a plain sentence when this account has used its weekly applications (only enforced when payments are switched on)."""
-    if not user or not settings()["on"]:
+    if not user or not usable():
         return None
     p = PLANS[plan_of(user)]
     if p["cap"] and _week_used(user["id"]) >= p["cap"]:
@@ -87,7 +97,7 @@ def limit_reached(user):
 
 def status(user):
     s = settings()
-    out = {"enabled": s["on"], "test": s["test"], "plans": {k: {"name": v["name"], "price": v["price"], "cap": v["cap"]} for k, v in PLANS.items()}}
+    out = {"enabled": usable(s), "test": s["test"] and usable(s), "early": RELEASE and not usable(s), "plans": {k: {"name": v["name"], "price": v["price"], "cap": v["cap"]} for k, v in PLANS.items()}}
     if user:
         r = auth_api.billing_row(user["id"]) or {}
         plan = plan_of(user)
@@ -100,7 +110,7 @@ def status(user):
 
 def checkout(user, plan, site):
     s = settings()
-    if not s["on"]:
+    if not usable(s):
         return 503, {"error": "Payments are not switched on yet."}
     if not user:
         return 401, {"error": "Sign in first so the plan is saved to your account."}
@@ -127,7 +137,7 @@ def checkout(user, plan, site):
 
 def portal(user, site):
     s = settings()
-    if not s["on"]:
+    if not usable(s):
         return 503, {"error": "Payments are not switched on yet."}
     if not user:
         return 401, {"error": "Sign in first."}

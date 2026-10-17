@@ -1306,9 +1306,14 @@ function apply(w,host){
   var BILL={enabled:false,plan:"free",signedIn:false,plans:{free:{name:"Free",price:0,cap:50},plus:{name:"Plus",price:9.99,cap:250},pro:{name:"Pro",price:19.99,cap:0}}};
   function loadBilling(){return w.fetch("/api/billing/status",{credentials:"same-origin"}).then(function(r){return r.ok?r.json():null}).then(function(j){if(j){j._asked=BILL._asked;BILL=j;if(!acctSec.hidden&&sub.prof==="plan")renderAcct("plan")}}).catch(function(){})}
   loadBilling();
+  var EARLY="Paid plans are coming. UAply is free during early access.";
+  function earlyAccess(){return REL&&!BILL.enabled}   /* the release build without live Stripe keys: no prices to choose, no checkout, no payment links */
   function billingHTML(){
     var who=SRV.user?SRV.user.id:0;
     if(!!BILL.signedIn!==!!SRV.user&&BILL._asked!==who){BILL._asked=who;loadBilling()}       /* signed in or out since the plan was last read: read it again (the screen redraws when it arrives) */
+    if(earlyAccess())return '<div class="plan" data-cur="true" style="display:flex;flex-direction:column;gap:6px"><b>Current plan: Free (early access)</b>'+
+      '<ul><li>No weekly limit on applications</li><li>Full dashboard and tracking</li><li>Every filter</li><li>Message the hiring manager</li></ul>'+
+      '<small>Nothing is charged and no card is ever asked for. Before any paid plan starts, you will see its price here first.</small></div>';
     var keys=["free","plus","pro"],cur=BILL.plan||"free",P=BILL.plans;
     var h='<div class="plan" style="display:flex;flex-direction:column;gap:6px">'+(BILL.test?'<span class="tag">TEST PAYMENTS</span>':'')+'<b>Current plan: '+E(P[cur].name)+(BILL.canceling?' (ends '+new Date(BILL.renews*1000).toLocaleDateString()+')':'')+'</b>'+
       (BILL.signedIn?'<small>'+(P[cur].cap?(BILL.used||0)+' of '+P[cur].cap+' applications used this week':(BILL.used||0)+' applications this week, no limit')+(cur!=="free"&&BILL.renews&&!BILL.canceling?' · renews '+new Date(BILL.renews*1000).toLocaleDateString():'')+'</small>'+(P[cur].cap?'<div class="bar"><i style="width:'+Math.min(100,Math.round((BILL.used||0)/P[cur].cap*100))+'%"></i></div>':''):'<small>Sign in to choose a plan. Your plan is saved to your account.</small>')+'</div><div class="plans">';
@@ -1422,7 +1427,7 @@ function apply(w,host){
     fill();
   })();
   function renderAcct(v){
-    var h='<h3>'+label("prof",v)+'</h3><p class="lead">'+LEADS[v]+'</p>';
+    var h='<h3>'+label("prof",v)+'</h3><p class="lead">'+(v==="plan"&&earlyAccess()?EARLY:LEADS[v])+'</p>';
     if(v==="account"){acctSec.innerHTML=h+accountHTML()+'<p class="note" id="aMsg" role="status"></p>';paintHeader();setTimeout(mountGoogle,0);return}
     if(v==="plan"&&(SRV.up||REL)){
       h+=billingHTML();
