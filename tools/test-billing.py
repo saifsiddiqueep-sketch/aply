@@ -120,18 +120,19 @@ try:
     cfg["stripe"] = {}
     t("with payments switched off nobody is limited and everyone is on Free", (billing_api.limit_reached(user), billing_api.plan_of(user), billing_api.status(user)["enabled"]), (None, "free", False))
     t("checkout is refused while payments are off", billing_api.checkout(user, "plus", "http://x")[0], 503)
-    # the release build (dev): test keys never switch paid plans on; everyone is on Free during early access, with no limit
+    # the three states of the buy buttons (owner's rule): keys set (test or live), or the owner's own computer, or neither
+    t("no keys, owner's own computer: buttons shown (Payment Links fallback), not early access",
+      (billing_api.status(user)["buttons"], billing_api.status(user)["early"], billing_api.status(user)["enabled"]), (True, False, False))
+    billing_api.PUBLIC = True
+    t("no keys, public server: no buttons, early access, nobody limited", (billing_api.status(user)["buttons"], billing_api.status(user)["early"], billing_api.limit_reached(user)), (False, True, None))
     cfg["stripe"] = {"secret_key": "sk_test_mockkey123456", "webhook_secret": WH, "price_plus": "price_plus1", "price_pro": "price_pro1"}
-    billing_api.RELEASE = True
     st = billing_api.status(user)
-    t("release build with test keys: plans are off and the page is in early access", (st["enabled"], st["test"], st["early"], st["plan"]), (False, False, True, "free"))
-    t("release build with test keys: nobody is limited", billing_api.limit_reached(user), None)
-    t("release build with test keys: checkout and the billing portal are refused", (billing_api.checkout(user, "plus", "http://x")[0], billing_api.portal(user, "http://x")[0]), (503, 503))
+    t("test keys, public server: buttons shown and marked as test mode", (st["buttons"], st["early"], st["enabled"], st["test"]), (True, False, True, True))
+    t("test keys, public server: checkout opens (the stand-in Stripe answers)", billing_api.checkout(dict(user, emailVerified=True), "pro", "http://x")[0] in (200, 409), True)
     cfg["stripe"]["secret_key"] = "sk_live_mockkey123456"
-    t("release build with live keys: plans are on and not early access", (billing_api.status(user)["enabled"], billing_api.status(user)["early"]), (True, False))
-    billing_api.RELEASE = False
-    cfg["stripe"]["secret_key"] = "sk_test_mockkey123456"
-    t("the sandbox keeps its test checkout (test keys switch plans on there)", (billing_api.status(user)["enabled"], billing_api.status(user)["early"]), (True, False))
+    st = billing_api.status(user)
+    t("live keys, public server: buttons shown, not test mode", (st["buttons"], st["early"], st["test"]), (True, False, False))
+    billing_api.PUBLIC = False
 finally:
     proc.terminate()
 

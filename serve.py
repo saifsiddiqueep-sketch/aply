@@ -102,7 +102,7 @@ if api:
     employers_api.init(os.path.basename(root))                    # Hiring mode: on for the sandbox only
     auth_api.init(os.path.basename(root))
     chat_api.init(os.path.basename(root))
-    billing_api.RELEASE = os.path.basename(root) == "dev"           # the release build: only live Stripe keys switch paid plans on
+    billing_api.PUBLIC = PUBLIC                                     # Plan and billing: buy buttons on a public server only when Stripe keys are set
     uaply_api.hide_errors = jobs_api.hide_errors = PUBLIC       # a hosted server never shows visitors raw error text; the owner's own computer still does
     threading.Thread(target=jobs_api.get_jobs, daemon=True).start()   # warm the job cache so the first visitor does not wait
 
