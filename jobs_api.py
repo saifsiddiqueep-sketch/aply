@@ -505,11 +505,12 @@ def _usajobs(token):
         sched = " ".join(s.get("Name", "") for s in d.get("PositionSchedule") or [] if isinstance(s, dict))
         cats = [c.get("Name") for c in d.get("JobCategory") or [] if isinstance(c, dict) and c.get("Name")]
         apply_uri = [u for u in d.get("ApplyURI") or [] if isinstance(u, str) and u.startswith("https://")]
+        # dates come as 2026-10-01T00:00:00.0000: the 4-digit fraction is dropped so any Python version reads them (the host runs 3.12)
         out.append(dict(id=item.get("MatchedObjectId") or d.get("PositionID"), title=title, company=d.get("OrganizationName") or d.get("DepartmentName") or "USAJOBS",
                         loc=loc, remote=True if (det.get("RemoteIndicator") is True or re.search(r"remote", loc, re.I)) else None,
                         text=_text(" ".join(x for x in (det.get("JobSummary"), duties, d.get("QualificationSummary")) if isinstance(x, str))),
                         url=(apply_uri[0] if apply_uri else d.get("PositionURI") or ""), announcement=d.get("PositionURI") or "",
-                        salary_text=sal_text, sal=sal, posted=_ts(d.get("PublicationStartDate")), fallback=cats[0] if cats else None,
+                        salary_text=sal_text, sal=sal, posted=_ts(re.sub(r"\.\d+$", "", str(d.get("PublicationStartDate") or ""))), fallback=cats[0] if cats else None,
                         force_type="internship" if intern else ("parttime" if re.search(r"part[- ]time", sched, re.I) else None)))
     return out
 
@@ -684,11 +685,17 @@ def _cfg():
 
 
 def feeds_allowed():
-    """Third-party feeds the owner has explicitly switched on (default: none). See the legal notes at the top."""
-    f = _cfg().get("feeds")
+    """Third-party feeds the owner has explicitly switched on (default: none). See the legal notes at the top.
+    A source kind is on when it is listed in "feeds" (uaply-config.json / UAPLY_CONFIG_JSON) or in UAPLY_FEEDS. "feeds_off" (a list, or
+    UAPLY_FEEDS_OFF=remotive,muse) switches a kind off by name and wins over both, so one line turns a feed off without touching the others:
+    {"feeds_off": ["remotive"]}. The kinds: greenhouse, lever, ashby, smartrecruiters, usajobs, jobicy, muse, remotive."""
+    cfg = _cfg()
+    f, off = cfg.get("feeds"), cfg.get("feeds_off")
     on = {x for x in f if isinstance(x, str)} if isinstance(f, list) else set()
     on |= {x.strip().lower() for x in (os.environ.get("UAPLY_FEEDS") or "").split(",") if x.strip()}     # e.g. UAPLY_FEEDS=greenhouse,lever,ashby
-    return on
+    off = {x.strip().lower() for x in off if isinstance(x, str)} if isinstance(off, list) else set()
+    off |= {x.strip().lower() for x in (os.environ.get("UAPLY_FEEDS_OFF") or "").split(",") if x.strip()}
+    return on - off
 
 
 # ---- partner employers: postings an employer gave us and who agreed to receive applications ----
