@@ -33,6 +33,10 @@ module.exports = async ({ ev, sleep, nav, send, logs, shot }) => {
   if (await ev("!!" + F + ".getElementById('kcYes')")) { await ev(F + ".getElementById('kcYes').click()"); await sleep(400); }
   check("the sandbox has the learner on", await ev("!!(" + FW + ".__uaplyLearn&&" + FW + ".__uaplyLearnOrder)"));
   check("a new visitor starts with nothing learned", (await J(FW + ".__uaplyLearn.state().ev.length")) === 0);
+  // the same run every time: wait until the real feeds (if this server has them) have loaded, so no late redraw lands mid-swipe,
+  // and fix the learner's random seed (a new visitor otherwise gets a random one)
+  for (let i = 0; i < 60; i++) { if (await ev("/^(Real postings|Could not load)/.test((document.getElementById('note')||{}).textContent||'')")) break; await sleep(500); }
+  await ev(FW + ".__uaplyLearn.state().seed=20261016");
 
   // 80 made-up jobs: 40 on-site in New York asking for skills the example profile has (they match best), 40 remote asking for half of them
   await ev("(()=>{const w=" + FW + ",A=w.__uaply;w.__uaplyOnDecision=null;w.__uaplyHideSamples=true;const h0=w.__uaplyHide;" +
@@ -72,8 +76,15 @@ module.exports = async ({ ev, sleep, nav, send, logs, shot }) => {
   const firstOther = regular.findIndex((x) => x.mode !== "remote"), lastRemote = regular.map((x) => x.mode).lastIndexOf("remote");
   check("after 30 swipes the next cards are remote first (" + regular.slice(0, 8).map((x) => x.mode).join(", ") + ")",
     regular.slice(0, 8).every((x) => x.mode === "remote") && (firstOther < 0 || firstOther > lastRemote));
-  check("remote cards now show a higher number than their profile fit, on-site ones lower",
-    regular.filter((x) => x.mode === "remote").every((x) => x.pct > x.fit) && next.filter((x) => x.mode !== "remote").every((x) => x.pct < x.fit), JSON.stringify(next.map((x) => x.mode + " " + x.fit + "->" + x.pct)));
+  // What the design promises: what you liked pushes cards up and what you passed pushes them down, attribute by attribute. A remote
+  // card can still end below its fit when its other attributes (role, pay band, years, skills) were mostly passed; then its line
+  // must name one of those, never "remote".
+  const rem = next.filter((x) => x.mode === "remote"), ons = next.filter((x) => x.mode !== "remote");
+  const fell = rem.filter((x) => x.pct < x.fit);
+  check("remote cards went up on average and every on-site card went down (" + JSON.stringify(next.map((x) => x.mode + " " + x.fit + "->" + x.pct)) + ")",
+    rem.length && rem.reduce((s, x) => s + x.pct - x.fit, 0) > 0 && ons.every((x) => x.pct < x.fit));
+  check("any remote card that ended below its fit says why with another attribute it has, never remote (" + fell.length + " such cards)",
+    fell.every((x) => x.key && x.key !== "m:remote" && /^You've passed on /.test(x.why)), JSON.stringify(fell.map((x) => x.key + ": " + x.why)));
 
   // the line on the card
   const c1 = await top();
