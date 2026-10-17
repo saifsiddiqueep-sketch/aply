@@ -93,6 +93,7 @@ SOURCES = [
     ("jobicy", "data-science", "Jobicy"),
     ("muse", "Internship", "The Muse"),       # The Muse public jobs API; links go to the posting on The Muse
     ("muse", "Entry Level", "The Muse"),
+    ("smartrecruiters", "CityofPhiladelphia", "City of Philadelphia"),   # the City's own public SmartRecruiters postings (no key)
     ("usajobs", "philadelphia", "USAJOBS"),   # every federal posting within 25 miles of Philadelphia (needs feed_keys.usajobs)
     ("usajobs", "students", "USAJOBS"),       # the same area, only the Students and Recent graduates hiring paths (Pathways)
 ]
@@ -390,7 +391,73 @@ def _fetch_raw(kind, token, name):
                                 force_type="internship" if token == "Internship" else None))
     elif kind == "usajobs":
         out = _usajobs(token)
+    elif kind == "smartrecruiters":
+        out = _smartrecruiters(token, name)
     return out
+
+
+_sr_desc = {}            # (company, posting id) -> {"at", "released", "detail"}: each description is read once a day at most
+
+
+def _sr_detail(token, pid, released):
+    """One posting's full record (description, pay), from the cache when it is fresh and the posting was not re-released."""
+    key = (token, pid)
+    with _lock:
+        c = _sr_desc.get(key)
+    if c and c["released"] == released and time.time() - c["at"] < SR_DESC_TTL:
+        return c["detail"]
+    at = time.time()
+    try:
+        d = _get("https://api.smartrecruiters.com/v1/companies/%s/postings/%s" % (urllib.parse.quote(token, safe=""), urllib.parse.quote(pid, safe="")))
+    except Exception:
+        d = c["detail"] if c else None           # keep the last description if this read fails, and try again at the next hourly refresh
+        at = time.time() - SR_DESC_TTL + TTL["smartrecruiters"] - 60
+    with _lock:
+        _sr_desc[key] = {"at": at, "released": released, "detail": d}
+    return d
+
+
+def _smartrecruiters(token, name):
+    """A company's public SmartRecruiters postings: the list page by page (100 at a time, until totalFound, at most KEEP postings),
+    then each posting's own record for its description. Shapes as seen on the live API (October 16, 2026)."""
+    cap = KEEP["smartrecruiters"]
+    base = "https://api.smartrecruiters.com/v1/companies/%s/postings" % urllib.parse.quote(token, safe="")
+    items, offset = [], 0
+    while len(items) < cap:
+        page = _get("%s?limit=100&offset=%d" % (base, offset))
+        got = page.get("content") or []
+        items += got
+        offset += len(got)
+        if not got or offset >= int(page.get("totalFound") or 0):
+            break
+    items = [p for p in items if isinstance(p, dict) and p.get("id")][:cap]
+    with ThreadPoolExecutor(max_workers=4) as ex:                # four at a time: gentle on their API, and quick enough
+        details = list(ex.map(lambda p: _sr_detail(token, str(p["id"]), p.get("releasedDate") or ""), items))
+    out = []
+    for p, d in zip(items, details):
+        d = d if isinstance(d, dict) else {}
+        L = p.get("location") or {}
+        city, region = (L.get("city") or "").strip(), (L.get("region") or "").strip()
+        loc = city + (", " + region if region and region not in city else "")
+        if (L.get("country") or "us").lower() != "us":
+            loc = L.get("fullLocation") or (loc + ", " + (L.get("country") or "").upper())
+        secs = ((d.get("jobAd") or {}).get("sections")) or {}
+        text = " ".join((secs.get(k) or {}).get("text") or "" for k in ("jobDescription", "qualifications", "additionalInformation"))
+        comp = d.get("compensation") or {}
+        sal = None
+        if comp.get("currency") == "USD" and comp.get("period") == "YEARLY" and isinstance(comp.get("min"), (int, float)) and isinstance(comp.get("max"), (int, float)) \
+                and 20000 <= comp["min"] < comp["max"] <= 600000:
+            sal = [int(comp["min"]), int(comp["max"])]
+        kind_label = ((p.get("typeOfEmployment") or {}).get("label") or "").lower()
+        force = "internship" if "intern" in kind_label else ("parttime" if "part" in kind_label else None)
+        dept = re.split(r"\s[-–—]\s", (p.get("department") or {}).get("label") or "")[0].strip()      # "Law Department – Tax Unit" -> "Law Department"
+        func = (p.get("function") or {}).get("label") or ""
+        fallback = dept or (func if func.lower() != "other" else "") or (p.get("industry") or {}).get("label") or None
+        out.append(dict(id=p["id"], title=(p.get("name") or "").strip(), company=(p.get("company") or {}).get("name") or name,
+                        loc=loc or "Not listed", remote=True if L.get("remote") else None,
+                        text=_text(text) or (p.get("name") or ""), url="https://jobs.smartrecruiters.com/%s/%s" % (token, p["id"]),
+                        salary_text="", sal=sal, posted=_ts(p.get("releasedDate")), fallback=fallback, force_type=force))
+    return [r for r in out if r["title"]]
 
 
 USA_INTERN = re.compile(r"\bintern(?:ship)?s?\b|student trainee|\bpathways\b", re.I)
