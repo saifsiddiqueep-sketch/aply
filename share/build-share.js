@@ -8,6 +8,7 @@ const prod = read("prod/index.html");
 const nav = read("shared/uaply-nav.js");
 const profile = read("shared/uaply-profile.js");
 const employers = read("shared/uaply-employers.js");     // Hiring mode: sandbox only (it registers itself after envs)
+const learn = read("shared/uaply-learn.js");             // Learns from your swipes: sandbox only (envs asks for it only when it is on)
 let envs = read("shared/uaply-envs.js");
 
 const NEEDS_SERVER = ["live", "kit", "submit", "chat"];   // the assistant needs chat_api.py, which a static host cannot run
@@ -53,9 +54,9 @@ function build(src, out, title, edits, extra) {
 }
 
 build("sandbox/index.html", "share/sandbox.html", "UAply Sandbox", [
-  ["on={glide:true,easy:true,axis:true,nav:true,profile:true,live:true,kit:true,submit:true,", "on={glide:true,easy:true,axis:true,nav:true,profile:true,"],
+  ["on={glide:true,learn:true,easy:true,axis:true,nav:true,profile:true,live:true,kit:true,submit:true,", "on={glide:true,learn:true,easy:true,axis:true,nav:true,profile:true,"],
   ["Experiment freely. Reads a copy of index.html (prod); prod is never changed.", "Experiment freely. Hosted copy: example jobs only, and your swipes stay in your own browser."],
-], "\n<script>" + safe(employers) + "</script>");
+], "\n<script>" + safe(employers) + "</script>\n<script>" + safe(learn) + "</script>");
 build("dev/index.html", "share/dev.html", "UAply", [
   ['var PROMOTED=["glide","nav","profile","live","kit","submit",', 'var PROMOTED=["glide","nav","profile",'],
   // the hosted copy has no server, so it must say so instead of posing as the real app
