@@ -291,7 +291,7 @@ function apply(w,host){
   var main=d.getElementById("main"),nav=d.createElement("nav");
   nav.id="bnav";nav.setAttribute("aria-label","Main");
   /* sandbox only: one-word tabs (Jobs, Dashboard, Profile) without the second line naming the open screen */
-  if(OPTS.simpleTabs){SECS.svc.label="Jobs";nav.className="simple";if(typeof OPTS.navLift==="number")d.documentElement.style.setProperty("--nav-lift",Math.max(0,Math.min(40,OPTS.navLift))+"px");[].slice.call(d.querySelectorAll("p.hint")).forEach(function(h){if(/^Keyboard:/.test(h.textContent.trim()))h.remove()})}
+  if(OPTS.simpleTabs){SECS.svc.label="Jobs";nav.className="simple";if(typeof OPTS.navLift==="number")d.documentElement.style.setProperty("--nav-lift",Math.max(0,Math.min(80,OPTS.navLift))+"px");[].slice.call(d.querySelectorAll("p.hint")).forEach(function(h){if(/^Keyboard:/.test(h.textContent.trim()))h.remove()})}
   Object.keys(SECS).forEach(function(k){
     var wrap=d.createElement("div");wrap.className="nwrap";wrap.setAttribute("data-k",k);
     wrap.innerHTML='<button type="button" class="nb" id="nb-'+k+'" aria-haspopup="menu" aria-expanded="false"><span>'+SECS[k].label+'</span><small></small></button><div class="nmenu" role="menu" aria-labelledby="nb-'+k+'" hidden></div>';
