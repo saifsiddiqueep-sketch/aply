@@ -290,6 +290,8 @@ class H(http.server.SimpleHTTPRequestHandler):
                 return self._refuse(400, {"error": "bad request"})
             # an application may carry a resume file (up to 1 MB, sent as text); a company profile may carry its logo (up to 120 KB)
             if n > (MAX_APPLY_BODY if p == "/api/apply" else MAX_COMPANY_BODY if p == "/api/employer/company" else MAX_BODY):
+                if p == "/api/apply":                    # the app shows this sentence to the person, so it says what to do
+                    return self._refuse(413, {"error": "This application is too large to send. Use a resume file under 1 MB (Profile setup, Background and links).", "code": "too_big"})
                 return self._refuse(413, {"error": "bad size"})
             payload = json.loads(self.rfile.read(n).decode("utf-8"))
             if not isinstance(payload, dict):

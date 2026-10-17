@@ -391,11 +391,16 @@ function apply(w,host){
     function sentLine(o){
       var x=o.x.sent,e=A.esc;if(!x)return "";
       if(x.status==="sent")return '<small class="sent ok">Application sent to '+e(x.to||o.j.co)+'</small>';
-      if(x.status==="delivered_test")return '<small class="sent ok">Sent to '+e(x.to||"the test inbox")+' (test, nothing reached '+e(o.j.co)+')</small>';
+      if(x.status==="delivered_test")return '<small class="sent ok">Sent to '+e((x.to||"the test inbox").replace(/ \(simulated\)$/,""))+' (test, nothing reached '+e(o.j.co)+')</small>';
       if(x.status==="handoff")return '<small class="sent todo">Not sent yet: '+e(o.j.co)+' takes applications on its own site. '+(o.j.url?'<button type="button" class="linkbtn" data-open="'+e(o.j.url)+'">Finish on their site ↗</button>':'')+'</small>';
-      if(x.status==="pending")return '<small class="sent todo">Waiting to send: UAply will try again when you are back online.</small>';
+      if(x.status==="pending")return '<small class="sent todo">Waiting to send: UAply sends it as soon as the connection is back.</small>';
+      /* nothing reached the employer: say so, with a way to try again (the same as swiping right on it again) */
+      var again='<button type="button" class="linkbtn" data-act="resend" data-id="'+o.j.id+'">';
+      if(x.status==="failed")return '<small class="sent todo">Not sent: UAply could not deliver it to '+e(o.j.co)+'. '+again+'Try again</button></small>';
+      if(x.status==="needs_answers")return '<small class="sent todo">Not sent yet: '+e(o.j.co)+'\'s form asks something only you can answer. '+again+'Answer now</button></small>';
       return "";
     }
+    w.__uaplyTrack=function(){if(!tp.hidden)renderTrack()};   /* called when an application's state changes while the list is open */
     function row(o,acts,view){
       var t=A.tone(o.x.pct),e=A.esc;
       return '<div class="row"><div class="logo" aria-hidden="true" style="background:hsl('+A.hue(o.j.id)+' 60% 46%)">'+e(o.j.co.charAt(0))+'</div><div class="info"><b>'+e(o.j.role)+'</b>'+modeChip(o.j)+'<small>'+e(o.j.co)+' · '+e(o.j.loc)+' · '+TYPE_LABEL[o.j.type||"job"]+'</small>'+
@@ -428,7 +433,11 @@ function apply(w,host){
     if(act==="savedet"){saveDet(id,b.closest(".row"));return}
     if(act==="ics"){exportIcs(id);return}
     if(act==="share"){var sj=A.JOBS.filter(function(j){return j.id===id})[0];if(sj)shareJob(sj);return}
-    if(act==="withdraw"||act==="reconsider"){delete A.S.decisions[id];A.S.history=A.S.history.filter(function(i){return i!==id});delete acct.apps[id];saveA()}
+    if(act==="resend"){if(w.__uaplyResend)w.__uaplyResend(id);return}
+    if(act==="withdraw"||act==="reconsider"){
+      delete A.S.decisions[id];A.S.history=A.S.history.filter(function(i){return i!==id});delete acct.apps[id];saveA();
+      if(act==="withdraw"&&w.__uaplyUndone)w.__uaplyUndone(x,A.JOBS.filter(function(j){return j.id===id})[0]);   /* an application that went out stays with the employer: say so */
+    }
     else{x.st=act;if(act==="interview"||act==="accepted"||act==="rejected")OPEN[id]=true}
     A.save();A.renderAll();renderTrack();
   });
