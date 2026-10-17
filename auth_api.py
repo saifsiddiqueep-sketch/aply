@@ -267,7 +267,7 @@ def user_for(token):
     if not isinstance(token, str) or not (20 <= len(token) <= 100):
         return None
     with _lock, _db() as c:
-        row = c.execute("SELECT u.id, u.email, u.has_password, u.email_verified FROM sessions s JOIN users u ON u.id=s.user_id "
+        row = c.execute("SELECT u.id, u.email, u.has_password, u.email_verified, u.plan FROM sessions s JOIN users u ON u.id=s.user_id "
                         "WHERE s.token_hash=? AND s.expires_at>?",
                         (hashlib.sha256(token.encode()).hexdigest(), int(time.time()))).fetchone()
     return public_user(row) if row else None
