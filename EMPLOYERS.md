@@ -52,11 +52,18 @@ The body (resume is `null` when the person has not uploaded one):
         "headline": "…", "summary": "…",
         "education": {"level": "Bachelor", "school": "…", "major": "…", "graduation": "2026-06", "gpa": 3.7},
         "links": {"resume": "https://…", "linkedin": "https://www.linkedin.com/in/…", "portfolio": "https://…"},
-        "work_authorization": "…", "needs_sponsorship": "no", "earliest_start": "…", "most_recent_employer": "…"
+        "work_authorization": "…", "needs_sponsorship": "no", "earliest_start": "…", "country": "US", "willing_to_relocate": "yes",
+        "most_recent_employer": "…",
+        "most_recent_job": {"employer": "…", "title": "…", "start": "2024-06", "end": "", "current": true}
       },
       "message": "", "match_percent": 87,
       "resume": {"name": "Resume.pdf", "type": "application/pdf", "size": 48211, "content_base64": "…"}
     }
+
+`country` is `US`, `CA`, `GB`, `other` or empty; `willing_to_relocate` and `needs_sponsorship` are `yes`, `no` or empty; in `most_recent_job`,
+`start` and `end` are months (`YYYY-MM`) and an empty `end` with a `start` means the person still works there (`current` is then `true`). Every
+field is optional for the person, so any of them can be empty. `applicant.expected_yearly_pay_usd` (a whole number of US dollars) appears only
+when your own application form required expected pay; otherwise the person's expected pay is never sent.
 
 To check the signature, compute HMAC-SHA256 over `timestamp + "." + body` with your secret and compare with `X-UAply-Signature` in constant time.
 
@@ -88,7 +95,10 @@ What then happens, for that employer's real postings on UAply:
 
 - The job card says **Apply instantly**, so a person knows before swiping what swipe right does. Cards for other employers say **Opens employer site**.
 - Swipe right, with a short window to Undo, sends the application: name, email, phone, links, the resume file, and answers to the posting's own
-  questions where the person's profile has them (LinkedIn, website, current employer, work authorization, sponsorship, how they heard of the job).
+  questions where the person's profile has them (LinkedIn, website, current employer and job title, work authorization, sponsorship, country,
+  willingness to relocate, how they heard of the job, and expected pay only when the form requires it). Greenhouse also receives the fields its
+  own careers page fills in without asking: `country_short_name`, the location with its `latitude` and `longitude` (all three together, worked
+  out from the person's ZIP code), and the most recent job as `employments[0][...]`.
 - **Greenhouse** postings often have required questions of their own. If one cannot be answered from the profile, UAply sends nothing and the person
   finishes on the employer's page (the card says "Saved. Finish applying"), rather than guessing. **Lever** takes the standard fields only; its
   API does not carry a posting's custom questions.

@@ -3,9 +3,13 @@ serves a posting's questions; Lever checks a key in the address and needs a name
   python tools/mock-ats.py 8795
 Greenhouse keys: board 'acme' uses 'gh-secret-key-123'. Lever keys: site 'acme' uses 'lever-key-456'.
 Greenhouse job ids choose the scenario: 1001 only the standard fields, 1002 also a work-authorization question and 'how did you hear', 1003 a required question that
-no profile can answer, 1004 a job that does not exist, 1005 an employer system that returns an error. Lever posting id 'slow' answers 429."""
+no profile can answer, 1004 a job that does not exist, 1005 an employer system that returns an error, 1006 the questions that most often stop an
+application (willing to relocate, expected pay, country) plus Greenhouse's location box (location with its hidden latitude and longitude).
+Like Greenhouse, it also takes country_short_name and one employments[0][...] entry; it refuses a location without its map position, an
+employment entry with a missing part and a country that is not a two-letter code, so a test sees a half-sent field. Lever posting id 'slow' answers 429."""
 import base64
 import email
+import re
 import email.policy
 import json
 import sys
@@ -41,7 +45,42 @@ def questions_for(job_id):
               {"required": False, "label": "Personal website", "fields": [{"name": "question_104", "type": "input_text", "values": []}]}]
     if job_id == "1003":
         q += [{"required": True, "label": "What is your favorite color and why?", "fields": [{"name": "question_200", "type": "textarea", "values": []}]}]
+    if job_id == "1006":
+        q += [{"required": True, "label": "Are you willing to relocate?",
+               "fields": [{"name": "question_300", "type": "multi_value_single_select", "values": [{"label": "Yes", "value": 1}, {"label": "No", "value": 0}]}]},
+              {"required": True, "label": "What are your salary expectations?", "fields": [{"name": "question_301", "type": "input_text", "values": []}]},
+              {"required": True, "label": "Which country do you currently live in?",
+               "fields": [{"name": "question_302", "type": "multi_value_single_select", "values": [{"label": "United States of America", "value": 11}, {"label": "Canada", "value": 12}, {"label": "Other", "value": 13}]}]}]
     return q
+
+
+def location_questions_for(job_id):
+    if job_id != "1006":
+        return []
+    return [{"required": True, "label": "Location", "fields": [{"name": "location", "type": "input_text", "values": []}]},
+            {"required": True, "label": "Latitude", "fields": [{"name": "latitude", "type": "input_hidden", "values": []}]},
+            {"required": True, "label": "Longitude", "fields": [{"name": "longitude", "type": "input_hidden", "values": []}]}]
+
+
+def check_extras(fields):
+    """What Greenhouse's careers page sends without asking, checked the way a test needs: '' when fine, or why it would be refused."""
+    geo = [k for k in ("location", "latitude", "longitude") if k in fields]
+    if geo and len(geo) != 3:
+        return "location, latitude and longitude go together (got %s)" % ", ".join(geo)
+    if "country_short_name" in fields and not re.match(r"^[A-Z]{2}$", fields["country_short_name"]):
+        return "country_short_name must be a two-letter code"
+    emp = {k[len("employments[0]"):]: v for k, v in fields.items() if k.startswith("employments[")}
+    if emp:
+        need = ["[company_name]", "[title]", "[start_date][month]", "[start_date][year]"]
+        ended = "[end_date][month]" in emp and "[end_date][year]" in emp
+        if any(not emp.get(k) for k in need) or not (ended or emp.get("[current]") == "true") or (ended and emp.get("[current]")):
+            return "an employment needs company_name, title, start_date and either end_date or current"
+    return ""
+
+
+def employments(fields):
+    emp = {k[len("employments[0]"):]: v for k, v in fields.items() if k.startswith("employments[0]")}
+    return [emp] if emp else []
 
 
 def parse_multipart(ctype, body):
@@ -75,7 +114,8 @@ class H(http.server.BaseHTTPRequestHandler):
             job_id = parts[4]
             if job_id == "1004":
                 return self._json(404, {"error": "Job not found"})
-            return self._json(200, {"id": int(job_id), "title": "Test job", "questions": questions_for(job_id), "location_questions": [], "compliance": [], "demographic_questions": {}})
+            return self._json(200, {"id": int(job_id), "title": "Test job", "questions": questions_for(job_id), "location_questions": location_questions_for(job_id),
+                                    "compliance": [], "demographic_questions": {}})
         return self._json(404, {"error": "not found"})
 
     def do_POST(self):
@@ -93,7 +133,10 @@ class H(http.server.BaseHTTPRequestHandler):
             fields, files = parse_multipart(ctype, body)
             if not fields.get("first_name") or not fields.get("email"):
                 return self._json(422, {"error": "first_name and email are required"})
-            RECEIVED.append({"system": "greenhouse", "board": parts[2], "job": parts[4], "fields": fields, "files": files})
+            why = check_extras(fields)
+            if why:
+                return self._json(422, {"error": why})
+            RECEIVED.append({"system": "greenhouse", "board": parts[2], "job": parts[4], "fields": fields, "files": files, "employments": employments(fields)})
             return self._json(200, {"success": "Application submitted"})
         if len(parts) == 4 and parts[:2] == ["v0", "postings"]:
             q = urllib.parse.parse_qs(u.query)
