@@ -60,6 +60,10 @@ run "swipe right to apply instantly, end to end" python tools/test-ats-flow.py
 run "paid plans: Stripe checkout, signed webhook, limits" python tools/test-billing.py
 run "autofill: real employers' forms answered from the profile, questions asked once" python tools/test-autofill.py
 run "Hiring mode: company, postings, feed, applicants (sandbox only)" python tools/test-employers.py
+run "job feeds: USAJOBS, City of Philadelphia, keys, feeds_off, via credit" python tools/test-feeds.py 18784
+run "swipe learning: the math, the worked example, the replay test" python tools/test-learn.py
+run "the server as Render runs it: start, stop mid-request, restart on the same disk" python tools/test-render.py 18782
+run "every path from swipe right to inbox, replayed in a browser" python tools/ui-apply-paths.py
 
 step "Accounts, applying, reset and setup (back end)"
 run "sandbox reset/setup/accounts" python tools/test-reset.py 18766
@@ -82,6 +86,8 @@ run "dev: hostile text in every form never runs, and the owner's inbox escapes i
 run "sandbox: the setup page's script runs, and Connect email switches between Brevo and Gmail" env PORT=18766 node tools/cdp.js tools/ui-setup.js
 run "dev on a big iPhone (440x956): every menu item tapped by touch, nothing covers a button, 7 kinds of real swipes" env W=440 H=956 PORT=18767 node tools/cdp.js tools/ui-phone.js
 run "dev on a small iPhone (375x667): the same" env W=375 H=667 PORT=18767 node tools/cdp.js tools/ui-phone.js
+run "sandbox: learns from swipes (remote first, explore card, reset)" env W=390 H=844 PORT=18766 node tools/cdp.js tools/ui-learn.js
+run "sandbox: every card says where the job came from" env W=390 H=844 PORT=18766 node tools/cdp.js tools/ui-via.js
 
 step "Google sign-in (against a stand-in Google)"
 PIDS="$PIDS $(start python tools/mock-google.py 8790)"
