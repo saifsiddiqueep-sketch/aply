@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs every check on this computer with throwaway data and its own servers, then prints one summary.
 #   bash tools/run-all-tests.sh
-# Needs Node, Python 3 and Google Chrome. It never touches your real data/ folder or uaply-config.json secrets
+# Needs Node, Python 3 and Google Chrome or Chromium (found by tools/cdp.js; set UAPLY_CHROME=/path/to/chrome to choose one). It never touches your real data/ folder or uaply-config.json secrets
 # (it ignores uaply-config.json by pointing UAPLY_CONFIG_JSON at its own settings).
 cd "$(dirname "$0")/.." || exit 1
 TMP="${TMPDIR:-/tmp}/uaply-tests-$$"
