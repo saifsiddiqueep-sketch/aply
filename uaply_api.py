@@ -600,6 +600,10 @@ def submit(p, user=None):
     if known.get("emp"):
         contact = known.get("contact") or ""     # a Hiring mode posting: its verified account email, which browsers never receive
     policy = jobs_api.job_policy(job["id"])      # 'direct' (employer opted in), 'link' (employer's own page) or 'unknown' (example)
+    if policy == "unknown" and job["id"] >= 100000:
+        # a real posting (examples have small numbers) that this server no longer lists, for example one that left the employer's board:
+        # nothing can be sent to anyone, so it is a hand-off in test mode too (test mode used to report it as delivered)
+        policy = "link"
     hook = jobs_api.known_webhook(job["id"]) if policy == "direct" else None      # the HTTPS address the employer registered, if any
     ats = jobs_api.known_ats(job["id"]) if policy == "direct" else None           # the employer's own hiring system and key, if they connected
     answers = autofill.clean_answers(p.get("answers"))      # the person's own answers to questions employers' forms asked before
@@ -607,7 +611,8 @@ def submit(p, user=None):
     def dup():
         for a in APPS:
             if a["job"]["id"] == job["id"] and a["candidate"]["email"] == cand["email"] and a["status"] != "failed":
-                return 200, {"status": "duplicate", "id": a["id"], "to": a.get("to", ""), "mode": a["mode"]}
+                # "was" is what happened the first time, so the app can show it again (after an undo, or on another device)
+                return 200, {"status": "duplicate", "id": a["id"], "to": a.get("to", ""), "mode": a["mode"], "was": a["status"]}
         return None
 
     with _lock:
@@ -616,7 +621,9 @@ def submit(p, user=None):
         return seen
     if mode == "live" and policy == "direct":
         # an application sent straight to an employer carries the person's email as the reply address, so that address must be proven theirs
-        if not user or not user.get("emailVerified"):
+        if not user:                                       # nobody is signed in: there is no email to verify yet, so say what to do first
+            return 403, {"error": "Sign in first (Profile, Account) and verify your email, so %s can trust your address." % job["co"], "code": "signin"}
+        if not user.get("emailVerified"):
             return 403, {"error": "Verify your email first (Profile, Account) so the employer can trust your address.", "code": "verify"}
         if cand["email"] != user["email"].lower():
             return 400, {"error": "Use your account email in Profile setup, under About you, so the employer replies to an address you verified."}
@@ -666,10 +673,14 @@ def submit(p, user=None):
             APPS.append(rec)
             _append("applications.jsonl", rec)
         elif mode == "test":
-            rec["to"] = contact or _simulated_recipient(job["co"])
+            # the same channels the live app would use: email only when the employer gave an address (or, for an example listing, has no
+            # other channel), otherwise their hiring system or their webhook. The test inbox and the Applied list then say where it would go.
+            by_mail = bool(contact) or not (hook or ats)
+            rec["to"] = (contact or _simulated_recipient(job["co"])) if by_mail else (
+                "%s hiring system (simulated)" % job["co"] if ats else "%s's own system (simulated)" % job["co"])
             rec["simulated"] = True
             rec["status"] = "delivered_test"
-            rec["channels"] = ["email (simulated)"] + (["webhook (simulated)"] if hook else []) + (["hiring system (simulated)"] if ats else [])
+            rec["channels"] = (["email (simulated)"] if by_mail else []) + (["webhook (simulated)"] if hook else []) + (["hiring system (simulated)"] if ats else [])
             APPS.append(rec)
             _append("applications.jsonl", rec)
         else:
@@ -686,6 +697,8 @@ def submit(p, user=None):
                 send_args = (cfg, target if _smtp_ready(cfg) else "", dict(cand, answers=answers) if ats else cand, job, note, contact,
                              resume_meta, resume_bytes, hook, rec, ats)
             else:
+                if target:                     # an employer who agreed to receive email, but this server cannot send email: tell the owner
+                    sys.stderr.write("[uaply] application %s to %s became a hand-off because no email account is set up (see /setup)\n" % (rec["id"], job["co"]))
                 rec["status"] = "handoff"
                 APPS.append(rec)
                 _append("applications.jsonl", rec)
@@ -701,8 +714,10 @@ def submit(p, user=None):
         out["plan"] = summary
     if rec.get("error"):
         sys.stderr.write("[uaply] delivery of application %s failed: %s\n" % (rec["id"], rec["error"]))      # the real reason stays in the server's own log and applications.jsonl
-        out["error"] = ("The email could not be sent right now. Try again in a moment." if hide_errors
-                        else "The email could not be sent: " + rec["error"])
+        # say "email" only when email was the way it went; an application for a hiring system or a webhook is not an email
+        what = "The email" if all(e.startswith("email:") for e in rec["error"].split("; ")) else "Your application to %s" % job["co"]
+        out["error"] = ("%s could not be sent right now. Try again in a moment." % what if hide_errors
+                        else "%s could not be sent: %s" % (what, rec["error"]))
     if user and rec["status"] in ("delivered_test", "sent", "handoff"):
         # A real confirmation goes only to an address the person has proven is theirs (otherwise anyone could make UAply email a stranger).
         # With no real email connected nothing leaves this server: the confirmation is only saved in the test inbox, so it is made for any account.

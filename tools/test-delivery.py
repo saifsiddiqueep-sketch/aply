@@ -131,6 +131,7 @@ t("channels recorded", uaply_api.APPS[-1]["channels"], ["webhook"])
 reset()
 code, out = apply("Hook Only Co")
 t("the same person applying twice is a duplicate, nothing is sent again", (out["status"], len(Employer.calls)), ("duplicate", 0))
+t("...and the answer says what happened the first time, so the Applied list can show it again", out.get("was"), "sent")
 
 # 3. email and webhook together, with the resume attached to the email
 reset()
@@ -207,7 +208,7 @@ try:
 finally:
     uaply_api.hide_errors = False
 t("on a hosted server a failed send says a plain sentence, with no employer detail", (out["status"], out.get("error"), "HTTP 400" in out.get("error", "")),
-  ("failed", "The email could not be sent right now. Try again in a moment.", False))
+  ("failed", "Your application to Hook Only Co could not be sent right now. Try again in a moment.", False))
 with open(os.path.join(uaply_api.DATA, "applications.jsonl"), encoding="utf-8") as f:
     last = [json.loads(x) for x in f if x.strip()][-1]
 t("the real reason is still kept in the owner's own record", "HTTP 400" in last.get("error", ""), True)
@@ -241,7 +242,16 @@ t("a test redirect never calls the employer's webhook", (len(Employer.calls), ou
 reset()
 code, out = apply("Hook Only Co", email_addr="testmode@example.com", delivery="test")
 cfg["delivery"] = "live"
-t("test mode simulates both channels and calls nothing", (out["status"], len(Employer.calls), uaply_api.APPS[-1]["channels"]), ("delivered_test", 0, ["email (simulated)", "webhook (simulated)"]))
+# Hook Only Co gave no email address, so the live app would only call its webhook: test mode must say the same (it used to claim an email to a made-up address)
+t("test mode simulates exactly the channels the live app would use and calls nothing", (out["status"], len(Employer.calls), uaply_api.APPS[-1]["channels"], out["to"]),
+  ("delivered_test", 0, ["webhook (simulated)"], "Hook Only Co's own system (simulated)"))
+code, out = apply("Both Co", email_addr="testmode@example.com", delivery="test")
+cfg["delivery"] = "live"
+t("test mode, an employer with email and a webhook: both simulated, to its real address", (out["status"], uaply_api.APPS[-1]["channels"], out["to"]),
+  ("delivered_test", ["email (simulated)", "webhook (simulated)"], "jobs@both.example"))
+code, out = apply("Email Only Co", email_addr="testmode@example.com", delivery="test")
+cfg["delivery"] = "live"
+t("test mode, an employer that takes email: email simulated", (out["status"], uaply_api.APPS[-1]["channels"], out["to"]), ("delivered_test", ["email (simulated)"], "hr@emailonly.example"))
 
 # 9. resumes that are not real are refused
 reset()
@@ -260,7 +270,7 @@ base_payload = {"consent": True, "confirm_real": True, "job": {"id": jh["id"], "
 code, out = uaply_api.submit(base_payload, {"id": 7, "email": "pat@example.com", "emailVerified": False})
 t("an unverified account cannot send directly to an employer", (code, out.get("code"), len(Employer.calls)), (403, "verify", 0))
 code, out = uaply_api.submit(base_payload, None)
-t("no account at all cannot send directly either", (code, out.get("code"), len(Employer.calls)), (403, "verify", 0))
+t("no account at all cannot send directly either, and is told to sign in first", (code, out.get("code"), len(Employer.calls), out.get("error", "").startswith("Sign in first")), (403, "signin", 0, True))
 code, out = uaply_api.submit(base_payload, {"id": 7, "email": "someone.else@example.com", "emailVerified": True})
 t("a verified account must use its own email on the application", (code, len(Employer.calls)), (400, 0))
 code, out = uaply_api.submit(base_payload, {"id": 7, "email": "Pat@Example.com", "emailVerified": True})
@@ -277,6 +287,18 @@ payload = {"consent": True, "confirm_real": True, "job": {"id": fid, "co": "Feed
 code, out = uaply_api.submit(payload, None)
 time.sleep(0.5)
 t("a feed job (employer never opted in) is a hand-off: nothing is emailed or posted", (out["status"], len(Employer.calls), len([x for x in open(mail_file) if x.strip()])), ("handoff", 0, 0))
+
+# 11. a real posting that this server no longer lists (it left the employer's board): a hand-off in both modes, never "delivered"
+gone = {"consent": True, "confirm_real": True, "job": {"id": 4242424, "co": "Vanished Co", "role": "Gone Intern", "url": "https://boards.greenhouse.io/vanished/jobs/1"},
+        "profile": {"name": "Sam Rivera", "email": "gone@example.com"}}
+for mode in ("live", "test"):
+    cfg["delivery"] = mode
+    code, out = uaply_api.submit(dict(gone, profile=dict(gone["profile"], email="gone-%s@example.com" % mode)), None)
+    t("%s mode: a posting no longer listed is a hand-off, sent to no one" % mode, (out["status"], out["to"]), ("handoff", ""))
+cfg["delivery"] = "live"
+code, out = uaply_api.submit({"consent": True, "job": {"id": 7, "co": "Example Co", "role": "Example", "url": "https://example.com/x"},
+                              "profile": {"name": "Sam Rivera", "email": "example@example.com"}}, None)
+t("an example listing (small number) in live mode is still only a hand-off", out["status"], "handoff")
 
 proc.terminate()
 srv.shutdown()

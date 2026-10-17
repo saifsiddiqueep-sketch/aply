@@ -85,6 +85,13 @@ try:
     t("the policy for each", (jobs_api.job_policy(feed["id"]), jobs_api.job_policy(other["id"])), ("direct", "link"))
     t("the key is held only by the server", (jobs_api.known_ats(feed["id"])["key"], jobs_api.known_ats(other["id"])), ("lever-key-456", None))
 
+    # test mode says where the live app would send it: into the hiring system, not to a made-up email address (Acme gave no address)
+    cfg["delivery"] = "test"
+    code, out = apply_to(job_by("Support Engineer"), email="testmode@example.com")
+    cfg["delivery"] = "live"
+    t("test mode: a connected hiring system is simulated as the hiring system, not as an email", (out["status"], out["to"], uaply_api.APPS[-1]["channels"]),
+      ("delivered_test", "Acme Robotics hiring system (simulated)", ["hiring system (simulated)"]))
+
     # a partner job: swipe right sends into their Greenhouse
     before = len(received())
     code, out = apply_to(job_by("Robotics Intern"))
@@ -135,7 +142,7 @@ try:
     code, out = apply_to(job_by("Support Engineer"), email="fail@example.com")
     uaply_api.hide_errors = False
     t("a refused key is reported as failed, with a plain sentence and no key or employer detail", (out["status"], out.get("error"), "wrong-key" in json.dumps(out)),
-      ("failed", "The email could not be sent right now. Try again in a moment.", False))
+      ("failed", "Your application to Acme Robotics could not be sent right now. Try again in a moment.", False))
 finally:
     mock.terminate()
 
