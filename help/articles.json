@@ -34,14 +34,14 @@
    "title": "What are target titles?",
    "tags": "title titles job title role position target sales hide coding wrong jobs",
    "body": "Target titles are the job names you want, up to five (for example Account Executive, Inside Sales Representative, Closer). Add them in Profile setup, under Jobs you want. Jobs whose role name matches score higher, and jobs that don't match are hidden so you only see roles you would accept. Common equivalents count, like developer and engineer. To see everything, turn off 'Hide roles that do not match my target titles' in Profile, Filters.",
-   "go": "prof:settings"
+   "go": "prof:jobs"
   },
   {
    "id": "skills",
    "title": "Adding skills",
    "tags": "skills skill add typo spelling limit maximum suggestions",
    "body": "In Profile setup, under Jobs you want, start typing a skill and pick it from the suggestion list to avoid typos. UAply also warns you about likely misspellings. You can add up to 25 skills. A skill your headline, About you or major already mentions counts too.",
-   "go": "prof:settings"
+   "go": "prof:jobs"
   },
   {
    "id": "no-jobs",
@@ -65,8 +65,9 @@
    "title": "Where is the distance filter?",
    "tags": "distance miles radius near me close commute location city 10 20 50",
    "body": "Open Profile, then Filters, and drag the Commute distance slider. Far left shows remote jobs only, and far right shows every job. In between you choose how many miles from you in-person jobs can be, from 5 to 100. UAply measures from your device location if you tapped Use my location, otherwise from your city or ZIP code.",
-   "go": "prof:preferences",
+   "go": "prof:filters",
    "release": {
+    "go": "prof:where",
     "body": "Distance is in Profile setup, under Where and pay, and it only appears when you tick Hybrid or On-site under work style, because remote jobs don't need it. Choose 10, 20, 50 or 100 miles from where you live. UAply finds that from your city and state, or from your ZIP code if it doesn't know the city. Distance works for most larger US cities."
    }
   },
@@ -82,7 +83,7 @@
    "title": "Adding my resume",
    "tags": "resume cv upload file pdf word link document",
    "body": "Open Profile, then Profile setup, step 4 (Background and links). Upload your resume file (PDF, Word or text, up to 1 MB), or add a link to it, such as a Google Drive link anyone can open. The file stays on your device, so add the link too if you want employers to be able to open your resume.",
-   "go": "prof:preferences"
+   "go": "prof:back"
   },
   {
    "id": "dashboard",
@@ -117,21 +118,21 @@
    "title": "Voluntary questions (race, gender, veteran, disability)",
    "tags": "voluntary eeo race ethnicity gender veteran disability hispanic self identification demographic why",
    "body": "Many employers ask these on their forms, so UAply lets you record your answers once in Profile setup, in the optional section on the last step. Every question is optional and has Prefer not to say. Your answers stay on your device, are never used to score or filter jobs, and are never sent automatically. They only leave your device if you tap Copy my answers and paste them yourself.",
-   "go": "prof:settings"
+   "go": "prof:final"
   },
   {
    "id": "work-authorization",
    "title": "Work authorization and sponsorship",
    "tags": "work authorization visa sponsorship citizen green card opt h1b permit",
    "body": "You can record whether you are authorized to work in the US and whether you will need visa sponsorship. These are optional, are used only to fill in applications, and never affect your match. UAply can't give immigration advice; for that, talk to an immigration attorney.",
-   "go": "prof:settings"
+   "go": "prof:final"
   },
   {
    "id": "message-manager",
    "title": "Messaging the hiring manager",
    "tags": "message hiring manager recruiter note cover letter personalized plus pro",
    "body": "On Plus and Pro, you can turn on 'Message the hiring manager' in Profile setup, on the last step. It adds a short message, filled in from your profile and the job, to each application. It is off until you turn it on, and it only goes to employers that accept applications through UAply.",
-   "go": "prof:preferences",
+   "go": "prof:final",
    "release": {
     "body": "In Profile setup, on the last step, you can turn on 'Message the hiring manager'. It adds a short message, filled in from your profile and the job, to each application. It is off until you turn it on, and it only goes to employers that accept applications through UAply."
    }
