@@ -275,7 +275,8 @@ class H(http.server.SimpleHTTPRequestHandler):
         if not api or p not in ("/api/apply", "/api/decision", "/api/auth/signup", "/api/auth/login", "/api/auth/logout",
                                 "/api/auth/delete", "/api/auth/forgot", "/api/auth/reset", "/api/auth/change-password",
                                 "/api/setup/test-mail", "/api/setup/save-mail", "/api/setup/save-google", "/api/setup/save-ats", "/api/setup/remove-ats", "/api/setup/save-stripe", "/api/auth/google/token", "/api/auth/verify", "/api/auth/resend", "/api/chat", "/api/feedback", "/api/billing/checkout", "/api/billing/portal",
-                                "/api/employer/company", "/api/employer/job", "/api/employer/job/status", "/api/employer/applicant"):
+                                "/api/employer/company", "/api/employer/job", "/api/employer/job/status", "/api/employer/applicant",
+                                "/api/employer/import"):
             return self._refuse(404, {"error": "not found"})
         # Only accept requests made by this site's own pages (blocks cross-site forms and scripts).
         origin = self.headers.get("Origin")
@@ -415,6 +416,8 @@ class H(http.server.SimpleHTTPRequestHandler):
                 code, out = employers_api.set_status(auth_api.user_for(self._token()), payload)
             elif p == "/api/employer/applicant":
                 code, out = employers_api.set_stage(auth_api.user_for(self._token()), payload)
+            elif p == "/api/employer/import":
+                code, out = employers_api.import_page(auth_api.user_for(self._token()), payload.get("url"))
             else:
                 code, out = uaply_api.record_decision(payload)
         except Exception as e:
