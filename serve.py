@@ -26,9 +26,13 @@ Serves ROOT; each urlpath=file alias maps one URL to a file outside ROOT (e.g. /
   GET  /feedback          the feedback summary page (this server only listens on this computer)
   GET  /help/articles.json  the help articles the assistant answers from
 Accounts use an HttpOnly session cookie. When a signed-in user swipes right, a receipt goes to their email."""
-import sys, os, json, http.server, base64, hmac, threading, time
+import sys, os, json, http.server, base64, hmac, threading, time, signal
 
-port = int(sys.argv[1])
+try:
+    port = int(sys.argv[1])
+except (IndexError, ValueError):            # e.g. a host's start command whose $PORT came out empty
+    sys.exit("[uaply] usage: python serve.py PORT ROOT [--api]. PORT must be a number (got %r). On Render the start command is "
+             "python serve.py ${PORT:-10000} dev --api" % (sys.argv[1] if len(sys.argv) > 1 else ""))
 # Locally the server only listens on this computer. A host sets HOST=0.0.0.0 so the public can reach it (always behind HTTPS).
 BIND = os.environ.get("HOST", "127.0.0.1")
 PUBLIC = BIND not in ("127.0.0.1", "localhost", "::1")
@@ -46,7 +50,36 @@ for a in rest:
     alias[u] = os.path.abspath(f)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def data_folder():
+    """Where accounts, applications, feedback and the job cache are kept (UAPLY_DATA_DIR on a host, ./data here). It must be writable: without it
+    nobody can sign up, so the server stops at once with a plain reason in the log instead of a traceback (on Render: the disk is not attached).
+    Returns (folder, persistent) where persistent is False when Render runs this without a separate disk at that folder, None when unknown."""
+    d = os.path.abspath(os.environ.get("UAPLY_DATA_DIR") or os.path.join(HERE, "data"))
+    try:
+        os.makedirs(d, exist_ok=True)
+        probe = os.path.join(d, ".write-check-%d" % os.getpid())
+        with open(probe, "w") as f:
+            f.write("ok")
+        os.remove(probe)
+    except OSError as e:
+        sys.exit("[uaply] cannot write the data folder %s (%s: %s). Accounts and applications are kept there. On Render: open the service, "
+                 "Disks, and check a disk is attached with the same mount path as UAPLY_DATA_DIR." % (d, type(e).__name__, e))
+    # Render sets RENDER=true. Its persistent disk is a separate file system mounted at the folder (or a folder above it); anything else is
+    # wiped at every deploy.
+    if not os.environ.get("RENDER"):
+        return d, None
+    p = d
+    while os.path.dirname(p) != p:
+        if os.path.ismount(p):
+            return d, True
+        p = os.path.dirname(p)
+    return d, False
+
+
 if api:
+    DATA_DIR, PERSISTENT = data_folder()
     # the sandbox and dev pages load these shared files and a copy of the production page; no command-line aliases needed
     for url, rel in (("/uaply-envs.js", "shared/uaply-envs.js"), ("/uaply-nav.js", "shared/uaply-nav.js"),
                      ("/uaply-live.js", "shared/uaply-live.js"), ("/uaply-profile.js", "shared/uaply-profile.js"),
@@ -101,8 +134,21 @@ class H(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **k):
         super().__init__(*a, directory=root, **k)
 
+    def handle_one_request(self):
+        """Count the requests being answered, so a stop (a deploy) can let them finish first. An idle kept-open connection is not counted."""
+        self._counted = False
+        try:
+            super().handle_one_request()
+        finally:
+            if self._counted:
+                with _busy_lock:
+                    _busy[0] -= 1
+
     def parse_request(self):
         """A null byte in the address (raw or as %00) is never valid: answer 400 instead of letting the file lookup fail and drop the connection."""
+        with _busy_lock:                                     # a request line arrived: from here on this request is "in progress"
+            _busy[0] += 1
+        self._counted = True
         if not super().parse_request():
             return False
         if "\x00" in self.path or "%00" in self.path.lower():
@@ -441,4 +487,51 @@ class H(http.server.SimpleHTTPRequestHandler):
 class Server(http.server.ThreadingHTTPServer):
     request_queue_size = 128         # Python's default of 5 refuses connections outright when a burst of visitors arrives at once
 
-Server((BIND, port), H).serve_forever()
+
+def startup_summary():
+    """One line in the host's log saying what this server will do: where records go and which features are on. Never a secret, only on/off."""
+    if not api:
+        return "[uaply] serving %s on %s:%d" % (root, BIND, port)
+    try:
+        json.loads(os.environ.get("UAPLY_CONFIG_JSON") or "{}")
+        cfg_note = "valid" if os.environ.get("UAPLY_CONFIG_JSON") else "not set"
+    except ValueError:
+        cfg_note = "NOT VALID JSON, ignored"
+    bill = billing_api.settings()
+    disk = {True: "persistent disk", False: "NOT a persistent disk: everything is lost at the next deploy", None: "local folder"}[PERSISTENT]
+    return ("[uaply] %s on %s:%d (%s) | data: %s (%s) | feeds: %s | email: %s | owner pages: %s | AI answers: %s | payments: %s | UAPLY_CONFIG_JSON: %s"
+            % (os.path.basename(root), BIND, port, "public" if PUBLIC else "this computer only", DATA_DIR, disk,
+               ",".join(sorted(jobs_api.feeds_allowed())) or "off", "on" if uaply_api.mail_ready() else "off (test inbox only)",
+               ("on" if OWNER_PASSWORD else "off (no OWNER_PASSWORD)") if PUBLIC else "on", "on" if chat_api.ai_ready() else "off",
+               ("on, %s mode" % ("test" if bill["test"] else "LIVE")) if bill["on"] else "off", cfg_note))
+
+
+_busy, _busy_lock = [0], threading.Lock()
+srv = Server((BIND, port), H)
+
+
+def _stop(signum, frame):
+    """A host stops the server with SIGTERM at every deploy (Render then waits 30 seconds before forcing it). Stop taking new requests, let the
+    ones in progress finish (a swipe that is sending an email, a sign-up), then exit normally."""
+    sys.stderr.write("[uaply] stopping (signal %d): finishing %d request(s) in progress\n" % (signum, _busy[0]))
+    sys.stderr.flush()
+    threading.Thread(target=srv.shutdown, daemon=True).start()     # shutdown() waits for serve_forever, so it cannot run on this thread
+
+
+for _sig in ("SIGTERM", "SIGBREAK"):          # SIGBREAK: Ctrl+Break on Windows, the same stop on the owner's own computer
+    if hasattr(signal, _sig):
+        signal.signal(getattr(signal, _sig), _stop)
+
+sys.stderr.write(startup_summary() + "\n")
+if PUBLIC and api and PERSISTENT is False:
+    sys.stderr.write("[uaply] WARNING: %s is not on a persistent disk. Accounts, applications and feedback will disappear at the next deploy. "
+                     "In Render: the service, Disks, add a disk with mount path %s.\n" % (DATA_DIR, DATA_DIR))
+sys.stderr.flush()
+srv.serve_forever()
+time.sleep(0.2)                               # a connection accepted just before the stop gets to read its request line
+_until = time.time() + 20                    # well inside Render's 30 seconds before it forces the stop
+while _busy[0] > 0 and time.time() < _until:
+    time.sleep(0.05)
+srv.server_close()
+sys.stderr.write("[uaply] stopped%s\n" % ("" if _busy[0] <= 0 else " (%d request(s) did not finish in time)" % _busy[0]))
+sys.stderr.flush()

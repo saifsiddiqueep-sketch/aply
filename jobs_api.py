@@ -346,6 +346,13 @@ def _fetch_raw(kind, token, name):
     return out
 
 
+def _type(raw):
+    """internship, coop, parttime or job, from the title (and the start of the text for part-time). Cheap, so it is known before the costly part."""
+    t = raw["title"].lower()
+    return raw.get("force_type") or ("internship" if re.search(r"\bintern(ship)?\b", t) else ("coop" if re.search(r"co-?op\b", t) else
+                                     ("parttime" if re.search(r"part[- ]time", t + " " + raw["text"][:400], re.I) else "job")))
+
+
 def _normalize(raw, kind, name, board=None):
     title, loc, text = raw["title"], raw["loc"], raw["text"]
     remote = raw["remote"] if raw["remote"] is not None else bool(re.search(r"\bremote\b", loc, re.I))
@@ -372,9 +379,7 @@ def _normalize(raw, kind, name, board=None):
     else:
         return None
     mode = "remote" if remote else ("hybrid" if re.search(r"hybrid", loc + " " + text[:600], re.I) else "onsite")
-    t = title.lower()
-    typ = raw.get("force_type") or ("internship" if re.search(r"\bintern(ship)?\b", t) else ("coop" if re.search(r"co-?op\b", t) else
-                                    ("parttime" if re.search(r"part[- ]time", t + " " + text[:400], re.I) else "job")))
+    typ = _type(raw)
     m = YRS_RE.search(text)
     yrs = min(int(m.group(1)), 15) if m else 0
     edu = "Bachelor" if re.search(r"bachelor|\bB\.?S\.? degree", text, re.I) else "High school"
@@ -458,6 +463,11 @@ def _fetch_source(src):
     try:
         student, other = [], []
         for raw in _fetch_raw(kind, token, name):
+            # only the first STUDENT_PER_SOURCE student roles and PER_SOURCE others can be kept below, so a posting past those is not worked
+            # through at all (a big board lists hundreds; reading every one cost about 35 CPU seconds, a minute or more on a small host)
+            bucket, cap = (other, PER_SOURCE) if _type(raw) == "job" else (student, STUDENT_PER_SOURCE)
+            if len(bucket) >= cap:
+                continue
             j = _normalize(raw, kind, name, token)
             if j:
                 (student if j["type"] in ("internship", "coop", "parttime") else other).append(j)
