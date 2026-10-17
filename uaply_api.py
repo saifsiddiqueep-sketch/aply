@@ -401,20 +401,22 @@ def _owner_copy(cfg):
     return r.strip() if isinstance(r, str) and EMAIL_RE.match(r.strip()) else ""
 
 
-def _site_base(cfg):
-    """The public address of this site for links in emails ('' when it only runs on this computer)."""
+def _site_base(cfg, site=""):
+    """The public address of this site for links in emails ('' when it only runs on this computer). The configured public_url wins;
+    otherwise the address the person is using (serve.py passes it), so a host such as Render gets its link without extra settings.
+    Only an https address is ever put in an email."""
     g = cfg.get("google") if isinstance(cfg.get("google"), dict) else {}
-    for v in (cfg.get("public_url"), g.get("public_url")):
-        if isinstance(v, str) and v.startswith("https://"):
+    for v in (cfg.get("public_url"), g.get("public_url"), site):
+        if isinstance(v, str) and v.startswith("https://") and " " not in v:
             return v.rstrip("/")
     return ""
 
 
-def _mail_ctx(cfg, rec, note, user_email=""):
+def _mail_ctx(cfg, rec, note, user_email="", site=""):
     """Everything emails.py needs to write the receipt or the owner copy of one application."""
     return {"test": rec["mode"] != "live", "status": rec["status"], "cand": rec["candidate"], "job": rec["job"], "at": rec["at"],
             "match": rec.get("match", 0), "to": rec.get("to", ""), "rows": _detail_rows(rec["candidate"], note), "note": note,
-            "channels": rec.get("channels") or [], "user_email": user_email, "base_url": _site_base(cfg), "support_email": _s(cfg.get("support_email"), 120),
+            "channels": rec.get("channels") or [], "user_email": user_email, "base_url": _site_base(cfg, site), "support_email": _s(cfg.get("support_email"), 120),
             "preview": rec.get("preview") is True}
 
 
@@ -543,10 +545,10 @@ def mail_ready():
     return _smtp_ready(config())
 
 
-def _receipt(cfg, user, cand, job, note, rec):
+def _receipt(cfg, user, cand, job, note, rec, site=""):
     """Email the signed-in applicant a copy of what happened. Never raises: a receipt problem must not undo an application."""
     to = user["email"]
-    subject, body, page = emails.applicant_receipt(_mail_ctx(cfg, rec, note, user["email"]))
+    subject, body, page = emails.applicant_receipt(_mail_ctx(cfg, rec, note, user["email"], site))
     status = "delivered_test"
     if _smtp_ready(cfg):                      # the receipt goes only to the applicant's own address, so it is safe to send in test mode too
         try:
@@ -563,8 +565,9 @@ def _receipt(cfg, user, cand, job, note, rec):
     return {"to": to, "status": status}
 
 
-def submit(p, user=None):
-    """Returns (http_status, dict). `user` is the signed-in account ({id, email}) or None."""
+def submit(p, user=None, site=""):
+    """Returns (http_status, dict). `user` is the signed-in account ({id, email}) or None. `site` is the address the person is using
+    (for the link in their receipt)."""
     err = _validate(p)
     if err:
         return 400, {"error": err}
@@ -726,7 +729,7 @@ def submit(p, user=None):
     if user and rec["status"] in ("delivered_test", "sent", "handoff"):
         # A real confirmation goes only to an address the person has proven is theirs (otherwise anyone could make UAply email a stranger).
         # With no real email connected nothing leaves this server: the confirmation is only saved in the test inbox, so it is made for any account.
-        out["receipt"] = (_receipt(cfg, user, cand, job, note, rec) if user.get("emailVerified") or not _smtp_ready(cfg)
+        out["receipt"] = (_receipt(cfg, user, cand, job, note, rec, site) if user.get("emailVerified") or not _smtp_ready(cfg)
                           else {"to": user["email"], "status": "unverified"})
     # the owner's copy: skipped when the person who swiped already got their own confirmation at that same address (one swipe, one email)
     already = out.get("receipt", {}).get("status") == "sent" and user and user["email"].lower() == _owner_copy(cfg).lower()
