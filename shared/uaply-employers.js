@@ -311,6 +311,10 @@ var CSS=[
 "#hub .chipok,#hub .f.filled>label:first-child::after,#hub .f.filled>.l::after{display:inline-block;margin-left:8px;font:600 10.5px var(--mono);padding:2px 7px;border-radius:99px;background:var(--yes-bg);color:var(--yes);vertical-align:middle}#hub .f.filled>label:first-child::after,#hub .f.filled>.l::after{content:'From your post'}",
 "#hub .f.filled{border-left:3px solid var(--yes);padding-left:9px}",
 "#hub .optn{display:inline-block;margin-bottom:6px;font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}",
+"#hub .psteps{display:flex;gap:6px;list-style:none;margin:0;padding:0}#hub .psteps li{flex:1;min-width:0}#hub .psteps button{width:100%;min-height:44px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--muted);font-weight:600;font-size:13.5px;cursor:pointer;padding:6px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#hub .psteps button.done{background:var(--yes-bg);color:var(--ink);border-color:transparent}#hub .psteps button[aria-current=step]{background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--accent-ink);border-color:transparent}#hub .psteps button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}",
+"#hub .pbar.pnav{position:static;backdrop-filter:none;background:var(--surface)}#hub .pbar.pnav .acts{display:flex;gap:8px;flex-wrap:wrap}",
+"#hub .prev{display:flex;flex-direction:column;gap:12px}#hub .prev ul{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}#hub .prev li{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 12px;border-radius:12px;border:1px solid var(--line)}#hub .prev .ready{padding:12px 14px;border-radius:12px;background:var(--yes-bg);font-weight:600}#hub .prev dl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 14px;margin:0}#hub .prev dt{color:var(--muted)}#hub .prev dd{margin:0;overflow-wrap:anywhere}",
+"@media (max-width:560px){#hub .psteps button{font-size:12px;padding:6px 4px}}",
 "#hub .orline{display:flex;align-items:center;gap:12px;color:var(--muted);font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase}#hub .orline::before,#hub .orline::after{content:'';flex:1;height:1px;background:var(--line)}",
 "#hub .h-banner{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 16px;border-radius:14px;background:var(--mid-bg);color:var(--mid);font-weight:600;font-size:14px}",
 "@media (max-width:1100px){#hub .pform{grid-template-columns:minmax(0,1fr)}#hub .pside{position:static;order:-1}}",
@@ -582,17 +586,63 @@ function apply(w,host){
         '<small>Works with your careers page, Greenhouse, Lever, Ashby, SmartRecruiters, Workday and most job sites. LinkedIn, Indeed, ZipRecruiter, Glassdoor and Handshake don\'t let other sites read their pages: use Paste the job text for those.</small></div>'+
       '<div id="impTextWrap"'+(t==="text"?"":" hidden")+' class="f"><label for="impText">Job text</label><textarea id="impText" rows="9" maxlength="30000" placeholder="Open your job post, select all of it (title, location, pay, description, requirements, benefits), copy, and paste it here.">'+esc(H.impText||"")+'</textarea><div><button type="button" class="btn" data-act="impText">Fill it in for me</button></div></div>'+
       '<p class="msg" id="impMsg" role="status" aria-live="polite"></p></div>'+
-      '<div class="orline" id="manualStart"><span>Option 2 · or fill it in yourself below</span></div>';
+      '<div class="orline" id="manualStart"><span>or</span></div><div><button type="button" class="btn ghost" data-act="manual">Skip this and fill it in myself</button></div>';
+  }
+  /* Post a job in four named steps. Every field stays in one form, so moving between steps never loses what was typed. */
+  var STEP_NAME={1:"Import",2:"The role",3:"Pay and rules",4:"Review"};
+  function postSteps(editing){return editing?[2,3,4]:[1,2,3,4]}
+  function fieldEl(field){
+    var map={role:"jRole",mode:"jMode",city:"jCity",sal_min:"jSalMin",skills:"jSkills",blurb:"jBlurb",gpa:"jGpa",grad_to:"jGradTo",url:"jUrl"};
+    var id=map[field]||field;return hub.querySelector("#"+id)||hub.querySelector('input[name="'+id+'"]');
+  }
+  function needList(p){
+    var n=[];
+    if(p.role.length<2)n.push(["Job title",2,"jRole"]);
+    if(!p.mode)n.push(["Work style",2,"jMode"]);
+    if(p.mode&&p.mode!=="remote"&&!(p.city&&p.region))n.push(["City and "+(p.country==="CA"?"province":"state"),2,p.city?"jRegion":"jCity"]);
+    if(p.blurb.length<20)n.push(["One-line summary for the card (20 characters or more)",2,"jBlurb"]);
+    if(!(p.sal_min>0)||!(p.sal_max>0)||p.sal_max<p.sal_min)n.push(["Yearly pay range",3,"jSalMin"]);
+    if(!p.skills.length)n.push(["At least one skill",3,"jSkills"]);
+    if(!n.length){var c=checkJob(p);if(c){var el=fieldEl(c[1]),st=el&&el.closest("[data-st]");n.push([c[0],st?+st.getAttribute("data-st"):2,el?(el.id||el.name):""])}}
+    return n;
+  }
+  function reviewHTML(){
+    var p=readPost(),n=needList(p),c=H.company||{};
+    var where=p.mode==="remote"?"Remote ("+(p.country==="CA"?"Canada":"US")+")":[p.city,p.region].filter(Boolean).join(", ")||"Not set";
+    var md=MODES.filter(function(m){return m[0]===p.mode})[0];
+    var rows=[["Job",p.role||"Not set"],["Company",c.name||""],["Work style",md?md[1]:"Not set"],["Where",where],
+      ["Pay",p.sal_max>0?money(p.sal_min)+" to "+money(p.sal_max)+" a year":"Not set"],["Skills",p.skills.join(", ")||"Not set"],["Benefits",p.perks.length?p.perks.length+" ticked":"None ticked"],["Hiring team",p.manager.name||"Not added"]];
+    return '<div><h2>Review</h2><p class="note">Check the job, then publish. You can edit, pause or close it any time.</p></div>'+
+      (n.length?'<div><b>Still needed before you publish</b><ul>'+n.map(function(x){return '<li><span>'+esc(x[0])+'</span><button type="button" class="btn ghost sm" data-act="fix" data-s="'+x[1]+'" data-f="'+esc(x[2])+'">Fix in '+STEP_NAME[x[1]]+'</button></li>'}).join("")+'</ul></div>':'<div class="ready" role="status">✓ Everything needed is filled in. Ready to publish.</div>')+
+      '<dl>'+rows.map(function(r){return '<dt>'+r[0]+'</dt><dd>'+esc(r[1])+'</dd>'}).join("")+'</dl>';
+  }
+  function goStep(s,focusId){
+    var f=hub.querySelector("#pForm");if(!f)return;
+    var editing=!!(H.edit&&H.edit.id),ST=postSteps(editing);if(ST.indexOf(s)<0)s=ST[0];
+    if(s===1){H.edit=null;H.filled=null;H.manual=false;H.step=1;render();return}       /* back to Import: start over from a link or text */
+    H.step=s;f.hidden=false;
+    [].slice.call(f.querySelectorAll("[data-st]")).forEach(function(x){x.hidden=+x.getAttribute("data-st")!==s});
+    if(s===4)f.querySelector("#pReview").innerHTML=reviewHTML();
+    [].slice.call(hub.querySelectorAll(".psteps button")).forEach(function(b){var k=+b.getAttribute("data-s");if(k===s)b.setAttribute("aria-current","step");else b.removeAttribute("aria-current");b.classList.toggle("done",k<s);b.textContent=(k<s?"✓ ":(ST.indexOf(k)+1)+" ")+STEP_NAME[k]});
+    var i=ST.indexOf(s);
+    f.querySelector("#pStepN").innerHTML="Step "+(i+1)+" of "+ST.length+' <small class="note">· price to post: TBD, no card needed</small>';
+    f.querySelector("#pBack").hidden=i===0;
+    var nx=f.querySelector("#pNext");nx.hidden=s===4;if(s<4)nx.textContent="Next: "+STEP_NAME[ST[i+1]];
+    f.querySelector("#jSubmit").hidden=s!==4;
+    var top=hub.querySelector(".psteps");if(top&&top.scrollIntoView)top.scrollIntoView({block:"start"});
+    if(focusId){var el=hub.querySelector("#"+focusId)||hub.querySelector('input[name="'+focusId+'"]');if(el){try{el.focus()}catch(x){}}}
   }
   function postView(){
     var j=H.edit||blankJob(),editing=!!(H.edit&&H.edit.id);
     var yrs=[[0,"No minimum"]];for(var i=1;i<=15;i++)yrs.push([i,i+"+ years"]);
     var gpa=j.gpa?(+j.gpa).toFixed(2):"";
     var got=H.filled||{},n=Object.keys(got).length,need=[["mode","work style"],["city","city and state (the post names no US or Canada location)"],["sal","pay range"],["skills","skills"],["blurb","one-line summary"]].filter(function(x){return !got[x[0]]&&!(x[0]==="city"&&j.mode==="remote")}).map(function(x){return x[1]});
+    var ST=postSteps(editing),cur=H.step&&ST.indexOf(H.step)>-1?H.step:ST[0];H.step=cur;
     return '<div><h1>'+(editing?"Edit job":"Post a job")+'</h1><p class="lead">'+(editing?'One page. Each section is matched to what job seekers fill in, so the right people see your job and their match score is fair.':'Bring in a job you already posted, or fill it in yourself. Each section is matched to what job seekers fill in.')+'</p></div>'+
-    (editing?'':H.filled?'<div class="impok" role="status"><div><b>✓ Filled '+n+' field'+(n===1?"":"s")+' from '+esc(H.impFrom||"your post")+'.</b> Fields marked <span class="chipok">From your post</span> came from it. Check them, then fill in the rest.'+(need.length?' <b>Still needed:</b> '+esc(need.join(", "))+'.':'')+'</div><button type="button" class="btn ghost sm" data-act="reimport">Use a different link</button></div>':importBox())+
-    '<form id="pForm" class="pform" novalidate><div style="display:flex;flex-direction:column;gap:16px;min-width:0">'+
-    '<fieldset><legend>The role</legend><p class="match">Matched to the job seeker\'s <b>target titles</b>, <b>opportunity types</b>, <b>work style</b>, <b>city and commute distance</b> and <b>willingness to relocate</b>.</p>'+
+    '<ol class="psteps" aria-label="Steps">'+ST.map(function(s){return '<li><button type="button" data-act="step" data-s="'+s+'"'+(s===cur?' aria-current="step"':'')+(s<cur?' class="done"':'')+'>'+(s<cur?'✓ ':(ST.indexOf(s)+1)+' ')+STEP_NAME[s]+'</button></li>'}).join("")+'</ol>'+
+    (editing?'':H.filled?'<div class="impok" role="status"><div><b>✓ Filled '+n+' field'+(n===1?"":"s")+' from '+esc(H.impFrom||"your post")+'.</b> Fields marked <span class="chipok">From your post</span> came from it. Check them, then fill in the rest.'+(need.length?' <b>Still needed:</b> '+esc(need.join(", "))+'.':'')+'</div><button type="button" class="btn ghost sm" data-act="reimport">Use a different link</button></div>':cur===1?importBox():'')+
+    '<form id="pForm" class="pform" novalidate'+(cur===1?' hidden':'')+'><div style="display:flex;flex-direction:column;gap:16px;min-width:0">'+
+    '<fieldset data-st="2"><legend>The role</legend><p class="match">Matched to the job seeker\'s <b>target titles</b>, <b>opportunity types</b>, <b>work style</b>, <b>city and commute distance</b> and <b>willingness to relocate</b>.</p>'+
       F("jRole","Job title",'<input type="text" id="jRole" maxlength="120" value="'+esc(j.role)+'" placeholder="Marketing Coordinator">',{req:1,full:1})+
       F("jType","Job type",radios("jType",TYPES,j.type),{req:1,full:1,group:1})+
       F("jMode","Work style",radios("jMode",MODES,j.mode),{req:1,full:1,group:1})+
@@ -600,33 +650,34 @@ function apply(w,host){
       '<div class="f" id="jCityWrap"><label for="jCity">City <span class="req" aria-hidden="true">*</span></label><input type="text" id="jCity" maxlength="60" value="'+esc(j.city)+'" placeholder="Philadelphia"><small class="err" id="jCity-err" role="alert"></small></div>'+
       '<div class="f" id="jRegionWrap"><label for="jRegion" id="jRegionL">State</label><select id="jRegion"></select></div>'+
       '<div class="f full" id="jRelocWrap"><label class="ckline"><input type="checkbox" id="jReloc"'+(j.reloc?" checked":"")+'> We help with relocation</label></div></fieldset>'+
-    '<fieldset><legend>Pay</legend><p class="match">Matched to the job seeker\'s <b>minimum salary</b>, the <b>salary dealbreaker</b> and the <b>commission-only</b> filter.</p>'+
+    '<fieldset data-st="3"><legend>Pay</legend><p class="match">Matched to the job seeker\'s <b>minimum salary</b>, the <b>salary dealbreaker</b> and the <b>commission-only</b> filter.</p>'+
       F("jSalMin","Lowest yearly pay (USD)",'<input type="number" id="jSalMin" min="0" step="1000" inputmode="numeric" value="'+(j.sal[0]||"")+'" placeholder="55000">',{req:1})+
       F("jSalMax","Highest yearly pay (USD)",'<input type="number" id="jSalMax" min="0" step="1000" inputmode="numeric" value="'+(j.sal[1]||"")+'" placeholder="70000">',{req:1,hint:"Paid hourly? Multiply by 2,080 (40 hours × 52 weeks)."})+
       '<div class="f full"><label class="ckline"><input type="checkbox" id="jComm"'+(j.comm?" checked":"")+'> This role is paid by commission only</label></div></fieldset>'+
-    '<fieldset><legend>Who it\'s for</legend><p class="match">Matched to the job seeker\'s <b>years of experience</b>, <b>experience level</b>, <b>education</b>, <b>skills</b>, <b>major</b>, <b>GPA</b> and <b>graduation date</b>.</p>'+
+    '<fieldset data-st="3"><legend>Who it\'s for</legend><p class="match">Matched to the job seeker\'s <b>years of experience</b>, <b>experience level</b>, <b>education</b>, <b>skills</b>, <b>major</b>, <b>GPA</b> and <b>graduation date</b>.</p>'+
       F("jYrs","Minimum experience",'<select id="jYrs">'+opt(yrs,j.yrs)+'</select>',{req:1})+
       F("jEdu","Minimum education",'<select id="jEdu">'+opt(LEVELS,j.edu)+'</select>',{req:1})+
       F("jSkills","Skills the job needs",'<input type="text" id="jSkills" maxlength="300" value="'+esc(j.skills.join(", "))+'" placeholder="Excel, Customer service, SQL">',{req:1,full:1,hint:'Up to 6, separated by commas. These drive 40% of the match score. <span id="jSkillsN"></span>'})+
       F("jMajors","Preferred majors",'<input type="text" id="jMajors" maxlength="300" value="'+esc(j.majors.join(", "))+'" placeholder="Marketing, Communications">',{full:1,hint:"Optional. A preference, never a hard rule."})+
       F("jGpa","Minimum GPA",'<input type="number" id="jGpa" min="0" max="4" step="0.1" inputmode="decimal" value="'+gpa+'" placeholder="3.0">',{hint:"Optional, out of 4.0."})+
       '<div class="f"><span class="l">Graduation window</span><div style="display:flex;gap:6px;align-items:center"><input type="month" id="jGradFrom" aria-label="Graduating from" value="'+esc(j.grad[0])+'"><span>to</span><input type="month" id="jGradTo" aria-label="Graduating by" value="'+esc(j.grad[1])+'"></div><small>Optional. Useful for internships and new graduate roles.</small><small class="err" id="jGradTo-err" role="alert"></small></div></fieldset>'+
-    '<fieldset><legend>Eligibility</legend><p class="match">Matched to the job seeker\'s <b>work authorization</b>, <b>visa sponsorship</b> and <b>earliest start</b>. Job seekers can hide jobs they are not eligible for.</p>'+
+    '<fieldset data-st="3"><legend>Eligibility</legend><p class="match">Matched to the job seeker\'s <b>work authorization</b>, <b>visa sponsorship</b> and <b>earliest start</b>. Job seekers can hide jobs they are not eligible for.</p>'+
       F("jAuth","Who can apply",radios("jAuth",[["any","Anyone authorized to work here, including visa and OPT holders"],["citizen","Citizens and permanent residents only"]],j.auth),{full:1,group:1})+
       F("jSponsor","Visa sponsorship",radios("jSponsor",[["yes","We sponsor"],["no","We don't sponsor"],["","Not decided"]],j.sponsor),{full:1,group:1})+
       F("jStart","When should the hire start?",'<select id="jStart">'+opt(START,j.start)+'</select>')+'</fieldset>'+
-    '<fieldset><legend>Benefits</legend><p class="match">Matched to the job seeker\'s <b>Benefits</b> filter. Tick only what you really offer.</p><div class="perks f full">'+PERKS.map(function(p){return '<label><input type="checkbox" data-perk="'+p[0]+'"'+(j.perks.indexOf(p[0])>-1?" checked":"")+'> '+esc(p[1])+'</label>'}).join("")+'</div></fieldset>'+
-    '<fieldset><legend>Describe the job</legend>'+
+    '<fieldset data-st="3"><legend>Benefits</legend><p class="match">Matched to the job seeker\'s <b>Benefits</b> filter. Tick only what you really offer.</p><div class="perks f full">'+PERKS.map(function(p){return '<label><input type="checkbox" data-perk="'+p[0]+'"'+(j.perks.indexOf(p[0])>-1?" checked":"")+'> '+esc(p[1])+'</label>'}).join("")+'</div></fieldset>'+
+    '<fieldset data-st="2"><legend>Describe the job</legend>'+
       F("jBlurb","One-line summary for the card",'<input type="text" id="jBlurb" maxlength="220" value="'+esc(j.blurb)+'" placeholder="Plan and run campaigns for our three Philadelphia stores."><span class="cnt" id="jBlurbN"></span>',{req:1,full:1})+
       F("jDesc","Full description",'<textarea id="jDesc" maxlength="5000" rows="7" placeholder="What the hire will do, who they work with, what success looks like in 90 days.">'+esc(j.desc)+'</textarea><span class="cnt" id="jDescN"></span>',{full:1,hint:"Shown under About the job when a job seeker opens the card."})+
       F("jUrl","Link to this job on your site",'<input type="text" id="jUrl" inputmode="url" maxlength="300" value="'+esc(j.url)+'" placeholder="https://yourcompany.com/careers/...">',{full:1,hint:"Optional. Applications through UAply come to your email either way."})+'</fieldset>'+
-    '<fieldset><legend>Meet the hiring team</legend><p class="match">Plus and Pro job seekers can choose to send the hiring team a short message with their application. The email and LinkedIn are never shown publicly.</p>'+
+    '<fieldset data-st="2"><legend>Meet the hiring team</legend><p class="match">Plus and Pro job seekers can choose to send the hiring team a short message with their application. The email and LinkedIn are never shown publicly.</p>'+
       F("jMgrName","Name",'<input type="text" id="jMgrName" maxlength="80" value="'+esc(j.manager.name)+'" placeholder="Dana Ortiz">')+
       F("jMgrTitle","Title",'<input type="text" id="jMgrTitle" maxlength="80" value="'+esc(j.manager.title)+'" placeholder="Marketing Manager">')+
       F("mgr_email","Email",'<input type="email" id="mgr_email" maxlength="120" value="'+esc(j.manager.email)+'" placeholder="dana@yourcompany.com">')+
       F("mgr_linkedin","LinkedIn",'<input type="text" id="mgr_linkedin" inputmode="url" maxlength="200" value="'+esc(j.manager.linkedin)+'" placeholder="https://www.linkedin.com/in/...">')+
       '<div class="f full"><label class="ckline"><input type="checkbox" id="jShowMgr"'+(j.show_manager?" checked":"")+'> Show the name and title on the job card under "Meet the hiring team"</label></div></fieldset>'+
-    '<div class="pbar"><span class="price">Price to post: <b>TBD</b> <small class="note">· no card needed for now</small></span><div class="acts"><button type="button" class="btn ghost" data-view="jobs">Cancel</button><button type="submit" class="btn" id="jSubmit">'+(editing?"Save changes":"Publish job")+'</button></div></div>'+
+    '<div class="box prev" data-st="4" id="pReview"></div>'+
+    '<div class="pbar pnav"><span class="price" id="pStepN"></span><div class="acts"><button type="button" class="btn ghost" data-act="back" id="pBack">Back</button><button type="button" class="btn ghost" data-view="jobs">Cancel</button><button type="button" class="btn" data-act="next" id="pNext">Next</button><button type="submit" class="btn" id="jSubmit">'+(editing?"Save changes":"Publish job")+'</button></div></div>'+
     '</div><aside class="pside" aria-label="Preview"><div><h2>Preview</h2><p class="note">What job seekers see on the swipe card.</p></div><div id="pPrev"></div></aside></form>';
   }
   function readPost(){
@@ -677,7 +728,8 @@ function apply(w,host){
     var t=null;
     f.addEventListener("input",function(){counters();clearTimeout(t);t=setTimeout(preview,120)});
     f.addEventListener("change",function(e){if(e.target.name==="jCountry")regions();if(e.target.name==="jMode")where();preview()});
-    f.addEventListener("submit",function(e){e.preventDefault();submitJob()});
+    f.addEventListener("submit",function(e){e.preventDefault();if(H.step<4){var STs=postSteps(!!(H.edit&&H.edit.id));goStep(STs[STs.indexOf(H.step)+1]);return}submitJob()});
+    if(H.step!==1)goStep(H.step);
   }
   /* ---- step 1: bring in an existing post ---- */
   function wireImport(){
@@ -705,7 +757,7 @@ function apply(w,host){
   function useResult(res,from){
     var n=Object.keys(res.got).length;
     if(n<3){impSay("We could only find "+n+" detail"+(n===1?"":"s")+" in that. Try pasting the full job text, or fill it in yourself.","bad");return}
-    H.edit=jobFromFields(res.fields);H.filled=res.got;H.impFrom=from;H.manual=true;render();
+    H.edit=jobFromFields(res.fields);H.filled=res.got;H.impFrom=from;H.manual=true;H.step=2;render();
     say("Filled "+n+" fields from "+from+". Check them, then publish.","good");
   }
   function runImport(kind){
@@ -747,6 +799,7 @@ function apply(w,host){
     hub.querySelectorAll("[aria-invalid=true]").forEach(function(x){x.removeAttribute("aria-invalid")});hub.querySelectorAll(".err").forEach(function(x){x.textContent=""});
     var map={role:"jRole",mode:"jMode",city:"jCity",sal_min:"jSalMin",skills:"jSkills",blurb:"jBlurb",gpa:"jGpa",grad_to:"jGradTo",url:"jUrl",name:"cName",industry:"cIndustry",size:"cSize",country:"cCountry",website:"cWebsite",consent:"cConsent",logo:"cLogoF"};
     var id=map[field]||field,el=hub.querySelector("#"+id)||hub.querySelector('input[name="'+id+'"]'),er=hub.querySelector("#"+id+"-err");
+    var st=el&&el.closest&&el.closest("[data-st]");if(st&&st.hidden)goStep(+st.getAttribute("data-st"));
     if(er)er.textContent=msg;if(el){el.setAttribute("aria-invalid","true");el.scrollIntoView({block:"center",behavior:"smooth"});try{el.focus({preventScroll:true})}catch(x){}}
     say(msg,"bad");
   }
@@ -885,12 +938,15 @@ function apply(w,host){
   hub.addEventListener("click",function(e){
     var b=e.target.closest("button,[data-view]");if(!b||!hub.contains(b))return;
     var view=b.getAttribute("data-view"),act=b.getAttribute("data-act"),id=b.getAttribute("data-id");
-    if(view){if(view==="post"){H.edit=null}H.view=view;render();return}
+    if(view){if(view==="post"){H.edit=null;H.filled=null;H.manual=false;H.step=1}H.view=view;render();return}
     if(act==="signin"||act==="verify"){setMode(false,true);hdr.click();return}
-    if(act==="new"){if(!H.company){H.view="company";render();say("Add your company first. It is shown on every job.");return}H.edit=null;H.manual=false;H.filled=null;H.view="post";render();return}
-    if(act==="edit"){var j=jobById(id);H.edit=JSON.parse(JSON.stringify(j));H.manual=true;H.filled=null;H.view="post";render();return}
-    if(act==="manual"){H.manual=true;H.filled=null;H.edit=null;render();return}
-    if(act==="reimport"){H.manual=false;H.filled=null;H.edit=null;render();return}
+    if(act==="new"){if(!H.company){H.view="company";render();say("Add your company first. It is shown on every job.");return}H.edit=null;H.manual=false;H.filled=null;H.step=1;H.view="post";render();return}
+    if(act==="edit"){var j=jobById(id);H.edit=JSON.parse(JSON.stringify(j));H.manual=true;H.filled=null;H.step=2;H.view="post";render();return}
+    if(act==="manual"){H.manual=true;H.filled=null;H.edit=null;H.step=2;render();return}
+    if(act==="step"){goStep(+b.getAttribute("data-s"));return}
+    if(act==="next"||act==="back"){var STs=postSteps(!!(H.edit&&H.edit.id)),ix=STs.indexOf(H.step)+(act==="next"?1:-1);if(ix>=0&&ix<STs.length)goStep(STs[ix]);return}
+    if(act==="fix"){goStep(+b.getAttribute("data-s"),b.getAttribute("data-f"));return}
+    if(act==="reimport"){H.manual=false;H.filled=null;H.edit=null;H.step=1;render();return}
     if(act==="impLink"){runImport("link");return}
     if(act==="impText"){runImport("text");return}
     if(act==="apps"){H.appJob=String(id);H.view="applicants";render();return}
