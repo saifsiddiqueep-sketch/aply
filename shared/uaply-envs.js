@@ -20,21 +20,120 @@ var CRIT_TOP2=`function critHTML(m){
 }
 `;
 
+/* the swipe, rebuilt for phones. Touch is handled with touch events and a direction lock: the first few pixels decide whether the
+   person means sideways (swipe) or up and down (scroll the card), and once it is sideways the browser is told not to scroll, so
+   Safari can no longer take a curved thumb swipe over and cancel it. A swipe counts at 18% of the card's width (at most 80px) or as a
+   quick flick. Mouse and pen keep pointer events. Replaces bindDrag in index.html.
+   A second swipe that starts while the last card is still flying off (the quarter second before the next card is on top) counts
+   too: the deck follows that finger, moves the next card once it is on top, and swipes it when the finger lifts (glideLate). */
+var GLIDE=`window.__uaplyGlide=true;
+/* one drag: where it started, how far it went, which way it is locked ("x" swipe, "y" scroll) and its recent path, for the speed */
+function glideTrack(x,y){return {sx:x,sy:y,dx:0,dy:0,lock:"",trail:[[performance.now(),x]]}}
+function glideMove(g,x,y){
+  g.dx=x-g.sx;g.dy=y-g.sy;
+  g.trail.push([performance.now(),x]);if(g.trail.length>12)g.trail.shift();
+  if(!g.lock){var ax=Math.abs(g.dx),ay=Math.abs(g.dy);if(ax<6&&ay<6)return "";g.lock=ax>=ay*0.6?"x":"y"}
+  return g.lock;
+}
+/* the finger's speed over its last tenth of a second (px per ms); 0 if it paused before lifting */
+function glideSpeed(g){
+  var t=g.trail,n=t.length,now=performance.now();if(n<2||now-t[n-1][0]>120)return 0;
+  var i=n-1;while(i>0&&t[n-1][0]-t[i-1][0]<=100)i--;
+  var dt=t[n-1][0]-t[i][0];return dt>0?(t[n-1][1]-t[i][1])/dt:0;
+}
+/* "applied", "passed" or "" (not a swipe): sideways past 18% of the card's width (56 to 80px), or a quick flick past 28px */
+function glideDir(g,card){
+  var v=glideSpeed(g),flick=Math.abs(v)>0.4&&Math.abs(g.dx)>28&&(v>0)===(g.dx>0);
+  var need=Math.min(80,Math.max(56,(card?card.offsetWidth:360)*0.18));
+  return g.lock==="x"&&(Math.abs(g.dx)>need||flick)?(g.dx>0?"applied":"passed"):"";
+}
+/* a box that asks something (consent, an employer's questions, the paywall) is open over the deck: no swipe goes through it */
+function glideBoxOpen(){return !!(document.getElementById("kitConsent")||document.getElementById("kitAsk")||document.getElementById("kitSheet")||document.getElementById("paywall")||document.getElementById("stConfirm"))}
+function glideLate(deck){
+  deck.addEventListener("touchstart",function(e){
+    /* only while the last card is still on its way out; otherwise the top card handles its own swipes. The cards under the top one
+       do not take touches (pointer-events:none), so this finger is on the flying card or on the deck itself */
+    if(!busy||e.touches.length!==1)return;
+    var hit=e.target.closest&&e.target.closest(".card");
+    var t=e.touches[0],g=glideTrack(t.clientX,t.clientY),node=e.target,moved=null;
+    /* the touch keeps going to the element it started on, even after the deck redraws it away, so listen there */
+    function top(){return busy?null:deck.querySelector(".card.top")}
+    function off(){node.removeEventListener("touchmove",mv);node.removeEventListener("touchend",up);node.removeEventListener("touchcancel",cancel)}
+    function mv(ev){
+      if(ev.touches.length!==1){cancel();return}
+      var p=ev.touches[0];if(glideMove(g,p.clientX,p.clientY)!=="x")return;
+      if(ev.cancelable)ev.preventDefault();
+      var c=top();if(c){if(c!==moved){moved=c;c.style.transition="none"}setDrag(c,g.dx)}
+    }
+    function cancel(){off();if(moved&&moved.isConnected){moved.style.transition="";clearCardStyle(moved)}}
+    function up(){
+      off();var dir=glideDir(g,top()||hit),tries=0;
+      if(moved)moved.style.transition="";
+      (function commit(){
+        if(busy&&tries++<60){setTimeout(commit,25);return}         /* the last card is still on its way out */
+        var c=deck.querySelector(".card.top");if(!c)return;
+        if(dir&&!busy&&!glideBoxOpen())decide(dir);else if(moved&&moved.isConnected)clearCardStyle(moved);
+      })();
+    }
+    node.addEventListener("touchmove",mv,{passive:false});node.addEventListener("touchend",up);node.addEventListener("touchcancel",cancel);
+  },{passive:true});
+}
+function bindDrag(card){
+  var drag=false,g=null;
+  if(card.parentNode&&!card.parentNode.__glideLate){card.parentNode.__glideLate=true;glideLate(card.parentNode)}
+  function start(x,y){if(busy)return false;drag=true;g=glideTrack(x,y);card.style.transition="none";return true}
+  function move(x,y,e){
+    if(!drag)return;
+    if(glideMove(g,x,y)!=="x")return;
+    if(e&&e.cancelable)e.preventDefault();
+    setDrag(card,g.dx);
+  }
+  function end(){
+    if(!drag)return;
+    drag=false;card.style.transition="";
+    var dir=glideDir(g,card);
+    if(dir)decide(dir);else clearCardStyle(card);
+  }
+  function cancel(){if(!drag)return;drag=false;card.style.transition="";clearCardStyle(card)}
+  card.addEventListener("touchstart",function(e){if(e.touches.length!==1){cancel();return}var t=e.touches[0];start(t.clientX,t.clientY)},{passive:true});
+  card.addEventListener("touchmove",function(e){if(e.touches.length!==1)return;var t=e.touches[0];move(t.clientX,t.clientY,e)},{passive:false});
+  card.addEventListener("touchend",end);
+  card.addEventListener("touchcancel",cancel);
+  card.addEventListener("pointerdown",function(e){
+    if(e.pointerType==="touch")return;
+    if(e.pointerType==="mouse"&&e.button!==0)return;
+    if(start(e.clientX,e.clientY)){try{card.setPointerCapture(e.pointerId)}catch(x){}}
+  });
+  card.addEventListener("pointermove",function(e){if(e.pointerType!=="touch")move(e.clientX,e.clientY,null)});
+  card.addEventListener("pointerup",function(e){if(e.pointerType!=="touch")end()});
+  card.addEventListener("pointercancel",function(e){if(e.pointerType!=="touch")cancel()});
+}
+`;
+
 var ALIAS_NORM=`var ALIAS={js:"javascript",ts:"typescript",py:"python",postgres:"postgresql",psql:"postgresql",reactjs:"react","react.js":"react",nodejs:"node","node.js":"node",k8s:"kubernetes",tf:"terraform",ml:"machine learning","ux research":"user research"};
 function norm(s){var k=String(s).trim().toLowerCase();return ALIAS.hasOwnProperty(k)?ALIAS[k]:k}
 function locHit(a,b){a=norm(a);b=norm(b);if(!b)return false;var i=a.indexOf(b);while(i>-1){var pre=i===0||!/[a-z0-9]/.test(a.charAt(i-1));var post=i+b.length>=a.length||!/[a-z0-9]/.test(a.charAt(i+b.length));if(pre&&post)return true;i=a.indexOf(b,i+1)}return false}`;
 
 var FEATURES={
+ glide:{name:"Phone swipe",note:"Swipes work the way thumbs move: a curved or quick swipe counts, a vertical drag scrolls the card instead, and the browser can no longer cancel a swipe halfway. Replaces Easy swipe and Axis lock.",patch:function(s){
+   var a=s.indexOf("function bindDrag(card){"),b=s.indexOf("function decide(dir){");
+   if(a<0||b<0)throw new Error("bindDrag not found");
+   return s.slice(0,a)+GLIDE+s.slice(b);
+ }},
  easy:{name:"Easy swipe",note:"Swipe commits at 60px, or a quick 30px flick, instead of 110px.",apply:function(w){
+   if(w.__uaplyGlide)return;                                   /* Phone swipe already does this, better */
    var d=w.document,deck=d.getElementById("deck"),sx=0,dx=0,t0=0;
    deck.addEventListener("pointerdown",function(e){sx=e.clientX;dx=0;t0=performance.now()},true);
    deck.addEventListener("pointermove",function(e){dx=e.clientX-sx},true);
-   deck.addEventListener("pointerup",function(e){
+   function release(e){
      if(w.__axisY)return;
      var a=Math.abs(dx),v=a/Math.max(1,performance.now()-t0);
      if(a>110||!(a>60||(a>30&&v>0.5)))return;
      e.stopPropagation();d.getElementById(dx>0?"btnYes":"btnNo").click();
-   },true);
+   }
+   deck.addEventListener("pointerup",release,true);
+   /* a phone can cut a sideways swipe short (pointercancel) when the finger drifts: it still counts once it went far enough */
+   deck.addEventListener("pointercancel",release,true);
  }},
  confirm:{name:"Confirm apply",note:"Saving to Applied by swipe, button or → key asks for confirmation first. Passing stays instant.",apply:function(w){
    var d=w.document,ok=false,sx=0,dx=0;
@@ -64,7 +163,7 @@ var FEATURES={
    deck.addEventListener("pointerdown",function(e){sx=e.clientX;dx=0},true);
    deck.addEventListener("pointermove",function(e){dx=e.clientX-sx},true);
    deck.addEventListener("pointerup",function(e){
-     if(w.__axisY||dx<=110)return;
+     if(w.__axisY||dx<=110||(w.__uaplyGlide&&e.pointerType==="touch"))return;   /* with Phone swipe, a touch swipe is decided there */
      e.stopPropagation();
      var c=d.querySelector(".card.top");
      if(c){c.style.transition="";c.style.transform="";c.style.background="";c.style.borderColor="";c.style.boxShadow="";c.querySelectorAll(".stamp").forEach(function(s){s.style.opacity=0})}
@@ -73,6 +172,7 @@ var FEATURES={
    },true);
  }},
  axis:{name:"Axis lock",note:"A mostly vertical drag scrolls the card and never swipes it; a sideways drag swipes.",apply:function(w){
+   if(w.__uaplyGlide)return;                                   /* Phone swipe has its own direction lock */
    var d=w.document,deck=d.getElementById("deck"),sx=0,sy=0,lock="";
    w.__axisY=false;
    deck.addEventListener("pointerdown",function(e){sx=e.clientX;sy=e.clientY;lock="";w.__axisY=false},true);
@@ -80,6 +180,15 @@ var FEATURES={
      if(!lock){var ax=Math.abs(e.clientX-sx),ay=Math.abs(e.clientY-sy);if(ax>8||ay>8){lock=ay>ax*1.2?"y":"x";w.__axisY=lock==="y"}}
      if(lock==="y")e.stopPropagation();
    },true);
+   /* iPhone: once a drag is clearly sideways, keep Safari from turning it into a scroll. Otherwise Safari cancels the
+      swipe part-way (pointercancel) and the card snaps back. Up-and-down drags still scroll the card. */
+   var tx=0,ty=0,tlock="";
+   deck.addEventListener("touchstart",function(e){var t=e.touches[0];if(t){tx=t.clientX;ty=t.clientY;tlock=""}},{capture:true,passive:true});
+   deck.addEventListener("touchmove",function(e){
+     var t=e.touches[0];if(!t)return;
+     if(!tlock){var ax=Math.abs(t.clientX-tx),ay=Math.abs(t.clientY-ty);if(ax>6||ay>6)tlock=ay>ax*1.2?"y":"x"}
+     if(tlock==="x"&&e.cancelable&&!(e.target.closest&&e.target.closest("details,input,textarea,select")))e.preventDefault();
+   },{capture:true,passive:false});
  }},
  caps:{name:"Must-have caps",note:"If pay, work style or experience is a clear miss, the match is capped at 45% and the card says why.",patch:function(s){
    s=once(s,"return {pct:Math.round(total),rows:rows,matched:matched};","var pct=Math.round(total);var hard=rows[2].s===0||rows[3].s===0||ex<0.5;if(hard&&pct>45)pct=45;return {pct:pct,rows:rows,matched:matched,capped:hard};");
@@ -114,8 +223,8 @@ var FEATURES={
    if(!tips||tips.hidden||w.matchMedia("(prefers-reduced-motion: reduce)").matches)return;
    setTimeout(function(){var c=d.querySelector(".card.top");if(c&&c.animate)c.animate([{transform:"translateX(0)"},{transform:"translateX(30px) rotate(1.6deg)"},{transform:"translateX(-30px) rotate(-1.6deg)"},{transform:"translateX(0)"}],{duration:1100,easing:"ease-in-out"})},700);
  }},
- nav:{name:"Bottom navigation",note:"Bottom bar with three dropdowns: Services (Jobs, Internships, Coop), Dashboard (Applied, Interview, Rejected), Profile (Settings, Preferences, Filters). Adds internship and co-op listings.",patch:function(s){return window.UAplyNav.patch(s)},apply:function(w,host){window.UAplyNav.apply(w,host)}},
- live:{name:"Real jobs",note:"Loads real, current postings from employers' public job boards (Greenhouse, Lever, Ashby) and Remotive through this server's back end, hides the made-up examples, and links each card to the original posting. Indeed and ZipRecruiter have no open API, so they are not included.",patch:function(s){return window.UAplyLive.patch(s)},apply:function(w,host){return window.UAplyLive.apply(w,host)}},
+ nav:{name:"Bottom navigation",note:"Bottom bar with three dropdowns: Services (Full-time, Part-time, Internships, Coop), Dashboard (Overview, Applied, Accepted, Rejected, Interviews), Profile (Profile setup, Filters, Account, Plan & billing, Data & privacy). Adds part-time, internship and co-op listings.",patch:function(s){return window.UAplyNav.patch(s)},apply:function(w,host){window.UAplyNav.apply(w,host)}},
+ live:{name:"Real jobs",note:"Loads real, current postings from employers' public job boards (Greenhouse, Lever, Ashby, and any other feed switched on in the server's settings) through this server's back end, hides the made-up examples, and links each card to the original posting. Indeed and ZipRecruiter have no open API, so they are not included.",patch:function(s){return window.UAplyLive.patch(s)},apply:function(w,host){return window.UAplyLive.apply(w,host)}},
  kit:{name:"Apply assistant",note:"After a swipe right on a real posting: a ready-to-send note, Copy, an email draft (opens your mail app; you press send) and a button to the employer's application page. UAply cannot submit applications itself.",patch:function(s){return window.UAplyLive.kit.patch(s)},apply:function(w,host){window.UAplyLive.kit.apply(w,host)}},
  submit:{name:"Send applications",note:"Swipe right sends the application through this server: in test mode to a simulated recruiter inbox (nothing leaves this computer, see /outbox), in live mode by email to the recruiter after you review and press Send. Swipe left only records a pass; nothing is sent. Needs Bottom navigation, Real jobs and Apply assistant, which turn on with it.",apply:function(w,host){return window.UAplyLive.submit.apply(w,host)}},
  profile:{name:"Application profile",note:"Profile gets what LinkedIn, Indeed, ZipRecruiter and Handshake collect for a fast, complete application: phone, resume link, LinkedIn and portfolio, school and major, work authorization and sponsorship, start date, opportunity types and a default note. Shows a readiness score and checks your links. Needs Bottom navigation.",patch:function(s){return window.UAplyProfile.patch(s)},apply:function(w,host){window.UAplyProfile.apply(w,host)}},
@@ -151,7 +260,8 @@ var FEATURES={
  }}
 };
 FEATURES.chat={name:"Assistant and feedback",note:"A Help button (bottom right) opens UAply Assistant: answers from UAply's help articles (written by AI when an API key is set on the server, and labeled AI or Automated either way), one-question-at-a-time feedback, problem reports, a way to reach a person, and a one-tap rating after the third application in a visit. Needs this server's back end.",apply:function(w,host){window.UAplyChat.apply(w,host)}};
-var ORDER=["easy","confirm","axis","caps","smart","top2","nav","profile","live","kit","submit","fit","guide","notice","tap","dates","hint","anim","a11y","backend","chat"];   /* chat last: it wraps the apply hook set by kit */
+FEATURES.learn={name:"Learns from your swipes",note:"UAply learns what you like from your own swipes (work style, type, role, company, pay, years asked, city, skills, where the job came from) and reorders the deck, starting from the match score. Each card says what it learned (\"Learned from your swipes: +9. You've liked 7 of 8 remote jobs.\"), 1 in 5 cards is something different, your filters still decide what you see, and Profile, Filters has Reset what UAply learned. Stays on this device; never uses voluntary answers, work authorization or GPA. Sandbox only.",patch:function(s){return window.UAplyLearn.patch(s)},apply:function(w,host){window.UAplyLearn.apply(w,host)}};
+var ORDER=["glide","easy","confirm","axis","caps","smart","top2","nav","profile","live","kit","submit","fit","guide","notice","tap","dates","hint","anim","a11y","backend","chat","learn"];   /* chat after kit: it wraps the apply hook set by kit. learn last: it reorders the deck the other features built */
 
 function build(on,key){
   return fetch("prod-index.html",{cache:"no-store"}).then(function(r){return r.text()}).then(function(src){

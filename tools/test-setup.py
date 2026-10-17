@@ -90,6 +90,25 @@ FakeSMTP.mode = "drop"
 s, out = setup_api.save_mail({"email": "uaply.sender@gmail.com", "password": PW})
 t("a dropped connection is explained, not shown as an error code", (out["ok"], "closed the connection" in out["message"]), (False, True))
 
+# Brevo: sends from the owner's own domain with Brevo's SMTP login and key
+FakeSMTP.mode = "ok"
+FakeSMTP.sent = []
+KEY = "xsmtpsib-" + "0123456789abcdef" * 4 + "-AbCdEfGh12345678"
+s, out = setup_api.save_mail({"provider": "brevo", "email": "uaplytechnologies@uaply.net", "login": "", "password": KEY})
+t("Brevo without its SMTP login is refused, with where to find it", (s, "smtp-brevo.com" in out["message"]), (400, True))
+s, out = setup_api.save_mail({"provider": "brevo", "email": "uaplytechnologies@uaply.net", "login": "9a1b2c001@smtp-brevo.com", "password": "abcdefghijklmnop"})
+t("a Gmail App Password is not taken as a Brevo key", (s, "xsmtpsib-" in out["message"]), (400, True))
+s, out = setup_api.save_mail({"provider": "brevo", "email": "uaplytechnologies@uaply.net", "login": "9a1b2c001@smtp-brevo.com", "password": KEY, "copy_to": "uaplytechnologies@gmail.com"})
+cfg_b = json.load(open(uaply_api.CONFIG_PATH, encoding="utf-8"))["smtp"]
+t("Brevo is saved: its server, the login, and mail comes from the uaply.net address", (out["ok"], cfg_b["host"], cfg_b["port"], cfg_b["user"], cfg_b["from_addr"]),
+  (True, "smtp-relay.brevo.com", 587, "9a1b2c001@smtp-brevo.com", "uaplytechnologies@uaply.net"))
+t("...and the test email goes out from that address with Brevo's login", (FakeSMTP.sent[-1]["From"], FakeSMTP.login_used), ("uaplytechnologies@uaply.net", ("9a1b2c001@smtp-brevo.com", KEY)))
+t("the key is never sent back to the page", KEY in json.dumps(out), False)
+FakeSMTP.mode = "auth"
+s, out = setup_api.test_mail()
+t("Brevo refusing the login says where to check in Brevo", (out["ok"], "Brevo refused the login" in out["message"]), (False, True))
+FakeSMTP.mode = "ok"
+
 # the Connect Google box: only the public client ID, only a real-looking one
 uaply_api.CONFIG_PATH = os.path.join(TMP, "uaply-config2.json")
 s, out = setup_api.save_google({"client_id": "not a client id"})
@@ -102,15 +121,34 @@ t("a real-looking client ID is saved (trimmed) and other settings are kept", (s,
   (200, True, "123456789012-abcdefg1234567.apps.googleusercontent.com", ["greenhouse"], "keep-me"))
 uaply_api.CONFIG_PATH = os.path.join(TMP, "uaply-config.json")
 
+# a server started for testing (UAPLY_CONFIG_FILE=none) never reads the owner's uaply-config.json, so it must not write it either
+real_env, real_path = os.environ.get("UAPLY_CONFIG_FILE"), uaply_api.CONFIG_PATH
+os.environ["UAPLY_CONFIG_FILE"] = "none"
+uaply_api.CONFIG_PATH = uaply_api.REAL_CONFIG_PATH
+before = os.path.exists(uaply_api.REAL_CONFIG_PATH) and os.stat(uaply_api.REAL_CONFIG_PATH).st_mtime_ns
+got = [setup_api.save_google({"client_id": "123456789012-abcdefg1234567.apps.googleusercontent.com"})[0],
+       setup_api.save_mail({"email": "uaply.sender@gmail.com", "password": PW})[0],
+       setup_api.save_stripe({"secret_key": "sk_test_abcdefgh1234", "price_plus": "price_a", "price_pro": "price_b"})[0]]
+after = os.path.exists(uaply_api.REAL_CONFIG_PATH) and os.stat(uaply_api.REAL_CONFIG_PATH).st_mtime_ns
+t("a test run refuses to save Google, email or Stripe settings into the owner's real file, and the file is untouched", (got, before == after), ([409, 409, 409], True))
+t("...but it still checks what was typed first (the setup page test relies on that)", setup_api.save_mail({})[1]["message"].startswith("Enter the Gmail address"), True)
+uaply_api.CONFIG_PATH = real_path
+if real_env is None:
+    os.environ.pop("UAPLY_CONFIG_FILE", None)
+else:
+    os.environ["UAPLY_CONFIG_FILE"] = real_env
+
 # without a password the test button says why
 os.remove(uaply_api.CONFIG_PATH)
 uaply_api.config = lambda: {"smtp": {"host": "smtp.gmail.com", "from_addr": "a@gmail.com", "user": "a@gmail.com", "password": ""}, "delivery": "test"}
 s, out = setup_api.test_mail()
-t("the test button says the App Password is missing", (out["ok"], "no App Password" in out["message"]), (False, True))
+t("the test button says the password or key is missing", (out["ok"], "no password or key" in out["message"]), (False, True))
 
 # the Connect an employer's hiring system box
 import jobs_api  # noqa: E402
 os.environ["UAPLY_DATA_DIR"] = TMP
+code_copy = os.path.join(os.path.dirname(os.path.abspath(jobs_api.__file__)), "uaply-partners.json")      # the owner's real list, if any (only its date is looked at)
+code_stamp = os.path.exists(code_copy) and os.stat(code_copy).st_mtime_ns
 s, out = setup_api.save_ats({"kind": "workday", "board": "acme", "api_key": "abcdefgh1234"})
 t("an unknown hiring system is refused", (s, out["ok"]), (400, False))
 s, out = setup_api.save_ats({"kind": "greenhouse", "board": "ac/me", "api_key": "abcdefgh1234"})
@@ -124,6 +162,8 @@ setup_api.save_ats({"kind": "greenhouse", "board": "acme", "api_key": "gh-test-k
 t("saving the same board again replaces its key, other connections stay", (jobs_api.ats_connections().get(("greenhouse", "acme")), sorted(jobs_api.ats_connections())), ("gh-test-key-5678", [("greenhouse", "acme"), ("lever", "acme")]))
 setup_api.remove_ats({"kind": "lever", "board": "acme"})
 t("a connection can be removed", sorted(jobs_api.ats_connections()), [("greenhouse", "acme")])
+t("with UAPLY_DATA_DIR set the employer list is written there, and the one next to the code is never created or changed",
+  (os.path.exists(os.path.join(TMP, "uaply-partners.json")), os.path.exists(code_copy) and os.stat(code_copy).st_mtime_ns), (True, code_stamp))
 
 # the setup page is the owner's guide to switching test mode off: clickable steps, the exact addresses to give Google, and anchors the sign-in screen links to
 page = setup_api.page("localhost:8767", "http").decode("utf-8")
@@ -131,7 +171,7 @@ t("the page tells Google both local addresses (Google needs the bare localhost o
 t("each address has a Copy button", page.count('class="cp"'), 2)
 t("the Google and Gmail boxes have anchors for the sign-in screen's links", ('id="google"' in page, 'id="gmail"' in page), (True, True))
 t("the steps are clickable links to Google's own pages", all(('href="%s"' % u) in page for u in (
-    "https://console.cloud.google.com/apis/credentials/consent", "https://console.cloud.google.com/apis/credentials/oauthclient",
+    "https://console.cloud.google.com/auth/overview", "https://console.cloud.google.com/auth/clients",      # Google Auth Platform (Google's current console)
     "https://myaccount.google.com/apppasswords", "https://myaccount.google.com/signinoptions/two-step-verification")), True)
 t("links open in a new tab without handing over the opener", 'target="_blank" rel="noopener noreferrer"' in page, True)
 t("the page explains why a test inbox is still showing", "Why you still see the test inbox" in page, True)

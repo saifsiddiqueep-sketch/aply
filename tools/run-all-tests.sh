@@ -13,7 +13,7 @@ trap 'for p in $PIDS; do kill "$p" 2>/dev/null; done; rm -rf "$TMP"' EXIT
 step() { printf "\n== %s\n" "$1"; }
 run() {   # run <label> <command...>: pass if exit 0
   local label="$1"; shift
-  if out=$("$@" 2>&1); then
+  if out=$(timeout 600 "$@" 2>&1); then          # no single check may hang the run (a sleeping computer once froze one for hours)
     n=$(echo "$out" | grep -Eo '^[0-9]+ / [0-9]+$' | tail -1)          # the test's own "passed / total" line, so the count here is never stale
     printf "  PASS  %s%s\n" "$label" "${n:+ ($n)}"
   else printf "  FAIL  %s\n" "$label"; echo "$out" | tail -15 | sed 's/^/        /'; FAILS=$((FAILS+1)); fi
@@ -23,10 +23,14 @@ wait_port() { for _ in $(seq 1 60); do curl -s -o /dev/null "http://127.0.0.1:$1
 # a config that switches the real-jobs feed on and nothing else (so the run never uses your own keys)
 FEEDS='{"feeds":["greenhouse","lever","ashby"],"delivery":"test","smtp":{},"google":{},"owner_copy":"","anthropic_api_key":""}'
 unset ANTHROPIC_API_KEY
+# never read uaply-config.json (your real email login, keys and copy address): every server and test below uses only its own settings
+export UAPLY_CONFIG_FILE=none
 
 step "Static checks (syntax of every script, Python lint, JSON, legal pages, release flags, hosted builds)"
 run "node check.js" node check.js
 run "audit of every file (JSON, Python, JS, HTML, links, XML, images, secrets, git hygiene)" python tools/audit-files.py
+run "every page and email renders, every script parses, no line break JavaScript would join, shell scripts parse" python tools/test-pages.py
+if python -m ruff --version >/dev/null 2>&1; then run "Python syntax errors and undefined names (Ruff)" python -m ruff check --select E9,F63,F7,F82 .; fi
 
 step "Servers"
 mkdir -p "$TMP/sb" "$TMP/dv" "$TMP/pub" "$TMP/smtp" "$TMP/g"
@@ -53,6 +57,13 @@ run "receipt and owner copy emails" python tools/test-emails.py
 run "help requests from the assistant reach the support inbox" python tools/test-support.py
 run "applications go straight into employers' hiring systems (Greenhouse, Lever)" python tools/test-ats.py
 run "swipe right to apply instantly, end to end" python tools/test-ats-flow.py
+run "paid plans: Stripe checkout, signed webhook, limits" python tools/test-billing.py
+run "autofill: real employers' forms answered from the profile, questions asked once" python tools/test-autofill.py
+run "Hiring mode: company, postings, feed, applicants (sandbox only)" python tools/test-employers.py
+run "job feeds: USAJOBS, City of Philadelphia, keys, feeds_off, via credit" python tools/test-feeds.py 18784
+run "swipe learning: the math, the worked example, the replay test" python tools/test-learn.py
+run "the server as Render runs it: start, stop mid-request, restart on the same disk" python tools/test-render.py 18782
+run "every path from swipe right to inbox, replayed in a browser" python tools/ui-apply-paths.py
 
 step "Accounts, applying, reset and setup (back end)"
 run "sandbox reset/setup/accounts" python tools/test-reset.py 18766
@@ -67,9 +78,15 @@ run "sandbox: every screen and button" env PORT=18766 node tools/cdp.js tools/ui
 run "dev: every way of swiping, and what each sends (LinkedIn, resume, one email)" env W=390 H=844 PORT=18767 node tools/cdp.js tools/ui-swipes.js
 run "dev: the app copes when the server fails, goes offline or sends garbage" env W=390 H=844 PORT=18767 node tools/cdp.js tools/ui-errors.js
 run "dev: skill chips, the empty Add button and the file downloads" env W=390 H=844 PORT=18767 node tools/cdp.js tools/ui-effects.js
+run "sandbox: the first-application agreement shows once, swipes throw no error" env W=390 H=844 PORT=18766 node tools/cdp.js tools/ui-consent-once.js
+run "dev: the first-application agreement shows once, swipes throw no error" env W=390 H=844 PORT=18767 node tools/cdp.js tools/ui-consent-once.js
 run "sandbox: every profile checklist item lands on its field" env W=390 H=844 PORT=18766 node tools/cdp.js tools/ui-checklist.js
 run "sandbox: hostile text in every form never runs, and the owner's inbox escapes it" env W=390 H=844 PORT=18766 node tools/cdp.js tools/ui-inject.js
 run "dev: hostile text in every form never runs, and the owner's inbox escapes it" env W=390 H=844 PORT=18767 node tools/cdp.js tools/ui-inject.js
+run "sandbox: the setup page's script runs, and Connect email switches between Brevo and Gmail" env PORT=18766 node tools/cdp.js tools/ui-setup.js
+run "dev on a big iPhone (440x956): every menu item tapped by touch, nothing covers a button, 7 kinds of real swipes" env W=440 H=956 PORT=18767 node tools/cdp.js tools/ui-phone.js
+run "dev on a small iPhone (375x667): the same" env W=375 H=667 PORT=18767 node tools/cdp.js tools/ui-phone.js
+run "sandbox: learns from swipes (remote first, explore card, reset)" env W=390 H=844 PORT=18766 node tools/cdp.js tools/ui-learn.js
 
 step "Google sign-in (against a stand-in Google)"
 PIDS="$PIDS $(start python tools/mock-google.py 8790)"
@@ -78,11 +95,13 @@ wait_port 18768
 run "Google sign-in, attacks and failures" python tools/test-google.py 18768
 run "Continue with Google button: tokens, forged tokens, linking, cookies" python tools/test-google-token.py 18768
 run "sign-up and email-code screens in a browser, Google button area" env W=390 H=844 PORT=18768 node tools/cdp.js tools/ui-verify.js
+run "Continue with Google on an iPhone (full-page sign-in), and hidden inside the phone apps" env W=390 H=844 PORT=18768 MOCK_GOOGLE_PORT=8790 node tools/cdp.js tools/ui-google-ios.js
 
 step "Public server behind HTTPS (how a real host runs it)"
 PIDS="$PIDS $(UAPLY_DATA_DIR="$TMP/pub" HOST=0.0.0.0 OWNER_PASSWORD=ownerpw UAPLY_CONFIG_JSON='{}' start python serve.py 18772 dev --api)"
 wait_port 18772
 run "cookies, headers, owner pages, path traversal, limits" python tools/test-public.py 18772
+run "sign-in as the live site runs it (uaply.net, www, onrender.com): cookies, same-site check, Google tokens and linking, restart, lock-out, codes" python tools/test-public-auth.py 18780
 
 step "Real email sending (against a stand-in mail server)"
 PIDS="$PIDS $(start python tools/fake-smtp.py 12525 "$TMP/smtp/mail.jsonl")"

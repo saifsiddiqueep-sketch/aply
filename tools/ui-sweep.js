@@ -32,16 +32,16 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   await sleep(500);
   // swipe right on a job: the application must reach the simulated recruiter inbox
   const before = JSON.parse(await ev("fetch('/api/outbox').then(r=>r.json()).then(j=>JSON.stringify({n:j.applications.length}))")).n;
-  // fill in the profile the way a person would (Profile, Settings), then save
+  // fill in the profile the way a person would (Profile, Profile setup), then save
   await ev(F + ".getElementById('nb-prof').click()");
   await sleep(400);
-  await clickText("Settings");
+  await clickText("Profile setup");
   await sleep(400);
   const setVal = (id, v) => ev("(()=>{const e=" + F + ".getElementById('" + id + "');if(!e)return false;e.value=" + JSON.stringify(v) + ";e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
   check("profile name field", await setVal("pName", "Test User"));
   check("profile email field", await setVal("pEmail", "sweep.tester@example.com"));
   await setVal("pSkills", "Python, SQL, Git");
-  await ev("(()=>{const f=" + F + ".getElementById('saveBtn');f.click();return true})()");
+  await ev("(()=>{const f=" + F + ".getElementById('wzNext');f.click();return true})()");
   await sleep(800);
   await ev(F + ".getElementById('nb-svc').click()");
   await sleep(600);
@@ -50,11 +50,15 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   await sleep(1500);
   console.log("  consent dialog:", await ev("(()=>{const m=" + F + ".getElementById('kcYes');if(!m)return 'none (already agreed)';m.click();return 'agreed'})()"));
   await sleep(2500);
+  // the sandbox fills in the employer's real form; if it has questions only the person can answer, it asks them once: answer and send
+  const asked = await ev("(()=>{const o=" + F + ".getElementById('kitAsk');if(!o)return 0;let n=0;o.querySelectorAll('[data-k]').forEach(el=>{n++;if(el.tagName==='SELECT')el.value=el.options[1]?el.options[1].text:'';else el.value=el.tagName==='TEXTAREA'?'Because I build things.':'Sam'});const b=" + F + ".getElementById('kaYes');if(b&&!/Profile/.test(b.innerText))b.click();return n})()");
+  const needsFile = await ev("/needs a resume file/.test((" + F + ".getElementById('kitAsk')||{}).innerText||'')");
+  if (asked) { console.log("  the employer's form asked", asked, "question(s); answered once" + (needsFile ? " (it also needs a resume file, which this profile has not got)" : "")); await sleep(3000); }
   const after = JSON.parse(await ev("fetch('/api/outbox').then(r=>r.json()).then(j=>JSON.stringify({n:j.applications.length}))")).n;
   console.log("  applications in inbox before/after:", before, after);
   const newest = await ev("fetch('/api/outbox').then(r=>r.json()).then(j=>(j.applications[0]||{}).status||'')");
   check(REL ? "swipe right on a real job is recorded as a hand-off to the employer's own page" : "swipe right created an application in the test inbox",
-        REL ? after > before && newest === "handoff" : after > before, "(newest status: " + newest + ")");
+        REL ? after > before && newest === "handoff" : (after > before || needsFile), "(newest status: " + newest + (needsFile ? "; the employer needs a resume file first" : "") + ")");
   // dashboard
   await ev(F + ".getElementById('nb-dash').click()");
   await sleep(500);
@@ -65,7 +69,7 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   // profile sections
   await ev(F + ".getElementById('nb-prof').click()");
   await sleep(500);
-  for (const t of ["Account", "Settings", "Resume", "Preferences", "Filters", "Plan", "Data"].filter((x) => !(REL && x === "Plan"))) {
+  for (const t of ["Account", "Profile setup", "Filters", "Plan", "Data"]) {
     const ok = await clickText(t);
     await sleep(350);
     const txt = await visibleText();
@@ -74,9 +78,9 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   // data & privacy has the legal block
   check("Data & privacy shows Legal links", (await ev(F + ".querySelectorAll('[data-legal]').length")) === 5);
   // settings controls
-  await clickText("Settings");
+  await clickText("Profile setup");
   await sleep(400);
-  check("Settings has a Save button", !!(await ev("!!" + F + ".getElementById('saveBtn')")));
+  check("Profile setup has a Save and continue button", !!(await ev("!!" + F + ".getElementById('wzNext')")));
   // help assistant
   check("Help button opens the assistant", await ev("(()=>{const b=" + F + ".getElementById('uaChatBtn');if(!b)return false;b.click();return true})()"));
   await sleep(500);

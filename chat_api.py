@@ -1,6 +1,6 @@
 """UAply Assistant: support answers and feedback for the sandbox and dev instances (prod does not use it).
 
-  POST /api/chat        answer a question. With AI switched on, Claude writes the answer from UAply's help articles
+  POST /api/chat        answer a question. With AI switched on, the AI model writes the answer from UAply's help articles
                         (help/articles.json); otherwise the best-matching article is returned. Either way the reply
                         says which article it came from and whether a person should take over.
   POST /api/feedback    store one piece of feedback (rating, text, topic, optional email for a follow-up).
@@ -29,7 +29,13 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 HELP_PATH = os.path.join(ROOT, "help", "articles.json")
 DATA = os.path.join(ROOT, "data")
 EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
-TOPICS = ("general", "bug", "answer", "contact", "nudge")
+TOPICS = ("general", "bug", "answer", "contact", "nudge", "exit")
+# Exit survey (shown when someone deletes their account). Answers are fixed ids so they can be counted.
+EXIT_REASONS = {"found_job": "I found a job", "not_looking": "I'm not looking right now", "no_fit": "Not enough jobs that fit me",
+                "hard_to_use": "Hard to use or confusing", "too_expensive": "Too expensive", "privacy": "Privacy concerns",
+                "technical": "Technical problems", "other": "Something else"}
+EXIT_OUTCOMES = {"hired_uaply": "Got a job through UAply", "hired_other": "Got a job somewhere else",
+                 "still_looking": "Still looking", "break": "Taking a break"}
 DEFAULT_MODEL = "claude-opus-5-5"
 
 _lock = threading.RLock()
@@ -48,7 +54,7 @@ You are an AI. If anyone asks, say so plainly; never claim or imply that you are
 
 How to answer:
 - Use only the help articles below. If they don't cover the question, say you don't know, suggest "Talk to a person", and set needs_human to true. Never guess about features, prices, dates or policies.
-- Keep answers short: at most about 100 words, plain everyday language, no jargon. Give exact places in the app, like "Profile, then Settings". Use numbered steps only when there are several steps.
+- Keep answers short: at most about 100 words, plain everyday language, no jargon. Give exact places in the app, like "Profile, then Profile setup". Use numbered steps only when there are several steps.
 - Put the ids of the articles you used in source_ids (an empty list if none applied).
 - If the person reports a bug, complains, or gives an idea, thank them briefly and tell them the "Report a problem" or "Give feedback" button sends it straight to the team. That is not a reason for needs_human.
 - If the person is frustrated, acknowledge it in one short sentence before helping.
@@ -82,13 +88,7 @@ def init(instance):
     DATA = os.path.join(uaply_api.data_root(), re.sub(r"[^A-Za-z0-9_-]", "", instance) or "default")
     with _lock:
         FEEDBACK.clear()
-        try:
-            with open(os.path.join(DATA, "feedback.jsonl"), encoding="utf-8") as f:
-                for line in f:
-                    if line.strip():
-                        FEEDBACK.append(json.loads(line))
-        except Exception:
-            pass
+        FEEDBACK.extend(uaply_api.read_lines(os.path.join(DATA, "feedback.jsonl")))       # a broken line is skipped, not every line after it
 
 
 def _s(v, n):
@@ -111,12 +111,13 @@ def articles():
                     return r if RELEASE else {}
                 _help["articles"] = [
                     {"id": _s(a.get("id"), 60), "title": _s(a.get("title"), 120), "tags": _s(a.get("tags"), 400),
-                     "body": _s(rel(a).get("body") or a.get("body"), 1500), "go": _s(a.get("go"), 40)}
+                     "body": _s(rel(a).get("body") or a.get("body"), 1500), "go": _s(rel(a).get("go") or a.get("go"), 40)}
                     for a in raw if isinstance(a, dict) and a.get("id") and a.get("title") and a.get("body")
                     and not rel(a).get("hide")]
                 _help["mtime"] = mtime
-            except Exception:
-                pass
+            except Exception as e:                  # a typo in the file: keep the last good articles, and tell the owner why answers are missing
+                print("UAply Assistant: help/articles.json could not be read (%s: %s)" % (type(e).__name__, str(e)[:160]), file=sys.stderr)
+                _help["mtime"] = mtime              # said once per change of the file, not on every question
         return list(_help["articles"])
 
 
@@ -255,7 +256,7 @@ def _ask_ai(history, settings):
     request = dict(model=settings["model"], max_tokens=16000, system=system, messages=history,
                    output_config={"effort": settings["effort"], "format": {"type": "json_schema", "schema": SCHEMA}})
     try:
-        # if a safety classifier declines, re-run the request on Anthropic's recommended fallback model
+        # if a safety classifier declines, re-run the request on the provider's recommended fallback model
         resp = client.beta.messages.create(betas=["server-side-fallback-2026-07-01"], fallbacks="default", **request)
     except (TypeError, anthropic.BadRequestError):
         resp = client.messages.create(**request)                 # an SDK or model that doesn't take the fallback option
@@ -322,14 +323,30 @@ def feedback(p, ip, user=None, notify=None):
         return 400, {"error": "That email doesn't look right."}
     if topic == "contact" and not (text and email):
         return 400, {"error": "Add a message and an email so we can reply."}
-    if rating is None and not text and helpful is None:
+    survey = None
+    if topic == "exit":
+        sv = p.get("survey") if isinstance(p.get("survey"), dict) else {}
+        try:
+            nps = int(sv["nps"]) if sv.get("nps") is not None else None
+            nps = nps if nps is None or 0 <= nps <= 10 else None
+        except (TypeError, ValueError):
+            nps = None
+        survey = {"reason": sv.get("reason") if sv.get("reason") in EXIT_REASONS else "",
+                  "outcome": sv.get("outcome") if sv.get("outcome") in EXIT_OUTCOMES else "",
+                  "nps": nps, "better": _s(sv.get("better"), 1000), "return": _s(sv.get("return"), 600)}
+        if not (survey["reason"] or survey["outcome"] or nps is not None or survey["better"] or survey["return"]):
+            return 400, {"error": "Answer at least one question, or skip the survey."}
+    elif rating is None and not text and helpful is None:
         return 400, {"error": "Add a rating or a few words first."}
     rec = {"id": uuid.uuid4().hex[:10], "at": int(time.time()), "topic": topic, "rating": rating, "text": text,
            "helpful": helpful, "email": email, "page": _s(p.get("page"), 40), "source": _s(p.get("source"), 20),
            "articles": [_s(x, 60) for x in (p.get("articles") if isinstance(p.get("articles"), list) else [])[:3] if isinstance(x, str)],
-           "user": user["id"] if user else None}
+           # an exit survey is deliberately NOT linked to the account being deleted, so deleting the account keeps it anonymous
+           "user": None if topic == "exit" else (user["id"] if user else None)}
+    if survey is not None:
+        rec["survey"] = survey
     delivery = "saved"
-    if notify and text and (topic in ("contact", "bug") or email):
+    if notify and text and topic != "exit" and (topic in ("contact", "bug") or email):
         try:
             delivery = notify(rec, user)               # slow network call: made outside the lock
         except Exception as e:
@@ -338,12 +355,7 @@ def feedback(p, ip, user=None, notify=None):
     rec["delivery"] = delivery
     with _lock:
         FEEDBACK.append(rec)
-        try:
-            os.makedirs(DATA, exist_ok=True)
-            with open(os.path.join(DATA, "feedback.jsonl"), "a", encoding="utf-8") as f:
-                f.write(json.dumps(rec) + "\n")
-        except Exception:
-            pass
+        uaply_api.append_line(os.path.join(DATA, "feedback.jsonl"), json.dumps(rec))
     return 200, {"ok": True, "id": rec["id"], "delivery": delivery}
 
 
@@ -378,13 +390,44 @@ def feedback_html():
                    for n in (5, 4, 3, 2, 1))
     helped = [r["helpful"] for r in recs if r.get("helpful") is not None]
     help_rate = ("%d%%" % round(100 * sum(1 for h in helped if h) / len(helped))) if helped else "–"
-    label = {"general": "FEEDBACK", "bug": "PROBLEM", "answer": "ANSWER", "contact": "MESSAGE", "nudge": "QUICK RATING"}
+    label = {"general": "FEEDBACK", "bug": "PROBLEM", "answer": "ANSWER", "contact": "MESSAGE", "nudge": "QUICK RATING",
+             "exit": "EXIT SURVEY"}
+    exits = [r["survey"] for r in recs if r.get("topic") == "exit" and r.get("survey")]
+    leave = ""
+    if exits:
+        reasons = "".join("<li><b>%d</b> %s</li>" % (n, e(EXIT_REASONS[k])) for k, n in sorted(
+            ((k, sum(1 for s in exits if s["reason"] == k)) for k in EXIT_REASONS), key=lambda x: -x[1]) if n)
+        outs = "".join("<li><b>%d</b> %s</li>" % (n, e(EXIT_OUTCOMES[k])) for k, n in sorted(
+            ((k, sum(1 for s in exits if s["outcome"] == k)) for k in EXIT_OUTCOMES), key=lambda x: -x[1]) if n)
+        scores = [s["nps"] for s in exits if s["nps"] is not None]
+        nps = ("%+d" % round(100 * (sum(1 for x in scores if x >= 9) - sum(1 for x in scores if x <= 6)) / len(scores))) if scores else "–"
+        leave = ("<h2 style='margin:12px 0 0;font-size:18px'>Why people leave (%d exit surveys)</h2>"
+                 "<div class='stats'><div><b>%s</b><small>Recommend score (NPS)</small></div><div><b>%d</b><small>Answered</small></div></div>"
+                 "<article><b>Main reason</b><ul>%s</ul><b>How their search went</b><ul>%s</ul></article>") % (len(exits), nps, len(exits), reasons or "<li>No answers</li>", outs or "<li>No answers</li>")
+    def exit_detail(r):
+        s = r.get("survey")
+        if not s:
+            return ""
+        bits = []
+        if s["reason"]:
+            bits.append("Reason: " + e(EXIT_REASONS[s["reason"]]))
+        if s["outcome"]:
+            bits.append("Search: " + e(EXIT_OUTCOMES[s["outcome"]]))
+        if s["nps"] is not None:
+            bits.append("Would recommend: %d/10" % s["nps"])
+        out = "<p class='m'>%s</p>" % " · ".join(bits) if bits else ""
+        if s["better"]:
+            out += "<pre>Do better or add: %s</pre>" % e(s["better"])
+        if s["return"]:
+            out += "<pre>What would bring them back: %s</pre>" % e(s["return"])
+        return out
     rows = "".join(
-        '<article><header><span class="b">%s</span>%s<time>%s</time></header>%s%s</article>' % (
+        '<article><header><span class="b">%s</span>%s<time>%s</time></header>%s%s%s</article>' % (
             e(label.get(r["topic"], r["topic"].upper())),
             ("<b>%s</b>" % ("&#9733;" * r["rating"] + "&#9734;" * (5 - r["rating"]))) if r.get("rating") else
             ("<b>%s</b>" % ("Answer helped" if r.get("helpful") else "Answer did not help")) if r.get("helpful") is not None else "",
             time.strftime("%b %d, %H:%M", time.localtime(r["at"])),
+            exit_detail(r),
             ("<pre>%s</pre>" % e(r["text"])) if r.get("text") else "",
             '<p class="m">%s%s%s</p>' % (("Reply to: " + e(r["email"]) + " · ") if r.get("email") else "No reply requested · ",
                                          ("from " + e(r["source"]) + " · ") if r.get("source") else "",
@@ -407,4 +450,4 @@ pre{white-space:pre-wrap;margin:8px 0 0;font:inherit;background:var(--bg);border
 </style></head><body><main><h1>UAply feedback</h1><p class="m">Everything people sent through the UAply Assistant. Only people who asked for a reply left an email.</p>
 <div class="stats"><div><b>%d</b><small>Messages</small></div><div><b>%s</b><small>Average rating</small></div><div><b>%s</b><small>Answers that helped</small></div></div>
 <div class="stats">%s</div>
-%s</main></body></html>""" % (len(recs), avg, help_rate, dist, rows)).encode("utf-8")
+%s%s</main></body></html>""" % (len(recs), avg, help_rate, dist, leave, rows)).encode("utf-8")

@@ -31,20 +31,27 @@ module.exports = async ({ ev, sleep, nav, send, logs }) => {
   await ev("(()=>{window.__reqs=[];const f=window.fetch;window.fetch=function(u,o){try{if(/api[/](apply|decision)/.test(String(u)))window.__reqs.push({u:String(u),b:o&&o.body?String(o.body):''})}catch(e){}return f.apply(this,arguments)}})()");
   await ev("(()=>{window.__reqs=window.__reqs||[]; const w=" + FW + "; w.__reqs=[]; const f=w.fetch; w.fetch=function(u,o){try{if(/api[/](apply|decision)/.test(String(u)))w.__reqs.push({u:String(u),b:o&&o.body?String(o.body):''})}catch(e){}return f.apply(this,arguments)}})()");
 
-  // the profile a person would fill in: name and email, then LinkedIn, phone, portfolio and a resume file under Resume and links
-  await pick("nb-prof", "Settings"); await sleep(500);
+  // the profile a person would fill in, in Profile setup: name, email and phone (step 1, About you), then LinkedIn, portfolio and a
+  // resume file (step 4, Background and links). When the Application profile asks the same question, its box is the one shown.
+  const shown = (a, b) => ev("(()=>{const e=" + F + ".getElementById('" + a + "');return e&&!e.closest('.px-dup')?'" + a + "':'" + b + "'})()");
+  const step = async (i) => { await ev("(()=>{const b=" + F + ".querySelector('.wzDots button[data-step=\"" + i + "\"]');if(b)b.click()})()"); await sleep(600); };
+  const saveStep = async () => { await ev("(()=>{const b=" + F + ".getElementById('wzNext');if(b)b.click()})()"); await sleep(900); };
+  check("Profile setup opens", await pick("nb-prof", "Profile setup")); await sleep(600);
   await setVal("pName", "Sam Rivera"); await setVal("pEmail", "sam.swipes@example.com");
-  await ev(F + ".getElementById('saveBtn').click()"); await sleep(900);
-  check("Resume and links opens", await pick("nb-prof", "Resume")); await sleep(600);
-  check("LinkedIn field is there", !!(await ev("!!" + F + ".getElementById('aLinked')")));
-  await setVal("aLinked", "linkedin.com/in/sam-rivera"); await setVal("aSite", "samrivera.dev"); await setVal("aPhone", "+1 215 555 0100");
-  const saveRes = await ev("(()=>{const b=[...(" + F + ").querySelectorAll('button')].find(x=>x.offsetParent&&/^save/i.test(x.innerText.trim()));if(b){b.click();return b.innerText.trim()}return 'no save button'})()");
-  console.log("   (Resume and links saved with:", saveRes + ")");
-  await sleep(700);
-  check("the LinkedIn box says it is sent with every application", /Sent to employers with every application/.test(await ev("(" + F + ").body.innerText")));
-  check("Preferences opens (the resume file upload is there)", await pick("nb-prof", "Preferences")); await sleep(700);
+  await setVal(await shown("px-phone", "pPhone"), "+1 215 555 0100");
+  await saveStep();
+  await step(3);
+  check("Background and links opens", /Background and links/.test(await ev("(" + F + ").body.innerText")));
+  const li = await shown("px-linkedin", "aLinked"), site = await shown("px-portfolio", "aSite");
+  check("LinkedIn field is there", !!(await ev("!!" + F + ".getElementById('" + li + "')")), li);
+  // the Application profile's boxes ask for full links (they say "Use a full link that starts with https://" otherwise)
+  await setVal(li, li === "aLinked" ? "linkedin.com/in/sam-rivera" : "https://www.linkedin.com/in/sam-rivera");
+  await setVal(site, site === "aSite" ? "samrivera.dev" : "https://samrivera.dev");
+  check("the step says these details are sent with applications", /Sent with your applications/.test(await ev("(" + F + ").body.innerText")));
+  check("the resume file upload is on this step", !!(await ev("(()=>{const i=" + F + ".getElementById('pResFile');return !!(i&&i.closest('.field')&&getComputedStyle(i.closest('.field')).display!=='none')})()")));
   await ev("(()=>{const w=" + FW + ";const i=" + F + ".getElementById('pResFile');const dt=new w.DataTransfer();const bytes=new w.Uint8Array([37,80,68,70,45,49,46,52,10,37,226,227,207,211,10,115,97,109,10,37,37,69,79,70,10]);dt.items.add(new w.File([bytes],'Sam-Rivera-Resume.pdf',{type:'application/pdf'}));i.files=dt.files;i.dispatchEvent(new w.Event('change',{bubbles:true}))})()");
   await sleep(1500);
+  await saveStep();
   check("the resume file is held by the app", !!(await ev("!!(" + FW + ".__uaplyResume&&" + FW + ".__uaplyResume())")));
   await pick("nb-svc", "Full-time"); await sleep(900);
 
@@ -122,7 +129,9 @@ module.exports = async ({ ev, sleep, nav, send, logs }) => {
   await sleep(3500);
   await click("btnYes"); await sleep(3000);
   const unverifiedText = await ev("(" + F + ").body.innerText.split(" + NL + ").join(' ')");
-  check("signed in but not verified: the swipe says to verify the email", unverifiedText.includes("Verify your email"), unverifiedText.slice(-150));
+  // with no real email connected (this test), nothing leaves the server, so even an unverified account's confirmation is kept in the test inbox;
+  // with real email connected, an unverified account is told to verify first (covered by test-verify.py)
+  check("signed in but not verified: the swipe says where the confirmation is kept", /Verify your email|Confirmation is in the test inbox/.test(unverifiedText), unverifiedText.slice(-150));
   const code = await ev("fetch('/outbox').then(r=>r.text()).then(t=>{const m=t.match(/([0-9]{6}) is your UAply verification code/);return m?m[1]:''})");
   check("the verification code is in the test inbox", /^[0-9]{6}$/.test(code), code);
   check("the code verifies the account", (await ev("fetch('/api/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:'" + code + "'})}).then(r=>r.status)")) === 200);

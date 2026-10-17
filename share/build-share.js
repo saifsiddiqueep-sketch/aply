@@ -7,6 +7,8 @@ const read = (p) => fs.readFileSync(p, "utf8");
 const prod = read("prod/index.html");
 const nav = read("shared/uaply-nav.js");
 const profile = read("shared/uaply-profile.js");
+const employers = read("shared/uaply-employers.js");     // Hiring mode: sandbox only (it registers itself after envs)
+const learn = read("shared/uaply-learn.js");             // Learns from your swipes: sandbox only (envs asks for it only when it is on)
 let envs = read("shared/uaply-envs.js");
 
 const NEEDS_SERVER = ["live", "kit", "submit", "chat"];   // the assistant needs chat_api.py, which a static host cannot run
@@ -27,9 +29,10 @@ function darkBlocks(html) {
     "@media (prefers-color-scheme: dark){:root:not([data-theme=\"light\"]){" + vars + ";color-scheme:dark}}\n:root[data-theme=\"dark\"]{" + vars + ";color-scheme:dark}");
 }
 
-function build(src, out, title, edits) {
+function build(src, out, title, edits, extra) {
   let h = read(src);
-  h = h.replace(/(<script src="uaply-[a-z]+\.js"><\/script>\s*)+/, () => inline + "\n");
+  const viewport = (h.match(/<meta name="viewport" content="([^"]*)"/i) || [])[1] || "width=device-width,initial-scale=1";
+  h = h.replace(/(<script src="uaply-[a-z]+\.js"><\/script>\s*)+/, () => inline + (extra || "") + "\n");
   if (!h.includes("__PROD_SRC")) throw new Error("script tags not found in " + src);
   h = h.replace(/<title>[^<]*<\/title>/, "<title>" + title + "</title>");
   edits.forEach(([a, b]) => { if (!h.includes(a)) throw new Error("edit target missing: " + a.slice(0, 40)); h = h.replace(a, () => b); });
@@ -41,17 +44,21 @@ function build(src, out, title, edits) {
   console.log("wrote", out, Math.round(h.length / 1024) + "KB");
   if (process.argv.includes("--full")) {   // a complete page for ordinary web hosting (GitHub Pages)
     const full = out.replace(/\.html$/, ".full.html");
-    fs.writeFileSync(full, '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>\n' + h + "\n</body></html>\n");
+    // the icon links belong in <head>; the head was stripped above, so put them back there (in <body> some browsers show a plain globe)
+    // so are the "add to Home Screen as an app" tags: phones read them only from <head>
+    const iconTags = h.match(/<link rel="(?:icon|apple-touch-icon)"[^>]*>\s*|<meta name="(?:apple-mobile-web-app-[a-z-]+|mobile-web-app-capable|theme-color)"[^>]*>\s*/g) || [];
+    const bodyHtml = iconTags.reduce((s, t) => s.replace(t, ""), h);
+    fs.writeFileSync(full, '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="' + viewport + '">' + iconTags.map((t) => t.trim()).join("") + '</head><body>\n' + bodyHtml + "\n</body></html>\n");
     console.log("wrote", full);
   }
 }
 
 build("sandbox/index.html", "share/sandbox.html", "UAply Sandbox", [
-  ["on={nav:true,profile:true,live:true,kit:true,submit:true,", "on={nav:true,profile:true,"],
+  ["on={glide:true,learn:true,easy:true,axis:true,nav:true,profile:true,live:true,kit:true,submit:true,", "on={glide:true,learn:true,easy:true,axis:true,nav:true,profile:true,"],
   ["Experiment freely. Reads a copy of index.html (prod); prod is never changed.", "Experiment freely. Hosted copy: example jobs only, and your swipes stay in your own browser."],
-]);
+], "\n<script>" + safe(employers) + "</script>\n<script>" + safe(learn) + "</script>");
 build("dev/index.html", "share/dev.html", "UAply", [
-  ['var PROMOTED=["nav","live","kit","submit",', 'var PROMOTED=["nav",'],
+  ['var PROMOTED=["glide","nav","profile","live","kit","submit",', 'var PROMOTED=["glide","nav","profile",'],
   // the hosted copy has no server, so it must say so instead of posing as the real app
   ['<div class="bar" id="devbar" hidden><span class="badge">DEV</span><span id="what">Release candidate</span></div>',
    '<div class="bar" id="devbar"><span class="badge">PREVIEW</span><span id="what">Static preview: example jobs only. Accounts and real jobs run on the UAply server.</span></div>'],

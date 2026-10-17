@@ -7,18 +7,41 @@ const path = require("path");
 
 const CHROME = path.join(process.env.LOCALAPPDATA || "", "Google", "Chrome", "Application", "chrome.exe");
 
-(async () => {
-  const port = 9300 + Math.floor(Math.random() * 500);
-  const profile = fs.mkdtempSync(path.join(os.tmpdir(), "uaply-cdp-"));
-  const proc = spawn(CHROME, ["--headless=new", "--disable-gpu", "--remote-debugging-port=" + port, "--user-data-dir=" + profile,
-    "--window-size=" + (process.env.W || 1100) + "," + (process.env.H || 900), "about:blank"], { stdio: "ignore" });
-  let tab;
-  for (let i = 0; i < 50 && !tab; i++) {
-    try { tab = (await (await fetch("http://127.0.0.1:" + port + "/json")).json()).find((t) => t.type === "page"); } catch (e) {}
-    if (!tab) await new Promise((r) => setTimeout(r, 200));
+let failed = false;                                       // set when the test prints a FAIL line, so the runner (run-all-tests.sh) can see it
+const _log = console.log;
+console.log = (...a) => { const t = a.join(" "); if (/^FAIL\b|^TEST SCRIPT FAILED/.test(t)) failed = true; _log(...a); };
+// a test that hangs says so and fails, instead of going silent until the runner's time limit
+const LIMIT = Number(process.env.CDP_LIMIT_MS || 540000);
+setTimeout(() => { console.log("TEST SCRIPT FAILED: no result after " + Math.round(LIMIT / 1000) + " s (the page or Chrome stopped responding)"); process.exit(1); }, LIMIT).unref();
+
+// start headless Chrome and connect; if it does not answer (a busy computer, a port already taken), try a fresh one, up to 3 times
+async function launch() {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const port = 9300 + Math.floor(Math.random() * 500);
+    const profile = fs.mkdtempSync(path.join(os.tmpdir(), "uaply-cdp-"));
+    const proc = spawn(CHROME, ["--headless=new", "--disable-gpu", "--remote-debugging-port=" + port, "--user-data-dir=" + profile,
+      "--window-size=" + (process.env.W || 1100) + "," + (process.env.H || 900), "about:blank"], { stdio: "ignore" });
+    let tab;
+    for (let i = 0; i < 75 && !tab; i++) {
+      try { tab = (await (await fetch("http://127.0.0.1:" + port + "/json")).json()).find((t) => t.type === "page"); } catch (e) {}
+      if (!tab) await new Promise((r) => setTimeout(r, 200));
+    }
+    if (tab) {
+      const ws = new WebSocket(tab.webSocketDebuggerUrl);
+      const opened = await new Promise((r) => { ws.onopen = () => r(true); ws.onerror = () => r(false); setTimeout(() => r(false), 15000); });
+      if (opened) return { proc, profile, ws };
+      try { ws.close(); } catch (e) {}
+    }
+    proc.kill();
+    try { fs.rmSync(profile, { recursive: true, force: true }); } catch (e) {}
+    console.error("Chrome did not answer (attempt " + attempt + " of 3); starting a fresh one");
   }
-  const ws = new WebSocket(tab.webSocketDebuggerUrl);
-  await new Promise((r) => (ws.onopen = r));
+  console.log("TEST SCRIPT FAILED: Chrome would not start after 3 tries");
+  process.exit(1);
+}
+
+(async () => {
+  const { proc, profile, ws } = await launch();
   let id = 0;
   const pending = {};
   const logs = [];
@@ -55,5 +78,5 @@ const CHROME = path.join(process.env.LOCALAPPDATA || "", "Google", "Chrome", "Ap
   console.log("CONSOLE ISSUES:", logs.length ? "\n" + logs.join("\n") : "none");
   ws.close(); proc.kill();
   try { fs.rmSync(profile, { recursive: true, force: true }); } catch (e) {}
-  process.exit(0);
+  process.exit(failed || process.exitCode ? 1 : 0);      // a FAIL line, a crashed test script or exitCode set by the test makes the whole run fail
 })();

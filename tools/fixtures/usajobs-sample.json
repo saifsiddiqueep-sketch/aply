@@ -1,0 +1,155 @@
+{
+ "note": "CONSTRUCTED sample, not a recorded answer (UAply has no USAJOBS key yet). Built from the documented response of GET https://data.usajobs.gov/api/search (developer.usajobs.gov/api-reference/get-api-search, read October 16, 2026): SearchResult.SearchResultItems[].MatchedObjectDescriptor with PositionTitle, OrganizationName, PositionLocationDisplay, PositionRemuneration, ApplyURI, PositionURI, PublicationStartDate and UserArea.Details. The HiringPath list and RemoteIndicator in Details are not in the documented schema; they are included because the reader accepts them when present. Agencies and numbers are invented. Used by tools/test-feeds.py; never served as jobs.",
+ "philadelphia": {
+  "LanguageCode": "EN",
+  "SearchParameters": {},
+  "SearchResult": {
+   "SearchResultCount": 4,
+   "SearchResultCountAll": 4,
+   "SearchResultItems": [
+    {
+     "MatchedObjectId": "900000101",
+     "MatchedObjectDescriptor": {
+      "PositionID": "PHL-26-0001",
+      "PositionTitle": "IT Specialist (Applications Software)",
+      "PositionURI": "https://www.usajobs.gov/job/900000101",
+      "ApplyURI": ["https://www.usajobs.gov:443/job/900000101/apply"],
+      "PositionLocationDisplay": "Philadelphia, Pennsylvania",
+      "PositionLocation": [{"LocationName": "Philadelphia, Pennsylvania", "CountryCode": "United States", "CountrySubDivisionCode": "Pennsylvania", "CityName": "Philadelphia, Pennsylvania", "Longitude": -75.16379, "Latitude": 39.95233}],
+      "OrganizationName": "Defense Logistics Agency",
+      "DepartmentName": "Department of Defense",
+      "JobCategory": [{"Name": "Information Technology Management", "Code": "2210"}],
+      "JobGrade": [{"Code": "GS"}],
+      "PositionSchedule": [{"Name": "Full-time", "Code": "1"}],
+      "PositionOfferingType": [{"Name": "Permanent", "Code": "15317"}],
+      "QualificationSummary": "One year of specialized experience equivalent to GS-11, including Python and SQL development.",
+      "PositionRemuneration": [{"MinimumRange": "92108", "MaximumRange": "119746", "RateIntervalCode": "PA", "Description": "Per Year"}],
+      "PositionStartDate": "2026-10-01T00:00:00.0000",
+      "PositionEndDate": "2026-10-31T23:59:59.9970",
+      "PublicationStartDate": "2026-10-01T00:00:00.0000",
+      "ApplicationCloseDate": "2026-10-31T23:59:59.9970",
+      "PositionFormattedDescription": [{"Label": "Dynamic Teaser", "LabelDescription": "Hit highlighting for keyword searches.", "Content": ""}],
+      "UserArea": {"Details": {
+       "JobSummary": "Join the team that builds the agency's supply chain software in Philadelphia.",
+       "MajorDuties": ["Develops and tests applications in Python and SQL.", "Works with users to define requirements."],
+       "Education": "", "Requirements": "U.S. citizenship required.", "Evaluations": "", "HowToApply": "Apply on USAJOBS.",
+       "WhatToExpectNext": "", "RequiredDocuments": "", "Benefits": "", "BenefitsUrl": "", "OtherInformation": "",
+       "KeyRequirements": ["U.S. Citizenship"], "WhoMayApply": {"Name": "United States Citizens", "Code": ""},
+       "LowGrade": "12", "HighGrade": "12", "SubAgencyName": "", "OrganizationCodes": "DD/DL",
+       "HiringPath": ["public"], "IsRadialSearch": true}}
+     }
+    },
+    {
+     "MatchedObjectId": "900000102",
+     "MatchedObjectDescriptor": {
+      "PositionID": "PHL-26-0002",
+      "PositionTitle": "Contract Specialist",
+      "PositionURI": "https://www.usajobs.gov/job/900000102",
+      "ApplyURI": [],
+      "PositionLocationDisplay": "Multiple Locations",
+      "PositionLocation": [{"LocationName": "Philadelphia, Pennsylvania", "CountryCode": "United States"}, {"LocationName": "Camden, New Jersey", "CountryCode": "United States"}, {"LocationName": "Wilmington, Delaware", "CountryCode": "United States"}],
+      "OrganizationName": "Naval Supply Systems Command",
+      "DepartmentName": "Department of the Navy",
+      "JobCategory": [{"Name": "Contracting", "Code": "1102"}],
+      "PositionSchedule": [{"Name": "Full-time", "Code": "1"}],
+      "QualificationSummary": "",
+      "PositionRemuneration": [{"MinimumRange": "28.10", "MaximumRange": "36.50", "RateIntervalCode": "PH", "Description": "Per Hour"}],
+      "PublicationStartDate": "2026-10-05T00:00:00.0000",
+      "UserArea": {"Details": {"JobSummary": "Buys what the Navy needs and manages the contracts.", "MajorDuties": "Plans and awards contracts.", "HiringPath": ["public", "vet"]}}
+     }
+    },
+    {
+     "MatchedObjectId": "900000103",
+     "MatchedObjectDescriptor": {
+      "PositionID": "OVS-26-0003",
+      "PositionTitle": "Budget Analyst",
+      "PositionURI": "https://www.usajobs.gov/job/900000103",
+      "ApplyURI": ["https://www.usajobs.gov:443/job/900000103/apply"],
+      "PositionLocationDisplay": "Ramstein Air Base, Germany",
+      "OrganizationName": "U.S. Air Forces in Europe",
+      "DepartmentName": "Department of the Air Force",
+      "JobCategory": [{"Name": "Budget Analysis", "Code": "0560"}],
+      "PositionRemuneration": [{"MinimumRange": "70000", "MaximumRange": "90000", "RateIntervalCode": "PA", "Description": "Per Year"}],
+      "PublicationStartDate": "2026-10-06T00:00:00.0000",
+      "UserArea": {"Details": {"JobSummary": "Budget work at an overseas base.", "MajorDuties": ["Prepares budget estimates in Excel."], "HiringPath": ["overseas"]}}
+     }
+    },
+    {
+     "MatchedObjectId": "900000104",
+     "MatchedObjectDescriptor": {
+      "PositionID": "TEL-26-0004",
+      "PositionTitle": "Management and Program Analyst",
+      "PositionURI": "https://www.usajobs.gov/job/900000104",
+      "ApplyURI": ["https://www.usajobs.gov:443/job/900000104/apply"],
+      "PositionLocationDisplay": "Anywhere in the U.S. (remote job)",
+      "OrganizationName": "Office of Personnel Management",
+      "DepartmentName": "Office of Personnel Management",
+      "JobCategory": [{"Name": "Management And Program Analysis", "Code": "0343"}],
+      "PositionRemuneration": [{"MinimumRange": "80000", "MaximumRange": "104000", "RateIntervalCode": "PA", "Description": "Per Year"}],
+      "PublicationStartDate": "2026-10-07T00:00:00.0000",
+      "UserArea": {"Details": {"JobSummary": "Analyzes programs and writes reports with Tableau dashboards.", "MajorDuties": ["Builds reports."], "RemoteIndicator": true, "HiringPath": ["public"]}}
+     }
+    }
+   ]
+  }
+ },
+ "students": {
+  "LanguageCode": "EN",
+  "SearchParameters": {},
+  "SearchResult": {
+   "SearchResultCount": 3,
+   "SearchResultCountAll": 3,
+   "SearchResultItems": [
+    {
+     "MatchedObjectId": "900000201",
+     "MatchedObjectDescriptor": {
+      "PositionID": "PHL-26-0201",
+      "PositionTitle": "Student Trainee (Information Technology)",
+      "PositionURI": "https://www.usajobs.gov/job/900000201",
+      "ApplyURI": ["https://www.usajobs.gov:443/job/900000201/apply"],
+      "PositionLocationDisplay": "Philadelphia, Pennsylvania",
+      "OrganizationName": "Internal Revenue Service",
+      "DepartmentName": "Department of the Treasury",
+      "JobCategory": [{"Name": "Information Technology Management", "Code": "2299"}],
+      "PositionSchedule": [{"Name": "Part-time", "Code": "2"}],
+      "PositionRemuneration": [{"MinimumRange": "35000", "MaximumRange": "42000", "RateIntervalCode": "PA", "Description": "Per Year"}],
+      "PublicationStartDate": "2026-10-08T00:00:00.0000",
+      "UserArea": {"Details": {"JobSummary": "Pathways Internship Program: work while you study.", "MajorDuties": ["Supports the help desk.", "Learns SQL reporting."], "HiringPath": ["student"]}}
+     }
+    },
+    {
+     "MatchedObjectId": "900000202",
+     "MatchedObjectDescriptor": {
+      "PositionID": "PHL-26-0202",
+      "PositionTitle": "Accountant (Recent Graduate)",
+      "PositionURI": "https://www.usajobs.gov/job/900000202",
+      "ApplyURI": ["https://www.usajobs.gov:443/job/900000202/apply"],
+      "PositionLocationDisplay": "Philadelphia, Pennsylvania",
+      "OrganizationName": "Defense Contract Audit Agency",
+      "DepartmentName": "Department of Defense",
+      "JobCategory": [{"Name": "Accounting", "Code": "0510"}],
+      "PositionRemuneration": [{"MinimumRange": "52000", "MaximumRange": "68000", "RateIntervalCode": "PA", "Description": "Per Year"}],
+      "PublicationStartDate": "2026-10-09T00:00:00.0000",
+      "UserArea": {"Details": {"JobSummary": "Pathways Recent Graduates Program for new accountants. Excel skills help.", "MajorDuties": ["Audits contracts."], "HiringPath": ["graduates"]}}
+     }
+    },
+    {
+     "MatchedObjectId": "900000203",
+     "MatchedObjectDescriptor": {
+      "PositionID": "PHL-26-0203",
+      "PositionTitle": "Pathways Intern - Engineering",
+      "PositionURI": "https://www.usajobs.gov/job/900000203",
+      "ApplyURI": ["https://www.usajobs.gov:443/job/900000203/apply"],
+      "PositionLocationDisplay": "Philadelphia, Pennsylvania",
+      "OrganizationName": "U.S. Army Corps of Engineers",
+      "DepartmentName": "Department of the Army",
+      "JobCategory": [{"Name": "Civil Engineering", "Code": "0810"}],
+      "PositionRemuneration": [{"MinimumRange": "38000", "MaximumRange": "46000", "RateIntervalCode": "PA", "Description": "Per Year"}],
+      "PublicationStartDate": "2026-10-10T00:00:00.0000",
+      "UserArea": {"Details": {"JobSummary": "Summer engineering work on the Delaware River.", "MajorDuties": ["Assists engineers in the field."]}}
+     }
+    }
+   ]
+  }
+ }
+}

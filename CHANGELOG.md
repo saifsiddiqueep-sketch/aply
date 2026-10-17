@@ -4,6 +4,216 @@ How versions move: work happens in `sandbox`, is tested there, and goes to `dev`
 build: it is what the hosted site and the phone apps run. Each version is tagged on GitHub (Releases). `main` is the original
 production page and only changes when the owner decides.
 
+## Unreleased (sandbox and dev)
+
+### Sign-in ready for the live site (uaply.net), iPhones and Google
+- **Continue with Google on iPhone and iPad** now uses Google's full-page sign-in (a white "Continue with Google" button with
+  Google's G), because Google says its pop-up button needs that on iPhone (Safari's tracking protection breaks the pop-up).
+  Computers and Android phones keep Google's own button. The full-page sign-in needs the client secret on the server.
+- **The phone apps hide Google** on Android too, not only iPhone: Google refuses to sign anyone in inside an app's built-in web
+  view. Password sign-up works there.
+- **Someone can no longer sign up first with another person's Gmail** and keep a way in: when Google proves a Gmail (or Google
+  Workspace) address and links it to a password account that never confirmed its email, that password is removed and every other
+  session of the account is signed out. The person is told and can add a password with Forgot password. Likewise, using an emailed
+  reset link on an account whose email was never confirmed unlinks a Google login Google did not vouch for.
+- **Password guessing is stopped even when the attacker fakes a new address for every try**: on top of 5 wrong passwords per
+  connection, one account takes at most 20 wrong passwords in 15 minutes from all connections together. Forgot password and Google
+  still work during that time. Old rate-limit entries are forgotten after an hour, so the server's memory cannot grow without end.
+- **Google returns people to the address they started on** (uaply.net, www.uaply.net or the onrender.com address) instead of always
+  the configured public address, where the sign-in cookie did not exist and every full-page Google sign-in failed as "expired".
+- After coming back from Google, the "Signed in with Google" message (or the reason it failed) no longer vanishes when the
+  page's other start-up answers arrive a moment later.
+- New tests: `tools/test-public-auth.py` (71 checks, the server as Render runs it: cookies, the same-site check for every real
+  address, good and forged Google tokens, linking, a restart, password rules, lock-out, codes) and `tools/ui-google-ios.js`
+  (21 checks in a real browser as an iPhone, through a stand-in Google). The /setup page's Google steps use Google's current
+  console pages (Google Auth Platform).
+
+### Ready for Render: proven start, stop and restart
+- **Deploys no longer cut a swipe off half-way.** Render stops the server (SIGTERM) at every deploy. The server now stops taking new
+  requests, finishes the ones in progress (a sign-up, a swipe sending its email), writes `[uaply] stopped` in the log and exits normally.
+  Before, it died at once and the request in progress was lost.
+- **One line in Render's log says what the server will do:** public or not, where records are kept and whether that folder is really
+  Render's persistent disk, which job feeds, email, owner pages, AI answers and payments are on, and whether `UAPLY_CONFIG_JSON` is valid
+  JSON. Never a secret, only on or off. A data folder that is not a disk gets a WARNING line (everything there vanishes at the next deploy).
+- **A data folder that cannot be written** (the disk is not attached) stops the server with a plain reason instead of a traceback;
+  a blank port number does the same.
+- **A record cut short** (a full disk, a forced stop) no longer hides every application after it at the next start, and the next record
+  is never glued onto it. The log names any broken line it skipped.
+- **The job list is read about 5 times faster** (25.6 to 5.1 CPU seconds for the 24 boards): only the postings that can be shown are
+  worked through. The list is identical (checked on the same 5,632 postings). The first start on an empty disk went from 33 to 24 seconds,
+  which matters on Render's half-CPU Starter plan.
+- `render.yaml`: the start command uses `${PORT:-10000}`, both services run in Virginia (nearest to Philadelphia; cannot change later), the
+  sandbox gets the same job feeds as dev, and the comments say what the free plan lacks and that secrets are asked for only once.
+- `DEPLOY.md`: the full Render steps checked against the code: the settings line with `public_url`, why `feeds` stays out of it, the log
+  line to check after deploying, the Cloudflare records, and what a deploy does.
+- New test `tools/test-render.py` (74 checks, about 10 seconds, also in GitHub's checks on Render's Python 3.12): starts the server exactly as
+  Render does, stops it with SIGTERM mid-request, restarts it on the same disk and checks everything above.
+
+### Phone apps ready for the stores
+- The apps now open **https://uaply.net** (was the Render dev address).
+- **Google Play's new rule:** since August 31, 2026 new apps must target Android 16 (API 36). The Android project targeted
+  API 35 and would have been refused; it now targets API 36 (Android Gradle Plugin 8.10.1, which API 36 needs).
+- **Offline screen really shows now:** the "can't connect" page existed but was never wired up, so a phone without internet
+  saw a blank error. It now appears whenever the site does not load, and Try again (or reconnecting) goes back to the site.
+- Android 15 and 16 draw apps edge to edge; the app now keeps the page between the status bar and the navigation bar.
+- **"Continue with Google" is hidden inside the phone apps** (Android too, not only iPhone): Google refuses its sign-in
+  inside an app's built-in web view, so the button could only fail there. The website keeps it.
+- iPhone project: iPhone-only (no iPad screenshots or iPad review), and it declares standard encryption only, so App Store
+  Connect stops asking the export question on every build.
+- New `mobile/build-android.ps1`: one command builds the Android test app or the signed Play bundle on Windows (downloads the
+  free tools with checksum checks; you accept Google's SDK license yourself; the upload key and its password never go in git).
+- New `codemagic.yaml`: builds, signs and uploads the iPhone app to TestFlight on Codemagic's free cloud Mac (manual start only).
+
+### Swipe right always ends in the right place, and says so (sandbox and dev)
+- Every swipe-right path was tested end to end against local servers with a stand-in mail server and a stand-in
+  Greenhouse/Lever (`python tools/ui-apply-paths.py` replays them in a browser). Fixes:
+- The employer's Reply always goes to the applicant's verified email (a name written like an address could take it over),
+  and every UAply email shows the sender as UAply.
+- Test mode now says exactly where the live app would send the application (an employer's hiring system, not a made-up
+  email address); a job that left the employer's board is a hand-off in test mode too.
+- The Applied list shows every outcome: a failed delivery says "Not sent" with Try again; a second swipe on a job already
+  applied to shows what happened the first time; an application waiting for a connection is retried every 30 seconds when
+  UAply's server, not the device, was the problem. Undo or Withdraw after an application went out says the employer still
+  has it, and the Undo button during the live countdown cancels it cleanly.
+- Receipts and owner copies say where the resume really went (no receipt carries the file), the test banner follows the real
+  channel, the owner copy is labelled [TEST] in test mode, education reads "graduation June 2027", accented resume file
+  names are kept, and receipts link back to the site even when `public_url` is not set.
+
+### Post a job from an existing job post (sandbox) — Mohammed
+- **Post a job** shows two options on one page. Option 1, at the top: "Start from your existing job post": paste a link, or
+  paste the job text, and UAply fills in the form (title, job type, work style, place, pay, years, education, skills, majors,
+  GPA, graduation dates, sponsorship, who can apply, benefits, relocation, summary, description). Option 2, right below: the
+  form to fill in yourself. Filled fields are marked "From your post", and anything the post did not say is listed as still
+  needed. Career pages that show a Greenhouse job (?gh_jid=) are read too, and a slow site gives up after 12 seconds.
+- Links are read from the standard job-posting block career sites carry for Google Jobs, and from the public Greenhouse, Lever,
+  Ashby and SmartRecruiters feeds. LinkedIn, Indeed, ZipRecruiter, Glassdoor, Handshake, Monster and Hiring Cafe are never
+  read (their terms forbid it or they need a login); the screen asks for the pasted text instead.
+- The server reads only public web pages (never this computer, private networks or cloud metadata addresses), one page per
+  request, at most 3 MB, and a few a minute per account.
+- No lookbehind patterns in the scripts any more, so iPhones before iOS 16.4 can run them.
+
+### Paying for Plus and Pro in the sandbox (Stripe, test mode) — Mohammed
+- On the hosted sandbox (no server), **Choose Plus** and **Choose Pro** open Stripe's own secure checkout through Stripe Payment
+  Links in the "UAply sandbox" Stripe account (test mode: card 4242 4242 4242 4242, no real money). After paying, Stripe sends the
+  person back to the sandbox and the plan is switched on, with the payment listed as "Stripe test".
+- On a UAply server the existing Stripe Checkout, webhook and billing portal are used instead. The sandbox Render service now
+  names the two Stripe prices; the secret key and webhook secret are typed into Render, never stored in GitHub.
+
+### Hiring mode for employers (sandbox only for now) — Mohammed
+- A **Switch to hiring** pill in the header (next to the account button) opens the employer hub; **Switch to job search** goes back.
+  Same UAply account for both.
+- **Company profile** once: name, logo upload (PNG, JPEG or WebP, resized for you), industry and number of employees (both
+  dropdowns, required), United States or Canada, state or province, city, website and About the company.
+- **Post a job** on one page with a live preview of the swipe card. Each section says which job seeker fields it is matched to:
+  title, job type, work style, city, relocation help, yearly pay range, commission only, minimum experience and education,
+  skills, preferred majors, minimum GPA, graduation window, who can apply (work authorization), visa sponsorship, start date,
+  benefits, a one-line summary and a full description. **Meet the hiring team**: name, title, email and LinkedIn; the name and
+  title can show on the card, the email and LinkedIn stay on the server for the Plus/Pro "message the hiring manager" option.
+- **Hub**: Overview (open jobs, applicants, new this week, average match), Jobs (edit, pause, close, reopen, delete), Applicants
+  (best match first, must-haves checked, "only people who meet every must-have", stage New to Hired, private notes), Company,
+  Billing. Prices are **TBD**; posting is free while testing.
+- **Job seekers** see employer jobs in the same deck with the logo, "What the company asks for" checked against their own
+  answers, "Meet the hiring team", and About the job and company. A new filter hides jobs they are not eligible for. Paused and
+  closed jobs leave the deck at once and refuse new applications.
+- Applications go to the employer's **verified account email**, never to an address typed into a form; browsers never receive it.
+- The consent screen now shows **once, before the first swipe**; after that every swipe is just a swipe (sandbox only).
+- Removed coding-tool credits from the app, docs and legal pages; the AI disclosure page now credits the founders, Mohammed and Saif.
+
+### Profile setup, and what really changes your matches
+- **Profile setup** is now one guided flow, five short steps (About you, Jobs you want, Where and pay, Background and links,
+  Eligibility and extras), saved as you go, the same on phone and desktop. The old Settings, Resume and links, and Preferences
+  screens are folded into it, so the Profile menu has five items instead of seven. On desktop (960px and wider) a live "What
+  employers see" card sits beside the questions.
+- Deleting an account is tucked under "More account options", with a short skippable exit survey (anonymous).
+- **Your answers now do more work.** Your headline, About you and major count as skills a job asks for. Work style: tick nothing
+  and every style scores full points; the new "Hide work styles I did not pick" filter hides the rest. The opportunity types you
+  pick open first in Services. State and ZIP code help find where you live for the distance filter. One completeness score is used
+  everywhere. Optional EEO answers, work authorization and GPA are never used to score, rank or hide jobs.
+- dev now includes the Application profile (phone, links, school, work authorization, opportunity types) so those details reach
+  employers; before, dev sent none of them.
+- Fixed: errors on the Account screen were off-screen; a new profile was pre-filled with a stranger's email; restoring a backup
+  dropped the Application profile answers; the Account screen showed fake Google/Apple/phone sign-in previews next to the real
+  form; the desktop form was capped at half width; password, file and month inputs were unstyled; tap targets under 44px.
+
+### Jobs near you (sandbox only for now)
+- On first open the browser's own "share your location?" prompt appears, with a card above the jobs saying why. If location is
+  blocked in the browser, the card says so once and how to turn it on. The position is rounded to about a mile, kept only on the
+  device and never sent to the server.
+- Nearby in-person jobs score higher (full location points within 25 miles, partial to 60), and cards say "In your area" or
+  "About N miles from you".
+- Filters has a **Commute distance** slider: Remote only, 5 to 100 miles, Any distance. dev keeps the old distance choice.
+- Fixed: in the sandbox, Bottom navigation stopped part-way with "Cannot read properties of undefined (reading 'up')" (the
+  auto-message check read the sign-in state before it existed), which also left out everything that loads after it.
+
+### Swipe right fills in the real application form, swipes that work on phones, email from uaply.net
+Swipe right fills in the employer's real application form, asks only what the person alone can answer (once), and says honestly what happened.
+
+- **Autofill engine** (`autofill.py`). Greenhouse publishes every job's application form (questions, field types, options) through its public Job
+  Board API, with no key. UAply reads that form and answers each question from the profile: name, email, phone, resume file, LinkedIn, website,
+  location, US state (by full name or two-letter code), ZIP code, the hidden map position behind the location box (from the ZIP code, using the
+  Census Bureau's public ZIP data in `autofill_zip3.json`), school, degree, major, graduation date, GPA, current employer, work authorization and
+  sponsorship (including forms whose options are whole sentences), OPT, 18 or older, former employee, government official, office work, relocation,
+  "how did you hear", and the person's own "why this company" text. Voluntary self-identification (gender, race, veteran, disability) is never
+  answered. Privacy and AI-use acknowledgments are ticked only if the person chose that in Profile.
+- **Asked once, then remembered.** A required question the profile cannot answer is asked in a short sheet after the swipe ("2 questions from
+  Dropbox"); the answer is saved on the device and used for every later form that asks the same thing, at any company. On 59 real forms from
+  today's feed: 9 were complete from the profile alone, the typical form left 2 questions, and after answering each new question once, 58 of 59
+  were complete.
+- **Where it applies by itself.** Employers that connected their Greenhouse: the filled form goes straight in. Every other employer: nothing is
+  sent, the job is kept as "Not sent yet" with a Finish on their site button. In the sandbox (test mode), every Greenhouse posting is filled in
+  the same way and delivered to the test inbox, which now shows the employer's form exactly as UAply filled it in. Nothing reaches an employer.
+- **Profile, Preferences, "Questions employers ask"**: office work, former employee, government official, PhD, pronouns, notices, "why" text.
+  Relocation comes from the existing "Willing to relocate".
+- **The Applied list tells the truth.** It said "Application sent to the company" for jobs where nothing was sent (the employer's own page
+  was needed). Now: sent, sent to the test inbox, not sent yet (finish on their site), or waiting to send.
+- **A swipe that sends nothing goes back to the deck** (missing name or email, the weekly limit, unverified email, too fast) instead of sitting
+  in Applied. Offline swipes are kept as "waiting to send" and sent when the connection returns. Undo takes back that exact job, never just
+  "the last one".
+- **Server**: at most 40 applications and 150 swipes per minute per visitor (a script can no longer fill the disk); the weekly plan limit counts
+  only real applications, not hand-offs.
+- **Fixed earlier in this round**: the first-application agreement reappearing on every swipe; the browser test runner always reporting success
+  (now it fails on any failed check, and each check has a 10-minute limit); three stale test expectations that the old runner had hidden.
+- **Email from your own domain.** The Connect email box on `/setup` now takes Brevo (sends from an address such as uaplytechnologies@uaply.net with Brevo's
+  SMTP login and key) as well as a Gmail App Password, and says what to check in Brevo when it refuses the login (including blocked IP addresses).
+- `tools/shot-real-apply.js`: one complete application in the sandbox, signed in as a real address, to an employer that receives applications by email.
+- **Swiping on phones** (new "Phone swipe" feature, on in sandbox and dev). On a phone a thumb curves; the card left vertical moves to the
+  browser, which then treated curved swipes as scrolls and cancelled them, so swipes "worked here and there". Touch now uses a direction
+  lock: the first few pixels decide sideways (a swipe; the browser may no longer scroll) or up and down (scroll the card, never a swipe).
+  A swipe counts at 18% of the card's width (at most 80px) or as a quick flick, instead of a fixed 110px. Mouse and pen are unchanged.
+- **Nothing covers a button.** The round help button sat on the corner of Profile in the bottom menu on big phones, and the message after a
+  swipe covered the menu (or Pass, Undo and Apply on a small phone) for up to 12 seconds. Both now sit just above the menu on every screen
+  size, and taps pass through the message except on its own button.
+- `tools/ui-phone.js` (in the full run at 440x956 and 375x667): every menu item tapped by a real touch, no control covered at its center or
+  corners on 18 screens, and 7 kinds of swipe (straight, a quick flick, curved thumb swipes, a slow drag, plus a scroll, a nudge and a tap
+  that must not swipe). Before the fix, 0 of the 6 real swipes worked at phone size.
+- **The test run can no longer use the owner's real settings.** It set its own settings on top of uaply-config.json instead of replacing it,
+  so once real email was connected, two runs sent a few real emails (two test emails to the owner and some codes to made-up example.com
+  addresses, which bounced). `UAPLY_CONFIG_FILE=none` now makes every server skip the owner's file; the full run sets it.
+- New tests: `test-autofill.py` (34, real forms saved in `tools/fixtures/`), more in `test-ats-flow.py` (20); `tools/shot-autofill.js` shows the
+  whole flow in the sandbox at phone size.
+- **Squarespace and Block jobs are back (28 more jobs).** Both list their job links as http:// instead of https://, and UAply dropped every
+  such job. Those links now open securely (https://, which both sites serve); a link that is not a web address is still dropped. The
+  feed-health bot found both boards "empty"; all 30 boards now answer with jobs.
+- **Webflow's jobs are back.** Webflow moved its job board from Greenhouse (404 since October 2026) to Ashby; UAply now reads it there
+  (9 US jobs on October 16).
+- **A refused request always gets its answer.** When the server refuses a request without reading what was sent (a garbled length, too
+  large, cross-site, unknown address), it now says "Connection: close" and reads away the rest before hanging up. Before, Windows could
+  reset the connection first, so about 1 in 200 such requests lost the "bad request" answer (found by the hostile-input test).
+- `tools/feed-health.py` and `tools/daily-checks.py`: the read-only reports behind the scheduled "feed health" and "code checks" bots.
+
+### Combining Mohammed's and Saif's sandbox work
+- Both fixed swiping on iPhones. **Phone swipe** (touch direction lock) decides every swipe in sandbox and dev; Easy swipe and Axis lock,
+  with Mohammed's iPhone fixes, stay on in the sandbox as the fallback when Phone swipe is switched off. dev uses Phone swipe instead of
+  Axis lock, and now also includes Profile setup.
+- The consent screen keeps both fixes: shown once before the first swipe (sandbox), and never shown again because of a problem while applying.
+- A swipe made while that first consent screen is open (the keyboard can still reach the cards) now waits for the answer and then goes
+  on, or back to the deck, instead of being lost. Only one waits, so a double tap still applies once.
+- Messages and the privacy policy pointed to screens that no longer exist ("Profile, Settings", "Profile, Resume and links"). They now
+  name the Profile setup step: About you, Jobs you want, Where and pay, Background and links, or Eligibility and extras.
+- Five browser tests still opened the old Settings, Resume and Preferences screens; they now fill in Profile setup step by step.
+- **A removed employer connection is really removed.** The server remembered employer connections until the file's time changed; two
+  quick writes on a busy computer could share a time, so a removed connection kept being used. It now also compares the size and a finer time.
+
 ## 1.0.0-rc.8 (release candidate)
 
 Swipe right can now apply by itself: straight into the employer's own hiring system, for employers who connect.
@@ -174,7 +384,7 @@ The first release build. Everything below is in `dev`.
   password, delete account. **Sign in with Google** is built and switches on when Google keys are added.
 - Dashboard (Applied, Accepted, Rejected, Interviews), Profile (Settings, Resume and links, Preferences, Filters), Data and
   privacy (backup, restore, delete, and the legal pages).
-- UAply Assistant: help answers from written articles (AI answers when an Anthropic key is set), plus feedback.
+- UAply Assistant: help answers from written articles (AI answers when an AI provider key is set), plus feedback.
 
 ### What is different from sandbox (the release build)
 - No developer bar, no "SANDBOX / TEST MODE" labels, no simulated Google/Apple/email-link/phone sign-in.

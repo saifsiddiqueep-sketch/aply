@@ -1,5 +1,5 @@
 {
-  "_comment": "Copy to uaply-config.json to change delivery. Without that file the sandbox and dev run in TEST mode: a swipe right delivers the application to the simulated inbox at /outbox and nothing leaves this computer. In live mode a swipe right emails the recruiter by itself after grace_seconds (Undo cancels it); set auto_send to false to show a Send button instead. Only postings that list a recruiting email can be emailed; the rest hand off to the employer's own page. test_recipient sends EVERY live application to that address instead of the recruiter, so you can test real email safely. Never commit real credentials. UAply Assistant: support_email is shown as 'Talk to a person'; AI answers switch on when an Anthropic API key is available (pip install anthropic, then anthropic_api_key here or ANTHROPIC_API_KEY in the environment). ai.daily_limit caps AI answers per day; past it, answers come from the help articles.",
+  "_comment": "Copy to uaply-config.json to change delivery. Without that file the sandbox and dev run in TEST mode: a swipe right delivers the application to the simulated inbox at /outbox and nothing leaves this computer. In live mode a swipe right emails the recruiter by itself after grace_seconds (Undo cancels it); set auto_send to false to show a Send button instead. Only postings that list a recruiting email can be emailed; the rest hand off to the employer's own page. test_recipient sends EVERY live application to that address instead of the recruiter, so you can test real email safely. Never commit real credentials. UAply Assistant: support_email is shown as 'Talk to a person'; AI answers switch on when an AI provider API key is available (install the packages in requirements.txt, then anthropic_api_key here or ANTHROPIC_API_KEY in the environment). ai.daily_limit caps AI answers per day; past it, answers come from the help articles.",
   "delivery": "live",
   "auto_send": true,
   "grace_seconds": 5,
@@ -7,7 +7,7 @@
   "test_recipient": "your-test-inbox@example.com",
   "daily_limit": 20,
   "support_email": "support@your-domain.example",
-  "anthropic_api_key": "optional: your Anthropic API key, or leave this out and set ANTHROPIC_API_KEY in the environment",
+  "anthropic_api_key": "optional: your AI provider API key, or leave this out and set ANTHROPIC_API_KEY in the environment",
   "ai": {"enabled": true, "model": "claude-opus-5-5", "effort": "low", "daily_limit": 300},
   "google": {
     "client_id": "paste the Client ID from Google Cloud Console here",

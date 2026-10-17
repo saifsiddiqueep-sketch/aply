@@ -13,11 +13,12 @@ import urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 TMP = tempfile.mkdtemp(prefix="uaply-atsflow-")
-PORT = 8796
+PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8796                # another port can be given, so two test runs never collide
 os.environ.update(UAPLY_DATA_DIR=TMP, UAPLY_CONFIG_JSON="{}", UAPLY_ATS_BASE_GREENHOUSE="http://127.0.0.1:%d" % PORT, UAPLY_ATS_BASE_LEVER="http://127.0.0.1:%d" % PORT)
 os.environ["UAPLY_ATS_JSON"] = json.dumps([{"kind": "lever", "board": "acme", "api_key": "lever-key-456"}, {"kind": "workday", "board": "x", "api_key": "abcdefgh123"}])
 
 import jobs_api  # noqa: E402
+import autofill  # noqa: E402
 import uaply_api  # noqa: E402
 
 R = []
@@ -57,6 +58,7 @@ def apply_to(job, email="pat@example.com", verified=True, user_email=None):
          "profile": {"name": "Pat Doe", "email": email, "title": "Dev", "years": 1, "skills": ["Python"], "loc": "Austin, TX", "edu": "Bachelor",
                      "ext": {"phone": "+1 555 123 4567", "auth": "citizen", "sponsor": "no", "linkedin": "https://www.linkedin.com/in/patdoe"}},
          "resume": {"name": "resume.pdf", "data": "data:application/pdf;base64," + base64.b64encode(b"%PDF-1.4 a small test resume file for the flow test").decode()}}
+    apply_to.last, apply_to.user = p, user
     return uaply_api.submit(p, user)
 
 
@@ -83,6 +85,13 @@ try:
     t("the policy for each", (jobs_api.job_policy(feed["id"]), jobs_api.job_policy(other["id"])), ("direct", "link"))
     t("the key is held only by the server", (jobs_api.known_ats(feed["id"])["key"], jobs_api.known_ats(other["id"])), ("lever-key-456", None))
 
+    # test mode says where the live app would send it: into the hiring system, not to a made-up email address (Acme gave no address)
+    cfg["delivery"] = "test"
+    code, out = apply_to(job_by("Support Engineer"), email="testmode@example.com")
+    cfg["delivery"] = "live"
+    t("test mode: a connected hiring system is simulated as the hiring system, not as an email", (out["status"], out["to"], uaply_api.APPS[-1]["channels"]),
+      ("delivered_test", "Acme Robotics hiring system (simulated)", ["hiring system (simulated)"]))
+
     # a partner job: swipe right sends into their Greenhouse
     before = len(received())
     code, out = apply_to(job_by("Robotics Intern"))
@@ -101,7 +110,11 @@ try:
     # a posting with a question the profile cannot answer: nothing sent, the person finishes on the employer's page
     before = len(received())
     code, out = apply_to(job_by("Odd Question Role"), email="lee@example.com")
-    t("a required question that cannot be answered sends nothing and hands off", (out["status"], len(received())), ("handoff", before))
+    t("a required question the profile cannot answer: nothing is sent, and the app is told to ask it", (out["status"], [q["q"] for q in out.get("questions", [])], len(received())),
+      ("needs_answers", ["What is your favorite color and why?"], before))
+    code, out = uaply_api.submit(dict(apply_to.last, answers={autofill.norm("What is your favorite color and why?"): "Blue, it is calm."}), apply_to.user)
+    t("...once the person answers it, the application goes into the employer's system with that answer",
+      (out["status"], len(received()), "Blue, it is calm." in json.dumps(received()[-1]["fields"])), ("sent", before + 1, True))
 
     # the rules for a live send
     code, out = apply_to(job_by("Support Engineer"), email="unver@example.com", verified=False)
@@ -129,7 +142,7 @@ try:
     code, out = apply_to(job_by("Support Engineer"), email="fail@example.com")
     uaply_api.hide_errors = False
     t("a refused key is reported as failed, with a plain sentence and no key or employer detail", (out["status"], out.get("error"), "wrong-key" in json.dumps(out)),
-      ("failed", "The email could not be sent right now. Try again in a moment.", False))
+      ("failed", "Your application to Acme Robotics could not be sent right now. Try again in a moment.", False))
 finally:
     mock.terminate()
 

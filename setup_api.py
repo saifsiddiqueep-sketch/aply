@@ -5,6 +5,9 @@ public server, needs OWNER_PASSWORD.
 
   GET  /setup                 the checklist
   POST /api/setup/test-mail   send one test email to the owner (owner_copy, else the SMTP from address)
+  POST /api/setup/save-mail, save-google, save-stripe   the Connect boxes: write the git-ignored uaply-config.json (never in a test run)
+  POST /api/setup/save-ats, remove-ats                  an employer's hiring-system key, in the git-ignored employer list
+  POST /api/setup/save-feed-keys   the Job feed keys box: save the USAJOBS and The Muse API keys (this computer only)
 """
 import html
 import re
@@ -16,6 +19,7 @@ import os
 
 import ats_api
 import auth_api
+import billing_api
 import google_auth
 import jobs_api
 import uaply_api
@@ -24,6 +28,15 @@ CLIENT_RE = re.compile(r"^\d+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$")
 
 
 URL_RE = re.compile(r"https://[A-Za-z0-9./_?=&#%-]+[A-Za-z0-9/_-]")
+
+
+TEST_RUN = {"ok": False, "message": "This server was started for testing (UAPLY_CONFIG_FILE=none): it never reads or writes uaply-config.json, so nothing was saved."}
+
+
+def _test_run():
+    """A test run ignores the owner's uaply-config.json (uaply_api.config), so saving into it would change the owner's real settings and
+    still show nothing here. Tests that save point uaply_api.CONFIG_PATH at a file of their own instead."""
+    return os.environ.get("UAPLY_CONFIG_FILE") == "none" and uaply_api.CONFIG_PATH == uaply_api.REAL_CONFIG_PATH
 
 
 def _real(v, placeholder_starts=()):
@@ -60,13 +73,14 @@ def checks(host, proto):
     smtp_ok = bool(s.get("host") and s.get("from_addr") and _real(s.get("password"), ("a gmail app password", "the-sending")))
     return [
         {"name": "Sign in with Google", "ok": g_ok,
-         "detail": ("On. Google's own button shows on the sign-in screen, including accounts already signed in on that browser." if g_ok else
+         "detail": (("On. Google's own button shows on the sign-in screen, including accounts already signed in on that browser." +
+                     ("" if google_auth.enabled() else " iPhone and iPad also need the client secret (they use Google's full-page sign-in): add it to UAPLY_CONFIG_JSON on the host.")) if g_ok else
                     ("The client ID does not look right (it should end in .apps.googleusercontent.com)." if g_id and not CLIENT_RE.match(g_id) and not g.get("auth_url") else
-                     "Off. Add your Google client ID (the public one; no secret is needed).")),
-         "todo": ["Open https://console.cloud.google.com/apis/credentials/consent and set up the consent screen: type External, app name UAply, your Gmail as the support and developer email. Then press Publish app so anyone can sign in (the scopes openid, email and profile need no review).",
-                  "Open https://console.cloud.google.com/apis/credentials/oauthclient and create an OAuth client ID of type Web application (Google asks you to create a project first if you have none).",
-                  "Under Authorized JavaScript origins add each of these, exactly as written: " + "  and  ".join(origins(host, proto)) + ". Open this app at localhost, not 127.0.0.1, because Google treats them as different addresses. Add your real website address here too when you have one.",
-                  "Copy the Client ID Google shows (it ends in .apps.googleusercontent.com) and paste it in the Connect Google box below. No secret is needed."] if not g_ok else []},
+                     "Off. Add your Google client ID (the public one). The client secret is only needed on the hosted site, for iPhone and iPad.")),
+         "todo": ["Open https://console.cloud.google.com/auth/overview (Google Auth Platform) and press Get started: app name UAply, your Gmail as the support email, Audience External, your Gmail as the contact. Then on the Audience page press Publish app so anyone can sign in (sign-in only uses openid, email and profile, which need no review).",
+                  "Open https://console.cloud.google.com/auth/clients and press Create client, type Web application, name UAply web.",
+                  "Under Authorized JavaScript origins add each of these, exactly as written: " + "  and  ".join(origins(host, proto)) + ". Open this app at localhost, not 127.0.0.1, because Google treats them as different addresses. For the live site add https://uaply.net, https://www.uaply.net and https://uaply-dev.onrender.com, and under Authorized redirect URIs the same three addresses followed by /api/auth/google/callback.",
+                  "Press Create. Copy the Client ID (it ends in .apps.googleusercontent.com) and paste it in the Connect Google box below. Google shows the client secret only this once: keep it for the hosted site (UAPLY_CONFIG_JSON), never paste it into a page or chat."] if not g_ok else []},
         {"name": "Email sending (password resets, receipts, copies)", "ok": smtp_ok,
          "detail": ("An email login is set. Use the button below to send yourself a test." if smtp_ok else
                     "Off. Until this is set, emails go only to the simulated test inbox (/outbox) and password reset links cannot reach real people."),
@@ -79,9 +93,24 @@ def checks(host, proto):
          "todo": ["Ask the employer to create a Greenhouse Job Board API key or a Lever Postings API key (EMPLOYERS.md says where).",
                   "Paste it in the Connect an employer's hiring system box below, with the board name from their job-board address.",
                   "Set delivery to live in the settings (UAPLY_CONFIG_JSON on a host) so applications are really sent."] if not connections() else []},
+        {"name": "Payments for Plus and Pro (Stripe)", "ok": billing_api.settings()["on"] and bool(billing_api.settings().get("webhook_secret")),
+         "detail": ("On, in %s mode." % ("TEST" if billing_api.settings()["test"] else "LIVE")) if billing_api.settings()["on"] else "Off. Plans show, but Choose says payments are not switched on yet.",
+         "todo": ["Create a Stripe account at https://dashboard.stripe.com/register (start in test mode).",
+                  "Product catalog: add a product Plus with a monthly price of 9.99 USD and a product Pro at 19.99 USD. Copy both price ids (price_...).",
+                  "Developers, API keys: copy the secret key (sk_test_...).",
+                  "Developers, Webhooks: add an endpoint " + proto + "://" + host + "/api/billing/webhook with the events checkout.session.completed and customer.subscription.updated, created and deleted; copy its signing secret (whsec_...). On this computer use the Stripe CLI: stripe listen --forward-to " + host + "/api/billing/webhook.",
+                  "Settings, Billing, Customer portal: turn it on so people can switch plans and cancel.",
+                  "Paste the four values in the Connect Stripe box below."] if not billing_api.settings()["on"] else []},
         {"name": "Copy of every application to you", "ok": bool(owner),
          "detail": ("Every swipe right is also emailed to " + owner + (" once email sending is on." if not smtp_ok else ".")) if owner else "Off. Set owner_copy to your email.",
          "todo": [] if owner else ["Run: python tools/setup-config.py and enter your email when it asks."]},
+        {"name": "More jobs: USAJOBS and The Muse keys", "ok": all(feed_status().values()),
+         "detail": "USAJOBS key: %s. The Muse key: %s. Without the USAJOBS key federal jobs are skipped; without The Muse key its jobs still load, but its terms ask for one." % (
+             "saved" if feed_status()["usajobs"] else "not added yet", "saved" if feed_status()["muse"] else "not added yet"),
+         "todo": [t for t, need in (
+             ("Request a free USAJOBS key at https://developer.usajobs.gov/APIRequest/ (name, the email you will use, and what UAply does). The key arrives by email.", not feed_status()["usajobs"]),
+             ("Register a free The Muse key at https://www.themuse.com/developers/api/v2 (it asks you to sign in to The Muse).", not feed_status()["muse"]),
+             ("Paste them in the Job feed keys box below.", not all(feed_status().values()))) if need]},
         {"name": "AI answers in UAply Assistant (optional)", "ok": _real(cfg.get("anthropic_api_key"), ("optional", "sk-ant-...")) and str(cfg.get("anthropic_api_key")).startswith("sk-ant-"),
          "detail": "Without a key the assistant answers with the best matching help article.", "todo": []},
     ]
@@ -92,6 +121,8 @@ def save_google(payload):
     cid = (payload.get("client_id") if isinstance(payload.get("client_id"), str) else "").strip()
     if not CLIENT_RE.match(cid):
         return 400, {"ok": False, "message": "That does not look like a Google client ID. It ends in .apps.googleusercontent.com and starts with numbers and a dash."}
+    if _test_run():
+        return 409, dict(TEST_RUN)
     try:
         with open(uaply_api.CONFIG_PATH, encoding="utf-8") as f:
             cfg = json.load(f)
@@ -155,26 +186,117 @@ def remove_ats(payload):
     return 200, {"ok": True, "message": "Disconnected."}
 
 
+def save_stripe(payload):
+    """The "Connect Stripe" box: save the Stripe keys and the two price ids into the git-ignored uaply-config.json on this computer. (status, body)."""
+    g = lambda k: (payload.get(k) if isinstance(payload.get(k), str) else "").strip()
+    key, wh, plus, pro = g("secret_key"), g("webhook_secret"), g("price_plus"), g("price_pro")
+    if not re.match(r"^sk_(test|live)_[A-Za-z0-9]{8,}$", key):
+        return 400, {"ok": False, "message": "The secret key starts with sk_test_ (test mode) or sk_live_. Find it in Stripe, Developers, API keys."}
+    if not (plus.startswith("price_") and pro.startswith("price_")):
+        return 400, {"ok": False, "message": "Paste the two price ids (they start with price_) of the monthly Plus and Pro prices you made in Stripe, Product catalog."}
+    if wh and not wh.startswith("whsec_"):
+        return 400, {"ok": False, "message": "The webhook signing secret starts with whsec_."}
+    if _test_run():
+        return 409, dict(TEST_RUN)
+    try:
+        with open(uaply_api.CONFIG_PATH, encoding="utf-8") as f:
+            cfg = json.load(f)
+    except (OSError, ValueError):
+        cfg = {}
+    old = cfg.get("stripe") if isinstance(cfg.get("stripe"), dict) else {}
+    cfg["stripe"] = {"secret_key": key, "webhook_secret": wh or old.get("webhook_secret", ""), "price_plus": plus, "price_pro": pro}
+    tmp = uaply_api.CONFIG_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline=chr(10)) as f:
+        json.dump(cfg, f, indent=2)
+    os.replace(tmp, uaply_api.CONFIG_PATH)
+    return 200, {"ok": True, "saved": True, "message": "Saved. Plus and Pro can now be bought in Profile, Plan and billing" + ("" if cfg["stripe"]["webhook_secret"] else "; add the webhook signing secret so plans switch on after payment") + "."}
+
+
+FEED_NAMES = {"usajobs": "USAJOBS key", "muse": "The Muse key"}
+
+
+def feed_status():
+    """Which job feed keys are set (in uaply-config.json or the host's UAPLY_CONFIG_JSON). Only yes or no; a key is never read back out."""
+    k = uaply_api.config().get("feed_keys")
+    k = k if isinstance(k, dict) else {}
+    return {n: isinstance(k.get(n), str) and bool(jobs_api.KEY_RE.match(k[n].strip())) for n in FEED_NAMES}
+
+
+def save_feed_keys(payload):
+    """The "Job feed keys" box: save the USAJOBS and The Muse API keys (and the email the USAJOBS key was requested with) into the
+    git-ignored uaply-config.json on this computer, under "feed_keys". A blank field keeps what is saved; "remove" drops a key.
+    The keys are never sent back, never logged and never shown on the page again (it only says "saved"). Returns (status, body)."""
+    g = lambda k: "".join((payload.get(k) if isinstance(payload.get(k), str) else "").split())      # noqa: E731  (pasted keys may carry spaces or a line break)
+    new = {n: g(n) for n in FEED_NAMES if g(n)}
+    mail = (payload.get("usajobs_email") if isinstance(payload.get("usajobs_email"), str) else "").strip()
+    remove = [n for n in (payload.get("remove") if isinstance(payload.get("remove"), list) else []) if n in FEED_NAMES]
+    for n, v in new.items():
+        if not jobs_api.KEY_RE.match(v):
+            return 400, {"ok": False, "message": "That does not look like a %s. Paste the whole key from the email or page it came on (letters and digits, 16 or more)." % FEED_NAMES[n]}
+    if mail and not uaply_api.EMAIL_RE.match(mail):
+        return 400, {"ok": False, "message": "The USAJOBS email is not a valid email address. Use the one you requested the key with."}
+    if not (new or mail or remove):
+        return 400, {"ok": False, "message": "Paste at least one key."}
+    try:
+        with open(uaply_api.CONFIG_PATH, encoding="utf-8") as f:
+            cfg = json.load(f)
+    except (OSError, ValueError):
+        cfg = {}
+    fk = cfg.get("feed_keys") if isinstance(cfg.get("feed_keys"), dict) else {}
+    fk.update(new)
+    if mail:
+        fk["usajobs_email"] = mail
+    for n in remove:
+        fk.pop(n, None)
+    cfg["feed_keys"] = fk
+    tmp = uaply_api.CONFIG_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline=chr(10)) as f:
+        json.dump(cfg, f, indent=2)
+    os.replace(tmp, uaply_api.CONFIG_PATH)
+    said = [FEED_NAMES[n] for n in FEED_NAMES if n in new] + (["USAJOBS email"] if mail else [])
+    gone = [FEED_NAMES[n] for n in remove]
+    return 200, {"ok": True, "saved": True, "message": " ".join(x for x in (
+        ("Saved: %s. New jobs appear on the next refresh of the job list." % ", ".join(said)) if said else "",
+        ("Removed: %s." % ", ".join(gone)) if gone else "") if x)}
+
+
+BREVO_KEY_RE = re.compile(r"^xsmtpsib-[A-Za-z0-9-]{20,200}$")
+
+
 def save_mail(payload):
-    """The "Connect Gmail" form: save the sending Gmail address and its App Password into the git-ignored uaply-config.json on this
-    computer, then send a test email. The password is never echoed back and never goes anywhere except Gmail's own server.
-    Returns (status, body)."""
+    """The "Connect email" form: save how UAply sends email into the git-ignored uaply-config.json on this computer, then send a test.
+    Gmail: the Gmail address and its App Password. Brevo: the address mail comes from (one whose domain Brevo has verified, such as
+    an @uaply.net address), Brevo's SMTP login and an SMTP key. The password or key is never echoed back and never goes anywhere
+    except that provider's own mail server. Returns (status, body)."""
+    provider = "brevo" if payload.get("provider") == "brevo" else "gmail"
     addr = payload.get("email") if isinstance(payload.get("email"), str) else ""
     pw = "".join((payload.get("password") if isinstance(payload.get("password"), str) else "").split())      # Google shows it in groups of four
+    login = (payload.get("login") if isinstance(payload.get("login"), str) else "").strip()
     copy_to = payload.get("copy_to") if isinstance(payload.get("copy_to"), str) else ""
     if not uaply_api.EMAIL_RE.match(addr.strip()):
-        return 400, {"ok": False, "message": "Enter the Gmail address that will send UAply's email."}
-    if not (12 <= len(pw) <= 64) or not pw.isalnum():
+        return 400, {"ok": False, "message": ("Enter the address UAply's email comes from, such as uaplytechnologies@uaply.net." if provider == "brevo"
+                                              else "Enter the Gmail address that will send UAply's email.")}
+    if provider == "brevo":
+        if not uaply_api.EMAIL_RE.match(login):
+            return 400, {"ok": False, "message": "Enter the SMTP login from Brevo (SMTP & API, SMTP tab). It looks like an email address ending in @smtp-brevo.com."}
+        if not BREVO_KEY_RE.match(pw):
+            return 400, {"ok": False, "message": "That does not look like a Brevo SMTP key. In Brevo, open SMTP & API, SMTP tab, and generate a new SMTP key (it starts with xsmtpsib-)."}
+    elif not (12 <= len(pw) <= 64) or not pw.isalnum():
         return 400, {"ok": False, "message": "That does not look like a Gmail App Password (16 letters, shown in four groups). Create one at myaccount.google.com/apppasswords."}
     if copy_to.strip() and not uaply_api.EMAIL_RE.match(copy_to.strip()):
         return 400, {"ok": False, "message": "The address for copies is not a valid email."}
+    if _test_run():
+        return 409, dict(TEST_RUN)
     try:
         with open(uaply_api.CONFIG_PATH, encoding="utf-8") as f:
             cfg = json.load(f)
     except (OSError, ValueError):
         cfg = {}
     smtp = cfg.get("smtp") if isinstance(cfg.get("smtp"), dict) else {}
-    smtp.update({"host": "smtp.gmail.com", "port": 587, "starttls": True, "user": addr.strip(), "from_addr": addr.strip(), "password": pw})
+    if provider == "brevo":
+        smtp.update({"host": "smtp-relay.brevo.com", "port": 587, "starttls": True, "user": login, "from_addr": addr.strip(), "password": pw})
+    else:
+        smtp.update({"host": "smtp.gmail.com", "port": 587, "starttls": True, "user": addr.strip(), "from_addr": addr.strip(), "password": pw})
     cfg["smtp"] = smtp
     if copy_to.strip():
         cfg["owner_copy"] = copy_to.strip()
@@ -193,9 +315,9 @@ def test_mail():
     s = cfg.get("smtp") if isinstance(cfg.get("smtp"), dict) else {}
     to = uaply_api._owner_copy(cfg) or (s.get("from_addr") or "")
     if not (s.get("host") and s.get("from_addr")):
-        return 200, {"ok": False, "message": "Email sending is not set up yet. Run python tools/setup-config.py first."}
+        return 200, {"ok": False, "message": "Email sending is not set up yet. Fill in the Connect email box on this page first."}
     if not uaply_api.mail_ready():
-        return 200, {"ok": False, "message": "The sending Gmail has no App Password yet. Create one at myaccount.google.com/apppasswords, then run python tools/setup-config.py."}
+        return 200, {"ok": False, "message": "Email sending has no password or key yet. Add one in the Connect email box on this page."}
     if not to:
         return 200, {"ok": False, "message": "No address to send the test to."}
     msg = EmailMessage()
@@ -209,7 +331,11 @@ def test_mail():
             if s.get("user"):
                 srv.login(s["user"], s.get("password", ""))
             srv.send_message(msg)
-    except smtplib.SMTPAuthenticationError:
+    except smtplib.SMTPAuthenticationError as e:
+        if "brevo" in (s.get("host") or ""):
+            why = (" Brevo may be blocking this computer's internet address: in Brevo, open Security, Authorized IPs, and allow it (or turn off IP blocking for SMTP)."
+                   if "525" in str(e) or "ip" in str(e).lower() else "")
+            return 200, {"ok": False, "message": "Brevo refused the login. Check the SMTP login and key in Brevo (SMTP & API, SMTP tab)." + why}
         return 200, {"ok": False, "message": "Gmail refused the login. Use an App Password (not your normal password), with 2-Step Verification on."}
     except smtplib.SMTPServerDisconnected:
         return 200, {"ok": False, "message": "The mail server closed the connection. Check the host and port, and that the App Password is right."}
@@ -231,6 +357,14 @@ def page(host, proto):
                        'and cannot send real email, so sign-up codes and receipts are saved in the <a href="/outbox">test inbox</a> instead. Connect both and the app behaves like the live site: '
                        'Google\'s own "Continue with Google" button, and real emails in real inboxes.</p></article>')
     conn_html = "".join('<p class="m">%s / %s <button type="button" class="rm" data-k="%s" data-b="%s">Disconnect</button></p>' % (e(k.capitalize()), e(b), e(k), e(b)) for k, b in connections()).replace("%", "%%")
+    fs = feed_status()
+    feeds_html = ("".join('<p class="m">%s: <b>%s</b>%s</p>' % (e(label), "saved" if fs[n] else "not added yet",
+                                                                 (' <button type="button" class="fx" data-n="%s">Remove</button>' % n) if fs[n] else "")
+                          for n, label in FEED_NAMES.items())).replace("%", "%%")
+    feeds_help = _linkify("USAJOBS lists every federal job near Philadelphia, internships included: request a free key at https://developer.usajobs.gov/APIRequest/ "
+                          "(it arrives by email; give the email you used below). The Muse asks every app to register: get a key at https://www.themuse.com/developers/api/v2 . "
+                          "Keys are saved only in uaply-config.json on this computer and are never shown again. On a hosted server, put them in UAPLY_CONFIG_JSON "
+                          "as feed_keys instead.").replace("%", "%%")
     origin_html = "".join('<p><code>%s</code> <button type="button" class="cp" data-v="%s">Copy</button></p>' % (e(o), e(o)) for o in origins(host, proto)).replace("%", "%%")
     try:
         n = auth_api.counts()
@@ -250,12 +384,14 @@ code{background:var(--bg);padding:1px 5px;border-radius:5px}
 </style></head><body><main><h1>UAply setup</h1><p class="m">What is switched on, and what still needs a key. Secrets are never shown here.</p>
 %s
 <article id="google"><b>Connect Google sign-in</b><p class="m">Google needs to be told which addresses may show its button. Add each of these under Authorized JavaScript origins:</p>@@ORIGINS@@
-<p class="m">Then paste the Client ID from Google Cloud Console (the long address ending in .apps.googleusercontent.com). It is public, so it is safe to paste here. It is saved only on this computer.</p>
+<p class="m">Then paste the Client ID from Google Cloud Console (the long address ending in .apps.googleusercontent.com). It is public, so it is safe to paste here. It is saved only on this computer. The client secret is not needed here; on the hosted site it goes into UAPLY_CONFIG_JSON so iPhones and iPads can sign in.</p>
 <p><input id="gi" type="text" placeholder="123456789-abc.apps.googleusercontent.com" style="width:340px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><button id="gs" type="button">Save Google client ID</button> <span id="gr" class="m" role="status"></span></p></article>
-<article id="gmail"><b>Connect Gmail</b><p class="m">Paste the Gmail address that will send UAply's email and its App Password (a 16-letter code from myaccount.google.com/apppasswords, not your normal password). It is saved only in uaply-config.json on this computer, which is never uploaded, and a test email is sent right away.</p>
-<p><input id="ge" type="email" placeholder="Sending Gmail address" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
-<p><input id="gp" type="password" placeholder="App Password" autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<article id="gmail"><b>Connect email (Brevo or Gmail)</b><p class="m">How UAply sends sign-up codes, receipts and applications. <b>Brevo</b> sends from your own domain (for example uaplytechnologies@uaply.net): paste that address, Brevo's SMTP login and an SMTP key from Brevo, SMTP &amp; API, SMTP tab. <b>Gmail</b>: paste the Gmail address and its App Password (a 16-letter code from myaccount.google.com/apppasswords, not your normal password). It is saved only in uaply-config.json on this computer, which is never uploaded, and a test email is sent right away.</p>
+<p><select id="gv" aria-label="Email provider" style="padding:8px;border:1px solid var(--line);border-radius:8px"><option value="brevo">Brevo (your own domain)</option><option value="gmail">Gmail</option></select></p>
+<p><input id="ge" type="email" placeholder="Send from, e.g. uaplytechnologies@uaply.net" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p id="glw"><input id="gl" type="text" placeholder="Brevo SMTP login (ends in @smtp-brevo.com)" autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p><input id="gp" type="password" placeholder="Brevo SMTP key or Gmail App Password" autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><input id="gc" type="email" placeholder="Send copies and tests to (optional)" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><button id="sv" type="button">Save and send a test email</button> <span id="sr" class="m" role="status"></span></p></article>
 <article id="ats"><b>Connect an employer's hiring system</b><p class="m">For an employer that uses Greenhouse or Lever and gave you the key they created. Their real postings then say <b>Apply instantly</b>. The key is saved only in uaply-partners.json on this computer and is never shown again.</p>
@@ -264,6 +400,17 @@ code{background:var(--bg);padding:1px 5px;border-radius:5px}
 <p><input id="aa" type="password" placeholder="The employer's API key" autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><button id="as" type="button">Connect</button> <span id="ar" class="m" role="status"></span></p>
 @@CONNS@@</article>
+<article id="billing"><b>Connect Stripe (Plus and Pro)</b><p class="m">Saved only in uaply-config.json on this computer. Card numbers never reach UAply; people pay on Stripe's page.</p>
+<p><input id="ss" type="password" placeholder="Secret key sk_test_..." autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p><input id="sw" type="password" placeholder="Webhook signing secret whsec_..." autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p><input id="sp1" type="text" placeholder="Plus price id price_..." style="width:200px;padding:8px;border:1px solid var(--line);border-radius:8px"> <input id="sp2" type="text" placeholder="Pro price id price_..." style="width:200px;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p><button id="sb" type="button">Save Stripe</button> <span id="sbr" class="m" role="status"></span></p></article>
+<article id="feeds"><b>Job feed keys</b><p class="m">@@FEEDHELP@@</p>
+@@FEEDS@@
+<p><input id="fu" type="password" placeholder="USAJOBS API key" autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p><input id="fe" type="email" placeholder="Email you requested the USAJOBS key with (optional)" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p><input id="fm" type="password" placeholder="The Muse API key" autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
+<p><button id="fs" type="button">Save feed keys</button> <span id="fr" class="m" role="status"></span></p></article>
 <article><b>Send a test email</b><p class="m">Sends one message to your copy address so you can see that real email works.</p>
 <p><button id="t" type="button">Send test email</button> <span id="r" class="m" role="status"></span></p></article>
 <p class="m">%d accounts and %d emails recorded on this server. <a href="/outbox">Test inbox</a></p></main>
@@ -272,9 +419,15 @@ fetch('/api/setup/test-mail',{method:'POST',headers:{'Content-Type':'application
 document.getElementById('gs').onclick=function(){var r=document.getElementById('gr');r.textContent='Saving...';
 fetch('/api/setup/save-google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({client_id:document.getElementById('gi').value})}).then(function(x){return x.json()}).then(function(j){r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
 document.getElementById('sv').onclick=function(){var r=document.getElementById('sr'),g=function(i){return document.getElementById(i).value};r.textContent='Saving...';
-fetch('/api/setup/save-mail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:g('ge'),password:g('gp'),copy_to:g('gc')})}).then(function(x){return x.json()}).then(function(j){if(j.saved)document.getElementById('gp').value='';r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
+fetch('/api/setup/save-mail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:g('gv'),email:g('ge'),login:g('gl'),password:g('gp'),copy_to:g('gc')})}).then(function(x){return x.json()}).then(function(j){if(j.saved)document.getElementById('gp').value='';r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
+;(function(){var v=document.getElementById('gv'),w=document.getElementById('glw');function sync(){w.hidden=v.value!=='brevo'}v.onchange=sync;sync()})();
 document.getElementById('as').onclick=function(){var r=document.getElementById('ar'),g=function(i){return document.getElementById(i).value};r.textContent='Saving...';
 fetch('/api/setup/save-ats',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:g('ak'),board:g('ab'),api_key:g('aa')})}).then(function(x){return x.json()}).then(function(j){if(j.saved){document.getElementById('aa').value='';setTimeout(function(){location.reload()},900)}r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
 document.querySelectorAll('.rm').forEach(function(b){b.onclick=function(){fetch('/api/setup/remove-ats',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:b.getAttribute('data-k'),board:b.getAttribute('data-b')})}).then(function(){location.reload()})}})
+document.getElementById('sb').onclick=function(){var r=document.getElementById('sbr'),g=function(i){return document.getElementById(i).value};r.textContent='Saving...';
+fetch('/api/setup/save-stripe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret_key:g('ss'),webhook_secret:g('sw'),price_plus:g('sp1'),price_pro:g('sp2')})}).then(function(x){return x.json()}).then(function(j){if(j.saved){document.getElementById('ss').value='';document.getElementById('sw').value=''}r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
+document.getElementById('fs').onclick=function(){var r=document.getElementById('fr'),g=function(i){return document.getElementById(i).value};r.textContent='Saving...';
+fetch('/api/setup/save-feed-keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usajobs:g('fu'),usajobs_email:g('fe'),muse:g('fm')})}).then(function(x){return x.json()}).then(function(j){if(j.saved){document.getElementById('fu').value='';document.getElementById('fm').value='';setTimeout(function(){location.reload()},900)}r.textContent=j.message||j.error||'Done'}).catch(function(){r.textContent='Could not reach the server.'})}
+document.querySelectorAll('.fx').forEach(function(b){b.onclick=function(){fetch('/api/setup/save-feed-keys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({remove:[b.getAttribute('data-n')]})}).then(function(){location.reload()})}})
 document.querySelectorAll('.cp').forEach(function(b){b.onclick=function(){var v=b.getAttribute('data-v');(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(function(){b.textContent='Copied'},function(){b.textContent='Select the address and copy it'})}})</script>
-</body></html>""".replace("@@ORIGINS@@", origin_html).replace("@@CONNS@@", conn_html) % ("".join(rows), n["users"], n["mail"])).encode("utf-8")
+</body></html>""".replace("@@ORIGINS@@", origin_html).replace("@@CONNS@@", conn_html).replace("@@FEEDS@@", feeds_html).replace("@@FEEDHELP@@", feeds_help) % ("".join(rows), n["users"], n["mail"])).encode("utf-8")

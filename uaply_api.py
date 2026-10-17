@@ -35,11 +35,14 @@ import urllib.request
 import uuid
 import html
 from email.message import EmailMessage
+from email.utils import formataddr, parseaddr
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(ROOT, "data")
 CONFIG_PATH = os.path.join(ROOT, "uaply-config.json")
+REAL_CONFIG_PATH = CONFIG_PATH                             # the owner's own settings file (tests may point CONFIG_PATH at a temporary one)
 import ats_api
+import autofill
 import jobs_api
 import auth_api
 import emails
@@ -61,8 +64,9 @@ def config():
     without a file in the repository), then SUPPORT_EMAIL if set."""
     cfg = {"delivery": "test", "daily_limit": 20, "smtp": {}}
     try:
-        with open(CONFIG_PATH, encoding="utf-8") as f:
-            cfg.update(json.load(f))
+        if not (os.environ.get("UAPLY_CONFIG_FILE") == "none" and CONFIG_PATH == REAL_CONFIG_PATH):   # the test run never uses the owner's real email or keys
+            with open(CONFIG_PATH, encoding="utf-8") as f:
+                cfg.update(json.load(f))
     except Exception:
         pass
     try:
@@ -102,34 +106,62 @@ def public_config():
             "autoSend": cfg.get("auto_send", True) is not False, "graceSeconds": grace}
 
 
-def _append(name, obj):
+def append_line(path, text):
+    """Add one record (one line) to a records file. If the last write was cut short (a full disk, a forced stop), the file does not end in a
+    line break: one is added first, so the new record never gets glued to the broken one. Never raises; a failure is written to the server's log."""
     try:
-        os.makedirs(DATA, exist_ok=True)
-        with open(os.path.join(DATA, name), "a", encoding="utf-8") as f:
-            f.write(json.dumps(obj) + "\n")
-    except Exception:
-        pass            # keep working from memory if the disk is not writable
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "a+b") as f:
+            if f.tell():
+                f.seek(-1, os.SEEK_END)
+                if f.read(1) != b"\n":
+                    f.write(b"\n")
+            f.write(text.encode("utf-8") + b"\n")
+    except Exception as e:
+        sys.stderr.write("[uaply] could not save a record to %s: %s: %s\n" % (path, type(e).__name__, str(e)[:200]))      # kept in memory only
+
+
+def read_lines(path):
+    """Every readable record of a records file. A broken line (a write that was cut short) is skipped instead of hiding every record after it."""
+    out, bad = [], 0
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                if line.strip():
+                    try:
+                        rec = json.loads(line)
+                    except ValueError:
+                        bad += 1
+                        continue
+                    if isinstance(rec, dict):
+                        out.append(rec)
+    except OSError:
+        pass
+    if bad:
+        sys.stderr.write("[uaply] skipped %d broken line(s) in %s\n" % (bad, path))
+    return out
+
+
+def _append(name, obj):
+    append_line(os.path.join(DATA, name), json.dumps(obj))        # keep working from memory if the disk is not writable
 
 
 def _load():
     for name, store in (("applications.jsonl", APPS), ("decisions.jsonl", DECISIONS)):
-        try:
-            with open(os.path.join(DATA, name), encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if line:
-                        store.append(json.loads(line))
-        except Exception:
-            pass
+        store.extend(read_lines(os.path.join(DATA, name)))
 
 
 hide_errors = False        # serve.py sets this on a hosted server: visitors then see a plain sentence, never a mail server's or an employer's raw error text
 
 
+INSTANCE = ""
+
+
 def init(instance):
     """Each instance (sandbox, dev) keeps its own records in data/<instance>/."""
-    global DATA
-    DATA = os.path.join(data_root(), re.sub(r"[^A-Za-z0-9_-]", "", instance) or "default")
+    global DATA, INSTANCE
+    INSTANCE = re.sub(r"[^A-Za-z0-9_-]", "", instance) or "default"
+    DATA = os.path.join(data_root(), INSTANCE)
     APPS.clear()
     DECISIONS.clear()
     _load()
@@ -144,6 +176,7 @@ _AUTH = {"citizen": "US citizen or permanent resident", "authorized": "Authorize
          "none": "Not currently authorized"}
 _START = {"now": "Right away", "2w": "Within 2 weeks", "1m": "Within a month", "grad": "After graduation", "flex": "Flexible"}
 _TYPES = {"fulltime": "Full-time", "parttime": "Part-time", "internship": "Internship", "coop": "Co-op"}
+_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
 
 def _pick(v, allowed):
@@ -175,11 +208,18 @@ def _ext(raw):
     except (TypeError, ValueError):
         gpa = ""
     types = [t for t in x.get("types") if t in _TYPES] if isinstance(x.get("types"), list) else []
+    zipc = _s(x.get("zip"), 10)
+    state = _s(x.get("state"), 30)
     return {"phone": phone, "headline": _s(x.get("headline"), 120), "summary": _s(x.get("summary"), 600),
             "resume": _https(x.get("resume")), "linkedin": _linkedin(x.get("linkedin")), "portfolio": _https(x.get("portfolio")),
             "school": _s(x.get("school"), 100), "major": _s(x.get("major"), 100), "grad": grad, "gpa": gpa,
             "employer": _s(x.get("employer"), 100), "auth": _pick(x.get("auth"), _AUTH),
-            "sponsor": _pick(x.get("sponsor"), ("yes", "no")), "start": _pick(x.get("start"), _START), "types": types}
+            "sponsor": _pick(x.get("sponsor"), ("yes", "no")), "start": _pick(x.get("start"), _START), "types": types,
+            # the common questions employers' own forms ask (used by autofill.py to fill those forms; none of them is shown to a recruiter otherwise)
+            "zip": zipc if re.match(r"^\d{5}(-\d{4})?$", zipc) else "", "state": state if re.match(r"^[A-Za-z .]{2,30}$", state) else "",
+            "relocate": _pick(x.get("relocate"), ("yes", "no")), "office": _pick(x.get("office"), ("yes", "no")),
+            "former": _pick(x.get("former"), ("no", "ask")), "govt": _pick(x.get("govt"), ("yes", "no")), "phd": _pick(x.get("phd"), ("yes", "no")),
+            "pronouns": _s(x.get("pronouns"), 30), "ack": x.get("ack") is True, "why": _s(x.get("why"), 600)}
 
 
 def _detail_rows(c, note=""):
@@ -187,7 +227,9 @@ def _detail_rows(c, note=""):
     x = c.get("ext") or {}
     skills = ", ".join(c.get("skills") or [])
     exp = ("%s year%s" % (c["years"], "" if c.get("years") == 1 else "s")) if c.get("years") else ""
-    edu =", ".join(v for v in (x.get("school"), x.get("major"), x.get("grad"), ("GPA %s" % x["gpa"]) if x.get("gpa") != "" and x.get("gpa") is not None else "") if v)
+    grad = re.match(r"^(\d{4})-(\d{2})$", x.get("grad") or "")
+    grad = "graduation %s %s" % (_MONTHS[int(grad.group(2)) - 1], grad.group(1)) if grad else ""      # "graduation June 2027", not "2027-06"
+    edu = ", ".join(v for v in (x.get("school"), x.get("major"), grad, ("GPA %s" % x["gpa"]) if x.get("gpa") != "" and x.get("gpa") is not None else "") if v)
     rows = [("Applicant", c.get("name")), ("Email", c.get("email")), ("Current or target title", c.get("title")),
             ("Experience", exp), ("Location", c.get("loc")), ("Skills", skills),
             ("Phone", x.get("phone")), ("Headline", x.get("headline")), ("Resume", x.get("resume")),
@@ -227,9 +269,9 @@ def _validate(p):
     if not _s(job.get("co"), 200) or not _s(job.get("role"), 200):
         return "Missing company or role."
     if not _s(prof.get("name"), 100):
-        return "Add your name in Profile, Settings first."
+        return "Add your name in Profile setup, under About you, first."
     if not EMAIL_RE.match(_s(prof.get("email"), 200)):
-        return "Add a valid email in Profile, Settings so the recruiter can reply."
+        return "Add a valid email in Profile setup, under About you, so the recruiter can reply."
     note = p.get("note", "")                       # optional: the application is the profile, not a message
     if note is not None and (not isinstance(note, str) or len(note) > 4000):
         return "The note must be at most 4000 characters."
@@ -246,13 +288,14 @@ _RESUME_KINDS = {"pdf": (b"%PDF", "application", "pdf"), "doc": (b"\xd0\xcf\x11\
 
 
 def _resume(raw):
-    """The resume file the person uploaded under Profile, Resume and links, as (details, bytes). Returns (None, None) when there is
+    """The resume file the person uploaded in Profile setup, under Background and links, as (details, bytes). Returns (None, None) when there is
     none and raises ValueError when it is not a real PDF, Word or text file under 1 MB (checked by content, not just the name)."""
     if not raw:
         return None, None
     if not isinstance(raw, dict):
         raise ValueError("bad resume")
-    name = re.sub(r"[^A-Za-z0-9._ -]", "_", _s(raw.get("name"), 120)).strip() or "resume.pdf"
+    # letters of any language stay ("José García CV.pdf" reaches the employer as it is); slashes, quotes and other symbols become _
+    name = re.sub(r"[^\w. -]", "_", _s(raw.get("name"), 120)).strip() or "resume.pdf"
     m = re.match(r"^data:[\w/+.-]+;base64,([A-Za-z0-9+/=]+)$", raw.get("data") if isinstance(raw.get("data"), str) else "")
     ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
     if not m or ext not in _RESUME_KINDS:
@@ -314,12 +357,21 @@ def _post_webhook(url, secret, payload):
     return False, reason
 
 
+def _from(cfg):
+    """The sender of every UAply email. A bare address (what /setup saves) gets the name "UAply", so inboxes show UAply as the sender
+    instead of the part before the @; an address that already carries a name is used as it is."""
+    v = (cfg.get("smtp") or {}).get("from_addr") or ""
+    name, addr = parseaddr(v)
+    return v if name or not addr else formataddr(("UAply", addr))
+
+
 def _send_email(cfg, to, cand, job, note, original="", resume=None):
     s = cfg["smtp"]
     msg = EmailMessage()
-    msg["From"] = s["from_addr"]
+    msg["From"] = _from(cfg)
     msg["To"] = to
-    msg["Reply-To"] = "%s <%s>" % (cand["name"], cand["email"])
+    # the name is quoted, so a name such as "Sam <someone@else.example>" can never become the address the employer's Reply goes to
+    msg["Reply-To"] = formataddr((cand["name"], cand["email"]))
     test = _redirect(cfg) == to
     msg["Subject"] = "%sApplication: %s - %s" % ("[TEST] " if test else "", job["role"], cand["name"])
     extra = ("\nTest redirect: this would have gone to %s.\n" % (original or "the company's application page")) if test else ""
@@ -362,7 +414,7 @@ def _deliver(cfg, target, cand, job, note, contact, resume_meta, resume_bytes, h
         else:
             errors.append("%s: %s" % (ats["kind"], why))
     if not done and manual and not errors:     # nothing was sent because the posting asks something the profile cannot answer: finish on the employer's page
-        sys.stderr.write("[uaply] application %s needs a manual finish: %s" % (rec["id"], manual))
+        sys.stderr.write("[uaply] application %s needs a manual finish: %s\n" % (rec["id"], manual))
         return "handoff", None, []
     return ("sent" if done else "failed"), ("; ".join(errors) if errors else None), done
 
@@ -373,27 +425,30 @@ def _owner_copy(cfg):
     return r.strip() if isinstance(r, str) and EMAIL_RE.match(r.strip()) else ""
 
 
-def _site_base(cfg):
-    """The public address of this site for links in emails ('' when it only runs on this computer)."""
+def _site_base(cfg, site=""):
+    """The public address of this site for links in emails ('' when it only runs on this computer). The configured public_url wins;
+    otherwise the address the person is using (serve.py passes it), so a host such as Render gets its link without extra settings.
+    Only an https address is ever put in an email."""
     g = cfg.get("google") if isinstance(cfg.get("google"), dict) else {}
-    for v in (cfg.get("public_url"), g.get("public_url")):
-        if isinstance(v, str) and v.startswith("https://"):
+    for v in (cfg.get("public_url"), g.get("public_url"), site):
+        if isinstance(v, str) and v.startswith("https://") and " " not in v:
             return v.rstrip("/")
     return ""
 
 
-def _mail_ctx(cfg, rec, note, user_email=""):
+def _mail_ctx(cfg, rec, note, user_email="", site=""):
     """Everything emails.py needs to write the receipt or the owner copy of one application."""
     return {"test": rec["mode"] != "live", "status": rec["status"], "cand": rec["candidate"], "job": rec["job"], "at": rec["at"],
             "match": rec.get("match", 0), "to": rec.get("to", ""), "rows": _detail_rows(rec["candidate"], note), "note": note,
-            "channels": rec.get("channels") or [], "user_email": user_email, "base_url": _site_base(cfg), "support_email": _s(cfg.get("support_email"), 120)}
+            "channels": rec.get("channels") or [], "user_email": user_email, "base_url": _site_base(cfg, site), "support_email": _s(cfg.get("support_email"), 120),
+            "preview": rec.get("preview") is True}
 
 
 def _copy_message(cfg, rec):
     """The owner's copy of one application, as plain text plus an HTML version (built apart from sending so it can be tested)."""
     subject, text, page = emails.owner_copy(_mail_ctx(cfg, rec, rec.get("note", "")))
     msg = EmailMessage()
-    msg["From"], msg["To"], msg["Subject"] = cfg["smtp"]["from_addr"], _owner_copy(cfg), subject
+    msg["From"], msg["To"], msg["Subject"] = _from(cfg), _owner_copy(cfg), subject
     msg.set_content(text)
     msg.add_alternative(page, subtype="html")
     return msg
@@ -413,14 +468,15 @@ def _send_owner_copy(cfg, rec):
                 srv.login(s["user"], s.get("password", ""))
             srv.send_message(_copy_message(cfg, rec))
         return True
-    except Exception:
+    except Exception as e:
+        sys.stderr.write("[uaply] the owner's copy of application %s was not sent: %s: %s\n" % (rec.get("id"), type(e).__name__, str(e)[:200]))
         return False
 
 
 def _send_receipt(cfg, to, subject, body, page=None, reply_to=None):
     s = cfg["smtp"]
     msg = EmailMessage()
-    msg["From"] = s["from_addr"]
+    msg["From"] = _from(cfg)
     msg["To"] = to
     msg["Subject"] = subject
     if reply_to and EMAIL_RE.match(reply_to):             # pressing Reply answers this address (only a plain, valid address is ever used)
@@ -514,17 +570,18 @@ def mail_ready():
     return _smtp_ready(config())
 
 
-def _receipt(cfg, user, cand, job, note, rec):
+def _receipt(cfg, user, cand, job, note, rec, site=""):
     """Email the signed-in applicant a copy of what happened. Never raises: a receipt problem must not undo an application."""
     to = user["email"]
-    subject, body, page = emails.applicant_receipt(_mail_ctx(cfg, rec, note, user["email"]))
+    subject, body, page = emails.applicant_receipt(_mail_ctx(cfg, rec, note, user["email"], site))
     status = "delivered_test"
     if _smtp_ready(cfg):                      # the receipt goes only to the applicant's own address, so it is safe to send in test mode too
         try:
             _send_receipt(cfg, to, subject, body, page)
             status = "sent"
-        except Exception:
+        except Exception as e:
             status = "failed"
+            sys.stderr.write("[uaply] the applicant's confirmation was not sent: %s: %s\n" % (type(e).__name__, str(e)[:200]))
     elif cfg["delivery"] == "live":
         status = "not_configured"
     try:
@@ -534,8 +591,9 @@ def _receipt(cfg, user, cand, job, note, rec):
     return {"to": to, "status": status}
 
 
-def submit(p, user=None):
-    """Returns (http_status, dict). `user` is the signed-in account ({id, email}) or None."""
+def submit(p, user=None, site=""):
+    """Returns (http_status, dict). `user` is the signed-in account ({id, email}) or None. `site` is the address the person is using
+    (for the link in their receipt)."""
     err = _validate(p)
     if err:
         return 400, {"error": err}
@@ -550,6 +608,11 @@ def submit(p, user=None):
     sal = known.get("sal") or pj.get("sal")
     job["sal"] = [int(sal[0]), int(sal[1])] if isinstance(sal, list) and len(sal) == 2 and all(isinstance(x, (int, float)) for x in sal) else [0, 0]
     job["desc"] = _s(known.get("desc") or known.get("blurb") or pj.get("blurb"), 900)
+    # where the posting came from ("via USAJOBS; apply on the official announcement"), from this server's own copy only: kept in the record and named in the receipt
+    if known.get("credit"):
+        job["via"] = _s(known.get("credit"), 200)
+    if _https(known.get("announcement")):
+        job["announcement"] = _https(known.get("announcement"))
     prof = p["profile"]
     cand = {"name": _s(prof.get("name"), 100), "email": _s(prof.get("email"), 200).lower(),
             "title": _s(prof.get("title"), 100), "loc": _s(prof.get("loc"), 100), "edu": _s(prof.get("edu"), 40)}
@@ -563,46 +626,103 @@ def submit(p, user=None):
     try:
         resume_meta, resume_bytes = _resume(p.get("resume"))
     except (ValueError, TypeError):
-        return 400, {"error": "Your resume file could not be used. Replace it under Profile, Resume and links with a PDF, Word or text file under 1 MB."}
+        return 400, {"error": "Your resume file could not be used. Replace it in Profile setup, under Background and links, with a PDF, Word or text file under 1 MB."}
     if resume_meta:
         cand["resume_file"] = resume_meta["name"]
     note = (p.get("note") or "").strip()
 
+    if known.get("emp") and known.get("closed"):
+        return 410, {"error": "%s is not taking applications for this job right now." % known.get("co", "This employer")}
     # Never email an address the browser sends: only the recruiter address this server found in the job feed itself.
     claimed = job["contact"] if EMAIL_RE.match(job["contact"] or "") else ""
     contact = claimed if claimed and claimed.lower() == jobs_api.known_contact(job["id"]).lower() else ""
+    if known.get("emp"):
+        contact = known.get("contact") or ""     # a Hiring mode posting: its verified account email, which browsers never receive
     policy = jobs_api.job_policy(job["id"])      # 'direct' (employer opted in), 'link' (employer's own page) or 'unknown' (example)
+    if policy == "unknown" and job["id"] >= 100000:
+        # a real posting (examples have small numbers) that this server no longer lists, for example one that left the employer's board:
+        # nothing can be sent to anyone, so it is a hand-off in test mode too (test mode used to report it as delivered)
+        policy = "link"
     hook = jobs_api.known_webhook(job["id"]) if policy == "direct" else None      # the HTTPS address the employer registered, if any
     ats = jobs_api.known_ats(job["id"]) if policy == "direct" else None           # the employer's own hiring system and key, if they connected
-    send_args = None
-    with _lock:
+    answers = autofill.clean_answers(p.get("answers"))      # the person's own answers to questions employers' forms asked before
+
+    def dup():
         for a in APPS:
             if a["job"]["id"] == job["id"] and a["candidate"]["email"] == cand["email"] and a["status"] != "failed":
-                return 200, {"status": "duplicate", "id": a["id"], "to": a.get("to", ""), "mode": a["mode"]}
+                # "was" is what happened the first time, so the app can show it again (after an undo, or on another device)
+                return 200, {"status": "duplicate", "id": a["id"], "to": a.get("to", ""), "mode": a["mode"], "was": a["status"]}
+        return None
+
+    with _lock:
+        seen = dup()
+    if seen:
+        return seen
+    if mode == "live" and policy == "direct":
+        # an application sent straight to an employer carries the person's email as the reply address, so that address must be proven theirs
+        if not user:                                       # nobody is signed in: there is no email to verify yet, so say what to do first
+            return 403, {"error": "Sign in first (Profile, Account) and verify your email, so %s can trust your address." % job["co"], "code": "signin"}
+        if not user.get("emailVerified"):
+            return 403, {"error": "Verify your email first (Profile, Account) so the employer can trust your address.", "code": "verify"}
+        if cand["email"] != user["email"].lower():
+            return 400, {"error": "Use your account email in Profile setup, under About you, so the employer replies to an address you verified."}
+        if p.get("confirm_real") is not True:
+            return 400, {"error": "Live sending needs the user to review and press Send."}
+
+    # Autofill: read the job's real application form (Greenhouse publishes it) and answer it from the profile and saved answers.
+    #   - an employer that connected its Greenhouse: anything the form requires that the profile cannot answer is asked first, then it all goes in
+    #   - the sandbox, in test mode: the same, for every Greenhouse posting, and the filled form goes to the test inbox (nothing reaches the employer)
+    #   - every other posting: the filled answers come back with the hand-off, so finishing on the employer's page is quick
+    ref = known.get("ats") if isinstance(known.get("ats"), dict) else None
+    gh = ats if (ats and ats.get("kind") == "greenhouse") else (ref if ref and ref.get("kind") == "greenhouse" else None)
+    preview = (mode == "test" and policy == "link" and gh is not None and
+               (cfg.get("autofill_preview") is True or (INSTANCE == "sandbox" and cfg.get("autofill_preview") is not False)))
+    plan = None
+    if gh and (policy in ("direct", "link") or preview) and not _redirect(cfg):
+        form = autofill.fetch_form(gh["board"], gh["id"])
+        plan = autofill.plan_greenhouse(form, cand, job, note, resume_meta, resume_bytes, answers) if form else None
+        if plan and plan["missing"] and (preview or (policy == "direct" and ats)):
+            pub = autofill.public_plan(plan)
+            return 200, {"status": "needs_answers", "mode": mode, "questions": pub["missing"], "filled": pub["filled"], "total": pub["total"]}
+    summary = ({"filled": plan["filled"], "total": plan["total"],
+                "items": [{"q": i["q"][:160], "a": i["a"][:200]} for i in plan["items"] if i["a"] and not i.get("skip")][:40]} if plan else None)
+
+    send_args = None
+    with _lock:
+        seen = dup()                                       # checked again: a second tap may have landed while the form was being read
+        if seen:
+            return seen
         rec = {"id": uuid.uuid4().hex[:12], "at": int(time.time()), "mode": mode, "job": job, "candidate": cand,
                "note": note, "match": int(p.get("match") or 0), "to": "", "simulated": False, "status": "",
                "user": user["id"] if user else None, "resume": resume_meta, "channels": []}
-        if policy == "link" or (policy == "unknown" and mode == "live"):
+        if summary:
+            rec["autofill"] = summary
+        if preview and plan:
+            # the sandbox shows exactly what would go into the employer's hiring system once they connect; nothing is sent to them
+            rec["to"] = "%s hiring system (simulated)" % job["co"]
+            rec["simulated"] = rec["preview"] = True             # "preview": this employer has not connected, so the live app would hand off
+            rec["status"] = "delivered_test"
+            rec["channels"] = ["hiring system (simulated)"]
+            APPS.append(rec)
+            _append("applications.jsonl", rec)
+        elif policy == "link" or (policy == "unknown" and mode == "live"):
             # a third-party listing, or an example in live mode: UAply never sends an application to anyone here.
             # The person is pointed to the employer's own application page instead.
             rec["status"] = "handoff"
             APPS.append(rec)
             _append("applications.jsonl", rec)
         elif mode == "test":
-            rec["to"] = contact or _simulated_recipient(job["co"])
+            # the same channels the live app would use: email only when the employer gave an address (or, for an example listing, has no
+            # other channel), otherwise their hiring system or their webhook. The test inbox and the Applied list then say where it would go.
+            by_mail = bool(contact) or not (hook or ats)
+            rec["to"] = (contact or _simulated_recipient(job["co"])) if by_mail else (
+                "%s hiring system (simulated)" % job["co"] if ats else "%s's own system (simulated)" % job["co"])
             rec["simulated"] = True
             rec["status"] = "delivered_test"
-            rec["channels"] = ["email (simulated)"] + (["webhook (simulated)"] if hook else []) + (["hiring system (simulated)"] if ats else [])
+            rec["channels"] = (["email (simulated)"] if by_mail else []) + (["webhook (simulated)"] if hook else []) + (["hiring system (simulated)"] if ats else [])
             APPS.append(rec)
             _append("applications.jsonl", rec)
         else:
-            # an application sent straight to an employer carries the person's email as the reply address, so that address must be proven theirs
-            if not user or not user.get("emailVerified"):
-                return 403, {"error": "Verify your email first (Profile, Account) so the employer can trust your address.", "code": "verify"}
-            if cand["email"] != user["email"].lower():
-                return 400, {"error": "Use your account email in Profile, Settings, so the employer replies to an address you verified."}
-            if p.get("confirm_real") is not True:
-                return 400, {"error": "Live sending needs the user to review and press Send."}
             target = _redirect(cfg) or contact
             hook = None if _redirect(cfg) else hook          # a test redirect must never reach a real employer's system
             ats = None if _redirect(cfg) else ats
@@ -613,33 +733,52 @@ def submit(p, user=None):
                     return 429, {"error": "Daily sending limit reached."}
                 rec["to"], rec["status"] = target, "sending"      # reserved now, so a double tap cannot send twice
                 APPS.append(rec)
-                send_args = (cfg, target if _smtp_ready(cfg) else "", cand, job, note, contact, resume_meta, resume_bytes, hook, rec, ats)
+                send_args = (cfg, target if _smtp_ready(cfg) else "", dict(cand, answers=answers) if ats else cand, job, note, contact,
+                             resume_meta, resume_bytes, hook, rec, ats)
             else:
+                if target:                     # an employer who agreed to receive email, but this server cannot send email: tell the owner
+                    sys.stderr.write("[uaply] application %s to %s became a hand-off because no email account is set up (see /setup)\n" % (rec["id"], job["co"]))
                 rec["status"] = "handoff"
                 APPS.append(rec)
                 _append("applications.jsonl", rec)
     if send_args:                                                  # the slow network calls happen outside the lock
-        status, err, channels = _deliver(*send_args)
+        try:
+            status, err, channels = _deliver(*send_args)
+        except Exception as e:     # never leave the record on "sending": that would block every retry as a duplicate and count toward the daily cap
+            status, err, channels = "failed", "unexpected problem (%s)" % type(e).__name__, []
         with _lock:
             rec["status"], rec["channels"] = status, channels
             if err:
                 rec["error"] = err
             _append("applications.jsonl", rec)
     out = {"status": rec["status"], "id": rec["id"], "to": rec["to"], "mode": mode, "simulated": rec["simulated"], "copied": False}
+    if summary:
+        out["plan"] = summary
     if rec.get("error"):
         sys.stderr.write("[uaply] delivery of application %s failed: %s\n" % (rec["id"], rec["error"]))      # the real reason stays in the server's own log and applications.jsonl
-        out["error"] = ("The email could not be sent right now. Try again in a moment." if hide_errors
-                        else "The email could not be sent: " + rec["error"])
+        # say "email" only when email was the way it went; an application for a hiring system or a webhook is not an email
+        what = "The email" if all(e.startswith("email:") for e in rec["error"].split("; ")) else "Your application to %s" % job["co"]
+        out["error"] = ("%s could not be sent right now. Try again in a moment." % what if hide_errors
+                        else "%s could not be sent: %s" % (what, rec["error"]))
     if user and rec["status"] in ("delivered_test", "sent", "handoff"):
         # A real confirmation goes only to an address the person has proven is theirs (otherwise anyone could make UAply email a stranger).
         # With no real email connected nothing leaves this server: the confirmation is only saved in the test inbox, so it is made for any account.
-        out["receipt"] = (_receipt(cfg, user, cand, job, note, rec) if user.get("emailVerified") or not _smtp_ready(cfg)
+        out["receipt"] = (_receipt(cfg, user, cand, job, note, rec, site) if user.get("emailVerified") or not _smtp_ready(cfg)
                           else {"to": user["email"], "status": "unverified"})
     # the owner's copy: skipped when the person who swiped already got their own confirmation at that same address (one swipe, one email)
     already = out.get("receipt", {}).get("status") == "sent" and user and user["email"].lower() == _owner_copy(cfg).lower()
     if rec["status"] != "failed" and not already:
         out["copied"] = _send_owner_copy(cfg, rec)
     return 200, out
+
+
+def _line_user(line):
+    """The account a stored application line belongs to (None for a broken line, which is kept as it is: it cannot be read either way)."""
+    try:
+        rec = json.loads(line)
+        return rec.get("user") if isinstance(rec, dict) else None
+    except ValueError:
+        return None
 
 
 def forget_user(user_id):
@@ -653,8 +792,8 @@ def forget_user(user_id):
         path = os.path.join(DATA, "applications.jsonl")
         try:
             if os.path.exists(path):
-                with open(path, encoding="utf-8") as f:
-                    lines = [ln for ln in f if ln.strip() and json.loads(ln).get("user") != user_id]
+                with open(path, encoding="utf-8", errors="replace") as f:
+                    lines = [ln if ln.endswith("\n") else ln + "\n" for ln in f if ln.strip() and _line_user(ln) != user_id]
                 tmp = path + ".tmp"
                 with open(tmp, "w", encoding="utf-8") as f:
                     f.writelines(lines)
@@ -693,6 +832,16 @@ def outbox_json():
         return {"stats": st, "applications": list(reversed(APPS))[:100]}
 
 
+def _autofill_html(af):
+    """The employer's own application form as UAply filled it in (question and answer), for the test inbox."""
+    if not isinstance(af, dict) or not af.get("items"):
+        return ""
+    e = html.escape
+    rows = "".join("<tr><td>%s</td><td>%s</td></tr>" % (e(i.get("q", "")), e(i.get("a", ""))) for i in af["items"])
+    return ('<details open><summary>Employer\'s application form, filled in by UAply: %d of %d answers</summary>'
+            '<table class="af">%s</table></details>' % (af.get("filled", 0), af.get("total", 0), rows))
+
+
 def outbox_html():
     e = html.escape
     st = stats()
@@ -705,10 +854,11 @@ def outbox_html():
         rows.append(
             '<article><header><span class="b">%s</span><b>%s</b> to %s%s<time>%s</time></header>'
             '<p class="m">From %s &lt;%s&gt; · %s, %s yrs · match %d%% · <a href="%s" target="_blank" rel="noopener noreferrer">posting</a></p>'
-            '<pre>%s</pre></article>' % (
+            '<pre>%s</pre>%s</article>' % (
                 e(badge), e(j["role"]), e(j["co"]), (" &lt;%s&gt;" % e(a["to"])) if a["to"] else "",
                 time.strftime("%b %d, %H:%M", time.localtime(a["at"])),
-                e(c["name"]), e(c["email"]), e(c["title"] or "candidate"), c["years"], a["match"], e(j["url"]), e(_application_text(c, j, a["note"]))))
+                e(c["name"]), e(c["email"]), e(c["title"] or "candidate"), c["years"], a["match"], e(j["url"]), e(_application_text(c, j, a["note"])),
+                _autofill_html(a.get("autofill"))))
     body = "".join(rows) or "<p class='m'>No applications yet. Swipe right on a job in the sandbox or dev app.</p>"
     try:
         mails = auth_api.mail_list(30)
@@ -732,6 +882,8 @@ article{background:var(--surface);border:1px solid var(--line);border-radius:14p
 header{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}header time{margin-left:auto;color:var(--muted);font-size:13px}
 .b{font:700 11px ui-monospace,Menlo,monospace;padding:2px 7px;border-radius:6px;background:var(--accent);color:#fff}
 pre{white-space:pre-wrap;margin:8px 0 0;font:inherit;background:var(--bg);border-radius:10px;padding:10px}a{color:var(--accent)}
+details{margin-top:8px}summary{cursor:pointer;font-weight:700}.af{width:100%%;border-collapse:collapse;margin-top:6px;font-size:13.5px}
+.af td{border-top:1px solid var(--line);padding:6px 4px;vertical-align:top}.af td:first-child{color:var(--muted);width:55%%}
 </style></head><body><main><h1>UAply test inbox</h1><p class="m">Simulated recruiter inbox. In test mode nothing leaves this computer.</p>
 <div class="stats"><div><b>%d</b><small>Swipes right</small></div><div><b>%d</b><small>Swipes left</small></div><div><b>%d</b><small>Applications</small></div><div><b>%d</b><small>Testers</small></div></div>
 %s%s</main></body></html>""" % (st["right"], st["left"], st["applications"], st["sessions"], body, receipts)).encode("utf-8")

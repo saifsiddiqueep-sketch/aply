@@ -1,4 +1,4 @@
-Subject: [UAply copy] Software Engineering Intern at Acme Robotics: applicant sent to the employer's site
+Subject: [TEST] [UAply copy] Software Engineering Intern at Acme Robotics: applicant sent to the employer's site
 
 This is a copy for you, the UAply owner.
 
@@ -13,7 +13,7 @@ THE JOB
   Job type: Internship
   Work style: Hybrid
   Pay: $30k to $38k a year
-  Your match: 87%
+  Match: 87%
   Posting: https://acmerobotics.example/careers/42
 
 ABOUT THE JOB

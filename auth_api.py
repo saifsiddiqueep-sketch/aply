@@ -23,8 +23,13 @@ also forgets their application records (see uaply_api.forget_user). App stores r
 Password reset: request_reset() emails a one-hour, single-use link; reset_password() sets the new password, ends every
 session of that account and works for Google-only accounts too (it then gains a password).
 
-Not built yet: email verification at sign-up. A hosted database (instead of this file) is the production
-step: this module is the local stand-in that already behaves like one.
+Wrong passwords: 5 per connection and account, and 20 per account from all connections together, in 15 minutes (the second
+limit holds even when a visitor makes up a new address for every try).
+
+Email verification: a new password account gets a 6-digit code by email (email_codes above); a "Continue with Google" account
+counts as verified only when Google is the authority on that address (see oauth_login).
+
+A hosted database (instead of this file) is a later step: this module is the stand-in that already behaves like one.
 """
 import hashlib
 import hmac
@@ -41,6 +46,10 @@ ITER = 600000
 SESSION_SECONDS = 30 * 86400
 MAX_FAILS = 5
 FAIL_WINDOW = 15 * 60
+# Wrong passwords for one account from ALL connections together. The 5-per-connection limit above trusts the address the visitor's
+# connection reports, and behind a host's proxy a visitor can make that up for every try. This second limit cannot be dodged that way.
+# It is set high enough that a stranger cannot easily lock someone out, and Forgot password and Google still work during it.
+MAX_EMAIL_FAILS = 20
 
 _lock = threading.RLock()
 _path = ""
@@ -103,7 +112,9 @@ def init(instance):
             salt TEXT NOT NULL,
             expires_at INTEGER NOT NULL,
             attempts INTEGER NOT NULL DEFAULT 0)""")
-        for col in ("terms_at INTEGER", "has_password INTEGER NOT NULL DEFAULT 1", "email_verified INTEGER NOT NULL DEFAULT 0"):      # databases made before these columns existed
+        for col in ("terms_at INTEGER", "has_password INTEGER NOT NULL DEFAULT 1", "email_verified INTEGER NOT NULL DEFAULT 0",
+                    "plan TEXT NOT NULL DEFAULT 'free'", "plan_status TEXT NOT NULL DEFAULT ''", "plan_renews INTEGER NOT NULL DEFAULT 0",
+                    "plan_cancel INTEGER NOT NULL DEFAULT 0", "stripe_customer TEXT NOT NULL DEFAULT ''", "stripe_sub TEXT NOT NULL DEFAULT ''"):      # databases made before these columns existed
             try:
                 c.execute("ALTER TABLE users ADD COLUMN " + col)
             except sqlite3.OperationalError:
@@ -144,6 +155,21 @@ def _recent(bucket, key, window):
     return lst
 
 
+_pruned = [0.0]
+
+
+def _prune():
+    """Forget rate-limit entries older than an hour, at most once a minute, so a stream of made-up emails or addresses cannot grow
+    the server's memory without end. Call with _lock held."""
+    now = time.time()
+    if now - _pruned[0] < 60:
+        return
+    _pruned[0] = now
+    for bucket in (_fails, _signups, _resets, _code_sends):
+        for k in [k for k, v in bucket.items() if not v or now - v[-1] > 3600]:
+            del bucket[k]
+
+
 def _new_session(c, user_id):
     token = secrets.token_urlsafe(32)
     now = int(time.time())
@@ -154,7 +180,33 @@ def _new_session(c, user_id):
 
 
 def public_user(row):
-    return {"id": row["id"], "email": row["email"], "hasPassword": bool(row["has_password"]), "emailVerified": bool(row["email_verified"])}
+    keys = row.keys()
+    return {"id": row["id"], "email": row["email"], "hasPassword": bool(row["has_password"]), "emailVerified": bool(row["email_verified"]),
+            "plan": (row["plan"] if "plan" in keys and row["plan"] in ("free", "plus", "pro") else "free")}
+
+
+def billing_row(user_id):
+    """The stored subscription of one account, or None."""
+    with _db() as c:
+        r = c.execute("SELECT id, email, plan, plan_status, plan_renews, plan_cancel, stripe_customer, stripe_sub FROM users WHERE id=?", (user_id,)).fetchone()
+    return dict(r) if r else None
+
+
+def find_billing(customer="", sub=""):
+    """The account id for a Stripe customer or subscription id, or None."""
+    with _db() as c:
+        r = c.execute("SELECT id FROM users WHERE (stripe_customer!='' AND stripe_customer=?) OR (stripe_sub!='' AND stripe_sub=?)", (customer or "-", sub or "-")).fetchone()
+    return r["id"] if r else None
+
+
+def set_billing(user_id, **fields):
+    """Update the subscription fields of one account (only the known columns)."""
+    allowed = ("plan", "plan_status", "plan_renews", "plan_cancel", "stripe_customer", "stripe_sub")
+    pairs = [(k, v) for k, v in fields.items() if k in allowed]
+    if not pairs:
+        return
+    with _db() as c:
+        c.execute("UPDATE users SET %s WHERE id=?" % ", ".join("%s=?" % k for k, _ in pairs), [v for _, v in pairs] + [user_id])
 
 
 def signup(email, password, ip, agree=False):
@@ -191,16 +243,18 @@ def login(email, password, ip):
     bad = (401, {"error": "Wrong email or password."}, None)
     if not email or not isinstance(password, str) or not (1 <= len(password) <= 128):
         return bad
-    key = (ip, email)
+    key, every = (ip, email), ("*", email)
     with _lock:
-        if len(_recent(_fails, key, FAIL_WINDOW)) >= MAX_FAILS:
-            return 429, {"error": "Too many tries. Wait a few minutes and try again."}, None
+        _prune()
+        if len(_recent(_fails, key, FAIL_WINDOW)) >= MAX_FAILS or len(_recent(_fails, every, FAIL_WINDOW)) >= MAX_EMAIL_FAILS:
+            return 429, {"error": "Too many tries. Wait a few minutes and try again, or use Forgot password."}, None
         with _db() as c:
             row = c.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
         salt = bytes(row["salt"]) if row else _DUMMY_SALT          # same work whether or not the email exists
         ok = hmac.compare_digest(_hash(password, salt), bytes(row["hash"]) if row else b"\x01" * 32) and row is not None
         if not ok:
             _fails[key].append(time.time())
+            _fails[every].append(time.time())
             return bad
         _fails.pop(key, None)
         with _db() as c:
@@ -273,10 +327,16 @@ def oauth_login(provider, subject, email, agree=False, trusted=True):
 
     `trusted` says the provider is the authority on this email address (for Google: a Gmail address or a Workspace account). An
     untrusted email can still sign in by the provider's account number, but it never proves ownership: it cannot be merged into an
-    existing account ("email_in_use") and a new account made with it starts unverified, so the emailed code check applies."""
+    existing account ("email_in_use") and a new account made with it starts unverified, so the emailed code check applies.
+
+    Linking a trusted email to a password account that never proved its email (no code entered, no reset link used): whoever chose
+    that password never showed they own the address, and it may have been someone else who signed up first with this person's Gmail
+    to watch the account later. So that password is removed and every other session of the account ends; the owner can add a password
+    again with Forgot password. The returned user then carries passwordRemoved=True so the page can say so."""
     email = _clean_email(email)
     if not email or not isinstance(subject, str) or not subject:
         return "failed", None, None
+    removed = False
     with _lock:
         with _db() as c:
             row = c.execute("SELECT u.* FROM identities i JOIN users u ON u.id=i.user_id WHERE i.provider=? AND i.subject=?",
@@ -292,6 +352,11 @@ def oauth_login(provider, subject, email, agree=False, trusted=True):
                     cur = c.execute("INSERT INTO users(email, salt, hash, created_at, last_login, terms_at, has_password, email_verified) VALUES(?,?,?,?,?,?,0,?)",
                                     (email, secrets.token_bytes(16), secrets.token_bytes(32), now, now, now, 1 if trusted else 0))
                     row = c.execute("SELECT * FROM users WHERE id=?", (cur.lastrowid,)).fetchone()
+                if trusted and row["has_password"] and not row["email_verified"]:     # a password nobody proved belongs to this address's owner
+                    c.execute("UPDATE users SET salt=?, hash=?, has_password=0 WHERE id=?", (secrets.token_bytes(16), secrets.token_bytes(32), row["id"]))
+                    for table in ("sessions", "password_resets", "email_codes"):
+                        c.execute("DELETE FROM %s WHERE user_id=?" % table, (row["id"],))
+                    removed = True
                 c.execute("INSERT OR IGNORE INTO identities(provider, subject, user_id, email, created_at) VALUES(?,?,?,?,?)",
                           (provider, subject, row["id"], email, now))
                 if trusted:
@@ -299,7 +364,10 @@ def oauth_login(provider, subject, email, agree=False, trusted=True):
                 row = c.execute("SELECT * FROM users WHERE id=?", (row["id"],)).fetchone()
             c.execute("UPDATE users SET last_login=? WHERE id=?", (now, row["id"]))
             token = _new_session(c, row["id"])
-    return None, public_user(row), token
+    user = public_user(row)
+    if removed:
+        user["passwordRemoved"] = True
+    return None, user, token
 
 
 def _check_new_password(password, email=""):
@@ -347,7 +415,7 @@ def reset_password(token, new_password, ip):
             return 429, {"error": "Too many tries. Wait a few minutes and try again."}
         th = hashlib.sha256(token.encode()).hexdigest()
         with _db() as c:
-            row = c.execute("SELECT r.user_id, u.email FROM password_resets r JOIN users u ON u.id=r.user_id "
+            row = c.execute("SELECT r.user_id, u.email, u.email_verified FROM password_resets r JOIN users u ON u.id=r.user_id "
                             "WHERE r.token_hash=? AND r.expires_at>?", (th, int(time.time()))).fetchone()
         if not row:
             _fails[key].append(time.time())
@@ -360,6 +428,11 @@ def reset_password(token, new_password, ip):
             c.execute("UPDATE users SET salt=?, hash=?, has_password=1, email_verified=1 WHERE id=?", (salt, pw_hash, row["user_id"]))   # the link went to their inbox
             c.execute("DELETE FROM password_resets WHERE user_id=?", (row["user_id"],))
             c.execute("DELETE FROM sessions WHERE user_id=?", (row["user_id"],))
+            if not row["email_verified"]:
+                # Until now nobody had proven this address. A Google login linked to it could only be one Google was not the authority
+                # for (a trusted one would have verified the account), so it may belong to whoever held the address before. The person
+                # who just used the emailed link does own it: that Google login no longer opens this account.
+                c.execute("DELETE FROM identities WHERE user_id=?", (row["user_id"],))
     return 200, {"ok": True, "email": row["email"]}
 
 

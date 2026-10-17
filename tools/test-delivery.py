@@ -61,7 +61,7 @@ HOOK = "http://127.0.0.1:%d/apply" % srv.server_address[1]
 
 # ---- a stand-in mail server ----
 mail_file = os.path.join(TMP, "mail.jsonl")
-smtp_port = 2529
+smtp_port = int(sys.argv[1]) if len(sys.argv) > 1 else 2529           # another port can be given, so two test runs never collide
 proc = subprocess.Popen([sys.executable, os.path.join(HERE, "fake-smtp.py"), str(smtp_port), mail_file], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1.5)
 
@@ -131,6 +131,7 @@ t("channels recorded", uaply_api.APPS[-1]["channels"], ["webhook"])
 reset()
 code, out = apply("Hook Only Co")
 t("the same person applying twice is a duplicate, nothing is sent again", (out["status"], len(Employer.calls)), ("duplicate", 0))
+t("...and the answer says what happened the first time, so the Applied list can show it again", out.get("was"), "sent")
 
 # 3. email and webhook together, with the resume attached to the email
 reset()
@@ -155,6 +156,33 @@ open(mail_file, "w").close()
 code, out = apply("Email Only Co", email_addr="alex@example.com", resume=None)
 time.sleep(1)
 t("email-only: sent by email, no webhook call", (out["status"], uaply_api.APPS[-1]["channels"], len(Employer.calls)), ("sent", ["email"], 0))
+
+# 4b. a name that looks like an address must never become the address the employer's Reply goes to, and the sender is named UAply
+reset()
+open(mail_file, "w").close()
+j = jobs["Email Only Co"]
+hostile = {"consent": True, "confirm_real": True, "job": {"id": j["id"], "co": j["co"], "role": j["role"], "url": j["url"], "loc": j["loc"], "contact": j["contact"]},
+           "profile": {"name": "Sam <attacker@evil.example>", "email": "sam.h@example.com"}}
+code, out = uaply_api.submit(hostile, {"id": 3, "email": "sam.h@example.com", "emailVerified": True})
+time.sleep(1)
+got = [email.message_from_string(json.loads(x)["raw"], policy=email.policy.default) for x in open(mail_file, encoding="utf-8") if x.strip()]
+to_employer = [m for m in got if m["To"] == "hr@emailonly.example"]
+rt = to_employer[0]["Reply-To"].addresses if to_employer else ()
+t("a name shaped like an address: the employer's Reply still goes only to the verified email",
+  (out["status"], [a.addr_spec for a in rt], [a.display_name for a in rt]), ("sent", ["sam.h@example.com"], ["Sam <attacker@evil.example>"]))
+t("the sender shows as UAply even when only a bare address is set up", [m["From"].addresses[0].display_name for m in got], ["UAply"] * len(got))
+
+# 4c. a resume file name with accents reaches the employer as the person named it (it used to arrive as "Jos_ Garc_a CV.pdf")
+reset()
+open(mail_file, "w").close()
+accented = {"name": "José García CV.pdf", "data": RESUME["data"]}
+code, out = apply("Email Only Co", email_addr="jose@example.com", resume=accented)
+time.sleep(1)
+got = [email.message_from_string(json.loads(x)["raw"], policy=email.policy.default) for x in open(mail_file, encoding="utf-8") if x.strip()]
+atts = [a for m in got if m["To"] == "hr@emailonly.example" for a in m.iter_attachments()]
+t("an accented resume file name is kept, with the right type", [(a.get_filename(), a.get_content_type()) for a in atts], [("José García CV.pdf", "application/pdf")])
+code, out = apply("Email Only Co", email_addr="jose2@example.com", resume={"name": "../../etc/pass\"wd.pdf", "data": RESUME["data"]})
+t("a file name with slashes or quotes is still made safe", uaply_api.APPS[-1]["resume"]["name"], ".._.._etc_pass_wd.pdf")
 
 # 5. retries
 reset()
@@ -192,7 +220,7 @@ try:
 finally:
     uaply_api.hide_errors = False
 t("on a hosted server a failed send says a plain sentence, with no employer detail", (out["status"], out.get("error"), "HTTP 400" in out.get("error", "")),
-  ("failed", "The email could not be sent right now. Try again in a moment.", False))
+  ("failed", "Your application to Hook Only Co could not be sent right now. Try again in a moment.", False))
 with open(os.path.join(uaply_api.DATA, "applications.jsonl"), encoding="utf-8") as f:
     last = [json.loads(x) for x in f if x.strip()][-1]
 t("the real reason is still kept in the owner's own record", "HTTP 400" in last.get("error", ""), True)
@@ -211,6 +239,24 @@ finally:
     time.sleep = real_sleep
 t("an employer system that stays down: three tries, then failed", (out["status"], len(Employer.calls)), ("failed", 3))
 
+# an unexpected error while sending must end as "failed", never stay on "sending" (that blocked every retry as a duplicate)
+reset()
+real_post = uaply_api._post_webhook
+
+
+def broken(*a, **k):
+    raise KeyError("something nobody expected")
+uaply_api._post_webhook = broken
+try:
+    code, out = apply("Hook Only Co", email_addr="crash@example.com")
+    crashed = False
+except Exception:
+    code, out, crashed = 0, {}, True
+uaply_api._post_webhook = real_post
+t("an unexpected error while sending is reported as failed, not a crash", (crashed, out.get("status")), (False, "failed"))
+code, out = apply("Hook Only Co", email_addr="crash@example.com")
+t("...and trying again really sends it (not refused as a duplicate)", (out["status"], len(Employer.calls)), ("sent", 1))
+
 # 6. no secret: still sent, but unsigned
 reset()
 code, out = apply("Unsigned Hook Co", email_addr="nosecret@example.com", resume=None)
@@ -226,7 +272,16 @@ t("a test redirect never calls the employer's webhook", (len(Employer.calls), ou
 reset()
 code, out = apply("Hook Only Co", email_addr="testmode@example.com", delivery="test")
 cfg["delivery"] = "live"
-t("test mode simulates both channels and calls nothing", (out["status"], len(Employer.calls), uaply_api.APPS[-1]["channels"]), ("delivered_test", 0, ["email (simulated)", "webhook (simulated)"]))
+# Hook Only Co gave no email address, so the live app would only call its webhook: test mode must say the same (it used to claim an email to a made-up address)
+t("test mode simulates exactly the channels the live app would use and calls nothing", (out["status"], len(Employer.calls), uaply_api.APPS[-1]["channels"], out["to"]),
+  ("delivered_test", 0, ["webhook (simulated)"], "Hook Only Co's own system (simulated)"))
+code, out = apply("Both Co", email_addr="testmode@example.com", delivery="test")
+cfg["delivery"] = "live"
+t("test mode, an employer with email and a webhook: both simulated, to its real address", (out["status"], uaply_api.APPS[-1]["channels"], out["to"]),
+  ("delivered_test", ["email (simulated)", "webhook (simulated)"], "jobs@both.example"))
+code, out = apply("Email Only Co", email_addr="testmode@example.com", delivery="test")
+cfg["delivery"] = "live"
+t("test mode, an employer that takes email: email simulated", (out["status"], uaply_api.APPS[-1]["channels"], out["to"]), ("delivered_test", ["email (simulated)"], "hr@emailonly.example"))
 
 # 9. resumes that are not real are refused
 reset()
@@ -245,7 +300,7 @@ base_payload = {"consent": True, "confirm_real": True, "job": {"id": jh["id"], "
 code, out = uaply_api.submit(base_payload, {"id": 7, "email": "pat@example.com", "emailVerified": False})
 t("an unverified account cannot send directly to an employer", (code, out.get("code"), len(Employer.calls)), (403, "verify", 0))
 code, out = uaply_api.submit(base_payload, None)
-t("no account at all cannot send directly either", (code, out.get("code"), len(Employer.calls)), (403, "verify", 0))
+t("no account at all cannot send directly either, and is told to sign in first", (code, out.get("code"), len(Employer.calls), out.get("error", "").startswith("Sign in first")), (403, "signin", 0, True))
 code, out = uaply_api.submit(base_payload, {"id": 7, "email": "someone.else@example.com", "emailVerified": True})
 t("a verified account must use its own email on the application", (code, len(Employer.calls)), (400, 0))
 code, out = uaply_api.submit(base_payload, {"id": 7, "email": "Pat@Example.com", "emailVerified": True})
@@ -262,6 +317,18 @@ payload = {"consent": True, "confirm_real": True, "job": {"id": fid, "co": "Feed
 code, out = uaply_api.submit(payload, None)
 time.sleep(0.5)
 t("a feed job (employer never opted in) is a hand-off: nothing is emailed or posted", (out["status"], len(Employer.calls), len([x for x in open(mail_file) if x.strip()])), ("handoff", 0, 0))
+
+# 11. a real posting that this server no longer lists (it left the employer's board): a hand-off in both modes, never "delivered"
+gone = {"consent": True, "confirm_real": True, "job": {"id": 4242424, "co": "Vanished Co", "role": "Gone Intern", "url": "https://boards.greenhouse.io/vanished/jobs/1"},
+        "profile": {"name": "Sam Rivera", "email": "gone@example.com"}}
+for mode in ("live", "test"):
+    cfg["delivery"] = mode
+    code, out = uaply_api.submit(dict(gone, profile=dict(gone["profile"], email="gone-%s@example.com" % mode)), None)
+    t("%s mode: a posting no longer listed is a hand-off, sent to no one" % mode, (out["status"], out["to"]), ("handoff", ""))
+cfg["delivery"] = "live"
+code, out = uaply_api.submit({"consent": True, "job": {"id": 7, "co": "Example Co", "role": "Example", "url": "https://example.com/x"},
+                              "profile": {"name": "Sam Rivera", "email": "example@example.com"}}, None)
+t("an example listing (small number) in live mode is still only a hand-off", out["status"], "handoff")
 
 proc.terminate()
 srv.shutdown()

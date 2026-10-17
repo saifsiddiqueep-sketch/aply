@@ -3,6 +3,7 @@ Start the mock (python tools/mock-google.py 8790) and a server with the mock con
   python tools/test-google.py [server_port]"""
 import http.cookiejar
 import json
+import os
 import sys
 import urllib.error
 import urllib.parse
@@ -10,7 +11,7 @@ import urllib.request
 
 PORT = sys.argv[1] if len(sys.argv) > 1 else "8768"
 B = "http://127.0.0.1:%s" % PORT
-M = "http://127.0.0.1:8790"
+M = "http://127.0.0.1:%s" % os.environ.get("MOCK_GOOGLE_PORT", "8790")      # where tools/mock-google.py listens
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -83,8 +84,9 @@ t("email/password signup for that email says to log in", post(client()[1], "/api
 jar2, b = client()
 post(b, "/api/auth/signup", {"email": "pw1@gmail.com", "password": "correct horse 99", "agree": True})
 post(b, "/api/auth/logout", {})
-t("Google with an existing account's Gmail address links and signs in", sign_in(b, False, {"email": "pw1@gmail.com", "sub": "502", "verified": "1"}), "/?signed_in=google")
-t("...into the same account, which keeps its password", (me(b) or {}).get("hasPassword"), True)
+t("Google with an existing account's Gmail address links and signs in (and the page is told the unconfirmed password went)",
+  sign_in(b, False, {"email": "pw1@gmail.com", "sub": "502", "verified": "1"}), "/?signed_in=google&password_removed=1")
+t("...into the same account; its password, never confirmed by email, is removed (whoever set it had not proven the address)", (me(b) or {}).get("hasPassword"), False)
 post(b, "/api/auth/logout", {})
 # a "verified" address on any other domain is not trusted to take over an existing account
 post(b, "/api/auth/signup", {"email": "pw2@example.com", "password": "correct horse 99", "agree": True})

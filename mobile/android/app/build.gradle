@@ -16,8 +16,24 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Google Play upload key. The key file and its password never go into git (android/.gitignore): mobile/build-android.ps1
+    // creates uaply-upload-key.jks next to this folder the first time and hands the password the owner types to this build
+    // through UAPLY_KEY_PASSWORD. Without both, the release build is left unsigned and Play will not accept it.
+    def uploadKey = rootProject.file('uaply-upload-key.jks')
+    def uploadPass = System.getenv('UAPLY_KEY_PASSWORD')
+    signingConfigs {
+        release {
+            if (uploadKey.exists() && uploadPass) {
+                storeFile uploadKey
+                storePassword uploadPass
+                keyAlias 'upload'
+                keyPassword uploadPass
+            }
+        }
+    }
     buildTypes {
         release {
+            if (uploadKey.exists() && uploadPass) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

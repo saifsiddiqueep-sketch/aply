@@ -42,9 +42,20 @@ function patch(s){
 function apply(w,host){
   var d=w.document;
   function open(url){if(w.__uaplyOpen)w.__uaplyOpen(url)}
+  /* "View original posting" (on a card) and "Finish on their site" (in Applied) open on a tap or a click: when the same finger or
+     mouse button lifts within 10px of where it went down. They used to open on the first touch, so a swipe or a scroll that
+     happened to start on the link opened the employer's site (and a mouse drag from it could not swipe the card). The card's
+     mouse drag holds the pointer, so the browser's own click never reaches the link; this does the job instead. */
+  var tapLink=null;
   d.addEventListener("pointerdown",function(e){
     var b=e.target.closest&&e.target.closest("[data-open]");
-    if(b){e.stopPropagation();e.preventDefault();open(b.getAttribute("data-open"))}
+    tapLink=b&&(e.pointerType!=="mouse"||e.button===0)?{b:b,id:e.pointerId,x:e.clientX,y:e.clientY}:null;
+  },true);
+  d.addEventListener("pointercancel",function(e){if(tapLink&&tapLink.id===e.pointerId)tapLink=null},true);   /* the browser took it for a scroll */
+  d.addEventListener("pointerup",function(e){
+    var t=tapLink;tapLink=null;
+    if(!t||t.id!==e.pointerId||Math.abs(e.clientX-t.x)>10||Math.abs(e.clientY-t.y)>10||!t.b.isConnected)return;
+    open(t.b.getAttribute("data-open"));
   },true);
   d.addEventListener("click",function(e){
     var b=e.target.closest&&e.target.closest("[data-open]");
@@ -64,9 +75,10 @@ function apply(w,host){
     var now=Date.now(),fresh=(data.jobs||[]).map(function(j){j.seen=now;return j});
     if(fresh.length>=5)w.__uaplyHideSamples=true;      /* set before adding, so the deck renders once */
     var added=w.__uaplyJobs.add(fresh);
+    if(w.__uaplyRetryPending)setTimeout(w.__uaplyRetryPending,1500);   /* applications that were waiting for a connection */
     var all=readCache(),ids={};all.forEach(function(j){ids[j.id]=1});
     var byId={};fresh.forEach(function(j){byId[j.id]=j;if(!ids[j.id])all.push(j)});
-    all.forEach(function(c){var f=byId[c.id];if(f){c.posted=f.posted;c.perks=f.perks;c.type=f.type;c.comm=!!f.comm}});   /* keep saved copies current */
+    all.forEach(function(c){var f=byId[c.id];if(f){c.posted=f.posted;c.perks=f.perks;c.type=f.type;c.comm=!!f.comm;c.via=f.via}});   /* keep saved copies current */
     writeCache(all);
     var src=Object.keys(data.sources||{}).map(function(k){return k+": "+data.sources[k]}).join(" · ");
     say("Real postings: "+fresh.length+" loaded ("+added+" new). "+src);
@@ -76,8 +88,11 @@ function apply(w,host){
 /* ---------------- kit + submit ---------------- */
 function kitPatch(s){
   if(s.indexOf("__uaplyOnDecision")>-1)return s;
-  return once(s,"S.history.push(id);S.tips=false;save();busy=false;renderAll();",
+  s=once(s,"S.history.push(id);S.tips=false;save();busy=false;renderAll();",
     "S.history.push(id);S.tips=false;save();busy=false;renderAll();if(window.__uaplyOnDecision)window.__uaplyOnDecision(dir,job,m,S.profile,undo,S,save);");
+  /* Undo (the button or Z) on an application that already went out: say so, because undo only takes it off the list */
+  return once(s,"delete S.decisions[id];save();renderAll();clearToast();",
+    "var was=S.decisions[id];delete S.decisions[id];save();renderAll();clearToast();if(window.__uaplyUndone)window.__uaplyUndone(was,JOB_BY_ID[id]);");
 }
 
 function kitApply(w,host){
@@ -88,7 +103,9 @@ function kitApply(w,host){
     try{var k="uaply.session",v=w.localStorage.getItem(k);if(!v){v=Math.random().toString(36).slice(2)+Date.now().toString(36);w.localStorage.setItem(k,v)}return v}catch(e){return "anon"}
   }
   function post(path,body){
-    return w.fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j}})});
+    /* a reply that is not JSON (a host's "Bad gateway" page, say) is a server problem, not "you're offline": only a request that never
+       arrived rejects, which is what queues the application for when the connection is back */
+    return w.fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j}},function(){return {ok:false,j:{error:"UAply's server had a problem and nothing was sent. Try again in a moment.",code:"server"}}})});
   }
   /* contact lines under the note, from the Application profile experiment (empty if it is off) */
   function signature(p){
@@ -143,8 +160,8 @@ function kitApply(w,host){
     o.innerHTML='<div role="dialog" aria-modal="true" aria-labelledby="kitH" style="background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:20px;max-width:460px;width:100%;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px">'+
       '<h2 id="kitH" style="margin:0;font:800 20px var(--display)">'+(submitOn&&!ask?'Sending to ':'Finish applying to ')+esc(job.co)+'</h2>'+
       '<p style="margin:0;color:var(--muted);font-size:14px">'+intro+'</p>'+
-      (!p.custom?'<p style="margin:0;color:var(--mid);font-size:13px">This uses the example profile. Add your own details in Profile first.</p>':'')+
-      (submitOn&&!profileOk?'<p style="margin:0;color:var(--no);font-size:13px">Add your name and a valid email in Profile, Settings so the recruiter can reply.</p>':'')+
+      (!p.custom?'<p style="margin:0;color:var(--mid);font-size:13px">This uses the example profile. Add your own details in Profile setup first.</p>':'')+
+      (submitOn&&!profileOk?'<p style="margin:0;color:var(--no);font-size:13px">Add your name and a valid email in Profile setup, under About you, so the recruiter can reply.</p>':'')+
       '<textarea id="kitText" rows="7" aria-label="Application note" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font:inherit;resize:vertical"></textarea>'+
       '<p id="kitStatus" role="status" style="margin:0;font-size:13.5px;font-weight:600;min-height:1.3em"></p>'+
       '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
@@ -175,7 +192,7 @@ function kitApply(w,host){
         var j=r.j||{};
         if(!r.ok){setStatus(j.error||"Could not send.",true);if(sendBtn&&live)sendBtn.disabled=false;return}
         var dec=S&&S.decisions&&S.decisions[job.id];
-        if(dec&&j.status!=="duplicate"){dec.sent={at:Date.now(),to:j.to||"",status:j.status};if(save)save()}
+        if(dec&&(j.status!=="duplicate"||j.was)){dec.sent={at:Date.now(),to:j.to||"",status:j.status==="duplicate"?j.was:j.status};if(save)save()}
         if(j.status==="delivered_test")setStatus("Delivered to the test inbox as "+(j.to||"recruiter")+".");
         else if(j.status==="sent")setStatus("Sent to "+j.to+". Replies go to "+p.email+".");
         else if(j.status==="duplicate")setStatus("You already sent this application.");
@@ -191,7 +208,7 @@ function kitApply(w,host){
     }
     var sendBtn=d.getElementById("kitSend");if(sendBtn)sendBtn.onclick=send;
     var pb=d.getElementById("kitProfile");
-    if(pb)pb.onclick=function(){close();var b=d.getElementById("nb-prof");if(b){b.click();var it=d.querySelector('.nwrap[data-k=prof] .nitem[data-v=settings]');if(it)it.click()}};
+    if(pb)pb.onclick=function(){close();openProfile("about")};   /* the message above asks for the name and email: open that step */
     d.getElementById("kitOpen").onclick=function(){if(w.__uaplyOpen)w.__uaplyOpen(job.url)};
     d.getElementById("kitCopy").onclick=function(){copy(ta.value,this)};
     var ansBtn=d.getElementById("kitAnswers");
@@ -244,31 +261,126 @@ function kitApply(w,host){
   }
   /* first application only: say plainly what a swipe right does with the person's details, and get agreement */
   var CONSENT_V=2;   /* 2: also explains the optional hiring-manager message and that voluntary answers are never sent */
-  function legalBase(){var p=(host&&host.defaultView&&host.defaultView.location.pathname)||"/";return /\/(sandbox|dev)\/$/.test(p)?"../legal/":"legal/"}
+  function legalBase(){var p=(host&&host.defaultView&&host.defaultView.location.pathname)||"/";return /\/(sandbox|dev)\/(index\.html)?$/.test(p)?"../legal/":"legal/"}   /* the hosted copies live at /dev/ and /sandbox/, with legal/ beside them */
   function consentKey(){return (w.__uaplyKey||"uaply")+".consent"}
-  function ensureConsent(go,cancel){
-    try{var c=JSON.parse(w.localStorage.getItem(consentKey()));if(c&&c.v===CONSENT_V){go();return}}catch(e){}
+  function hasConsent(){try{var c=JSON.parse(w.localStorage.getItem(consentKey()));return !!(c&&c.v===CONSENT_V)}catch(e){return false}}
+  /* consentFirst (sandbox): ask once when the swipe deck first opens, so no swipe is ever interrupted by it */
+  var consentFirst=!!((host&&host.defaultView&&host.defaultView.UAplyOpts)||{}).consentFirst;
+  /* the sandbox opens the box before the first swipe (atStart). A swipe made while that box is open (the keyboard can reach the
+     deck behind it) waits for the answer and then goes on, or back. Only one: more presses, or a double tap on a box a swipe
+     opened, add nothing, so a job is never sent twice. */
+  var consentWait=[],consentAtStart=false;
+  /* while a box is open over the deck (this consent box, an employer's questions, the apply sheet, the plan paywall), the arrow
+     keys and Z belong to the box, never to the deck behind it. They used to reach it: ArrowRight on a focused button in the box
+     applied to the next job behind it, which then sat in Applied without ever being sent; ArrowLeft passed it unseen. */
+  d.addEventListener("keydown",function(e){
+    var k=e.key;if(k!=="ArrowRight"&&k!=="ArrowLeft"&&k!=="z"&&k!=="Z")return;
+    if(d.getElementById("kitConsent")||d.getElementById("kitAsk")||d.getElementById("kitSheet")||d.getElementById("paywall"))e.stopPropagation();
+  },true);
+  function ensureConsent(go,cancel,atStart){
+    if(hasConsent()){go();return}      /* outside hasConsent's try: a problem while applying must never look like "not agreed yet" and bring this box back */
+    if(d.getElementById("kitConsent")){if(consentAtStart&&!consentWait.length&&!atStart)consentWait.push([go,cancel]);return}
+    consentAtStart=!!atStart;
     var b=legalBase(),o=d.createElement("div");o.id="kitConsent";
     o.style.cssText="position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.45);overflow:auto";
     o.innerHTML='<div role="dialog" aria-modal="true" aria-labelledby="kcH" style="background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:20px;max-width:460px;width:100%;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;font-size:14px">'+
-      '<h2 id="kcH" style="margin:0;font:800 20px var(--display)">Before your first application</h2>'+
-      '<p style="margin:0">When you swipe right, UAply applies for you. It sends the details in your profile (your name, email, and anything else you filled in, such as phone, resume link, education or work authorization) to the employer, plus a short message if you turned on "Message the hiring manager", but only if that employer has agreed to receive applications through UAply. Otherwise it sends you to the employer\'s own application page. UAply never emails a company that has not agreed.</p>'+
+      '<h2 id="kcH" style="margin:0;font:800 20px var(--display)">'+(consentFirst?"Before you start swiping":"Before your first application")+'</h2>'+
+      '<p style="margin:0">When you swipe right, UAply applies for you. It sends the details in your profile (your name, email, and anything else you filled in, such as phone, resume file or link, education or work authorization) to the employer, plus a short message if you turned on "Message the hiring manager", but only if that employer has agreed to receive applications through UAply. Otherwise it sends you to the employer\'s own application page. UAply never emails a company that has not agreed.</p>'+
       '<p style="margin:0">Your voluntary answers (such as race, gender, veteran or disability status) are never sent. They stay on your device unless you copy them yourself.</p>'+
       '<p style="margin:0">The match percentage is worked out automatically from your profile to help order jobs. It never rejects you, and employers make every hiring decision. <a href="'+b+'ai-and-employment.html" target="_blank" rel="noopener noreferrer">How matching works</a></p>'+
       '<p style="margin:0">By continuing you confirm you are 18 or older and agree to the <a href="'+b+'terms.html" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="'+b+'privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</p>'+
-      '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button type="button" class="btn ghost" id="kcNo">Cancel</button><button type="button" class="btn" id="kcYes">Agree and continue</button></div></div>';
+      (consentFirst?'<p style="margin:0">You only see this once. After you agree, every swipe is just a swipe.</p>':'')+
+      '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button type="button" class="btn ghost" id="kcNo">'+(consentFirst?"Not now":"Cancel")+'</button><button type="button" class="btn" id="kcYes">'+(consentFirst?"Agree and start swiping":"Agree and continue")+'</button></div></div>';
     d.body.appendChild(o);
     d.getElementById("kcYes").focus();
-    d.getElementById("kcYes").onclick=function(){try{w.localStorage.setItem(consentKey(),JSON.stringify({v:CONSENT_V,at:Date.now()}))}catch(e){}o.remove();go()};
-    d.getElementById("kcNo").onclick=function(){o.remove();cancel()};
+    function answer(ok){o.remove();var waiting=consentWait.splice(0);(ok?go:cancel)();waiting.forEach(function(p){(ok?p[0]:p[1])()})}
+    d.getElementById("kcYes").onclick=function(){try{w.localStorage.setItem(consentKey(),JSON.stringify({v:CONSENT_V,at:Date.now()}))}catch(e){}answer(true)};
+    d.getElementById("kcNo").onclick=function(){answer(false)};
+    o.addEventListener("keydown",function(e){if(e.key==="Escape")answer(false)});
+  }
+  /* step: a Profile setup step ("about", "back"...) to open on. Called from a button it gets the click event, which is ignored */
+  function openProfile(step){if(typeof step==="string"&&w.__uaplyOpenProf){w.__uaplyOpenProf(step);return}var b=d.getElementById("nb-prof");if(b){b.click();var it=d.querySelector('.nwrap[data-k=prof] .nitem[data-v=settings]');if(it)it.click()}}
+
+  /* answers the person gave to questions employers' forms asked, kept on this device and sent with each application so the
+     same question is never asked twice (the server matches them to each new form; see autofill.py) */
+  function answersKey(){return (w.__uaplyKey||"uaply")+".answers"}
+  function savedAnswers(){try{var a=JSON.parse(w.localStorage.getItem(answersKey()));return a&&typeof a==="object"&&!Array.isArray(a)?a:{}}catch(e){return {}}}
+  function keepAnswers(add){var a=savedAnswers();Object.keys(add).forEach(function(k){if(add[k])a[k]=String(add[k]).slice(0,2000)});var keys=Object.keys(a);while(keys.length>80)delete a[keys.shift()];try{w.localStorage.setItem(answersKey(),JSON.stringify(a))}catch(e){}}
+  /* the questions on an employer's form that the profile could not answer: asked once, then the application goes */
+  function askSheet(job,qs,filled,total,go,cancel){
+    var old=d.getElementById("kitAsk");if(old)old.remove();
+    var o=d.createElement("div");o.id="kitAsk";
+    o.style.cssText="position:fixed;inset:0;z-index:55;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.45);overflow:auto";
+    var fld="width:100%;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit";
+    var hasFile=qs.some(function(q){return q.kind==="file"});
+    var h='<form role="dialog" aria-modal="true" aria-labelledby="kaH" novalidate style="background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:20px;max-width:480px;width:100%;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;font-size:14px">'+
+      '<h2 id="kaH" style="margin:0;font:800 20px var(--display)">'+(qs.length===1?'One question':qs.length+' questions')+' from '+esc(job.co)+'</h2>'+
+      '<p style="margin:0;color:var(--muted)">UAply filled in '+filled+' of '+total+' answers on '+esc(job.co)+'\'s application. '+(hasFile?'It also needs a resume file. Answer what you can (it is saved), then upload your resume in Profile setup, under Background and links, and swipe right again.':'Answer '+(qs.length===1?'this':'these')+' and UAply sends it. Your answers are saved, so the next employer that asks the same thing gets them automatically.')+'</p>';
+    qs.forEach(function(q,i){
+      var id="kaQ"+i;
+      h+='<div style="display:flex;flex-direction:column;gap:5px"><label for="'+id+'" style="font-weight:600">'+esc(q.q)+'</label>';
+      if(q.kind==="file")h+='<small id="'+id+'" style="color:var(--no)">Upload your resume in Profile setup, under Background and links, then swipe right again.</small>';
+      else if(q.opts&&q.opts.length)h+='<select id="'+id+'" data-k="'+esc(q.key)+'" style="'+fld+'"><option value="">Choose</option>'+q.opts.map(function(x){return '<option>'+esc(x)+'</option>'}).join("")+'</select>';
+      else if(q.kind==="textarea")h+='<textarea id="'+id+'" data-k="'+esc(q.key)+'" rows="4" maxlength="2000" style="'+fld+';resize:vertical"></textarea>';
+      else h+='<input id="'+id+'" data-k="'+esc(q.key)+'" maxlength="300" style="'+fld+'">';
+      h+='</div>';
+    });
+    h+='<p id="kaMsg" role="alert" style="margin:0;font-size:13px;color:var(--no);min-height:1.2em"></p>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button type="button" class="btn ghost" id="kaNo">Not now</button><button type="submit" class="btn" id="kaYes">'+(hasFile?'Open Profile':'Send application')+'</button></div></form>';
+    o.innerHTML=h;d.body.appendChild(o);
+    var first=o.querySelector("[data-k]")||d.getElementById("kaYes");first.focus();
+    o.querySelector("form").onsubmit=function(e){
+      e.preventDefault();
+      var add={},blank=null;
+      o.querySelectorAll("[data-k]").forEach(function(el){var v=(el.value||"").trim();if(!v&&!blank)blank=el;add[el.getAttribute("data-k")]=v});
+      if(hasFile){keepAnswers(add);o.remove();cancel();openProfile("back");return}   /* keep whatever was answered: only the resume is left next time */
+      if(blank){d.getElementById("kaMsg").textContent="Answer every question to send the application.";blank.focus();return}
+      keepAnswers(add);o.remove();go();
+    };
+    d.getElementById("kaNo").onclick=function(){o.remove();cancel()};
     o.addEventListener("keydown",function(e){if(e.key==="Escape"){o.remove();cancel()}});
   }
-  function openProfile(){var b=d.getElementById("nb-prof");if(b){b.click();var it=d.querySelector('.nwrap[data-k=prof] .nitem[data-v=settings]');if(it)it.click()}}
-  function quietApply(job,m,p,undo,S,save){
+  /* applications that could not reach the server: sent again when the connection is back, and on the next visit. The "online" event only
+     comes after the device itself was offline, so when the device is online but UAply's server did not answer, it tries again every 30 seconds. */
+  var queue=[],queueT=0;
+  function flushQueue(){w.clearTimeout(queueT);queueT=0;var q=queue;queue=[];q.forEach(function(f){f()})}
+  function waitToSend(f){queue.push(f);if(!queueT)queueT=w.setTimeout(flushQueue,30000)}
+  w.addEventListener("online",flushQueue);
+  function openAccount(){var b=d.getElementById("nb-prof");if(b){b.click();var it=d.querySelector('.nwrap[data-k=prof] .nitem[data-v=account]');if(it)it.click()}}
+  /* Undo or Withdraw on an application that already went out: it stays with the employer, so say so instead of letting it look taken back */
+  w.__uaplyUndone=function(was,job){
+    var st=was&&was.s==="applied"&&was.sent&&was.sent.status;if(!job||!st)return;
+    if(st==="sent")toast("Removed from your list. Your application to "+job.co+" was already sent, so "+job.co+" still has it.","","",9000);
+    else if(st==="delivered_test")toast("Removed from your list. The test application to "+job.co+" stays in the test inbox.","","",9000);
+  };
+  function retryPending(){
+    var A=w.__uaply;if(!A||!A.S||!A.S.decisions)return;
+    A.JOBS.forEach(function(job){
+      var dec=A.S.decisions[job.id];
+      if(dec&&dec.s==="applied"&&dec.sent&&dec.sent.status==="pending")quietApply(job,{pct:dec.pct||0},A.S.profile,function(){},A.S,A.save,true);
+    });
+  }
+  w.__uaplyRetryPending=retryPending;
+  /* "Try again" / "Answer now" in the Applied list: the same as swiping right on that job again */
+  w.__uaplyResend=function(id){
+    var A=w.__uaply;if(!A||!A.S||!A.S.decisions[id])return;
+    var job=A.JOBS.filter(function(j){return j.id===id})[0];if(!job)return;
+    quietApply(job,{pct:A.S.decisions[id].pct||0},A.S.profile,function(){},A.S,A.save,false);
+  };
+
+  function quietApply(job,m,p,undo,S,save,retry){
     var live=w.__uaplyMode==="live",auto=w.__uaplyAuto!==false;
     var target=(live&&w.__uaplyRedirect)||job.contact||(job.instant?"hiring system":"");
+    /* take back this one swipe (never just "the last one": the person may have swiped on while this was on its way) */
+    function revert(){
+      if(retry)return;
+      var dec=S&&S.decisions&&S.decisions[job.id];if(!dec)return;
+      delete S.decisions[job.id];var i=S.history?S.history.lastIndexOf(job.id):-1;if(i>-1)S.history.splice(i,1);
+      if(save)save();try{w.__uaply.renderAll()}catch(e){}
+    }
+    function mark(status,to){var dec=S&&S.decisions&&S.decisions[job.id];if(dec){dec.sent={at:Date.now(),to:to||"",status:status};if(save)save();if(w.__uaplyTrack)w.__uaplyTrack()}}   /* the Applied list, if it is open, shows the new state at once */
     if(!(p.name&&EMAIL.test(p.email||"")&&(!live||p.custom))){
-      toast("Add your name and email in Profile so recruiters can reply.","Open Profile",openProfile,9000);return;
+      revert();toast("Add your name and email in Profile setup, under About you, so employers can reply. "+job.co+" is back in your deck.","Open Profile",function(){openProfile("about")},9000);return;
     }
     if(live&&!auto){sheet(job,m,p,undo,S,save);return}           /* auto_send is off in the config: show the review screen */
     /* what happened to the applicant's own email receipt (signed-in accounts only) */
@@ -281,32 +393,61 @@ function kitApply(w,host){
       /* the application is the profile itself: no cover note or message is written for the recruiter, unless the person
          turned on the opt-in "Message the hiring manager" preference (Plus and Pro; off by default) */
       var msgOn=!!(w.__uaplyAutoMsg&&w.__uaplyAutoMsg()&&w.__uaplyMessage);
+      if(!(S&&S.decisions&&S.decisions[job.id]))return;   /* undone or withdrawn in the meantime (also while it waited for a connection): send nothing */
       post("/api/apply",{consent:true,confirm_real:live,match:m.pct,note:msgOn?w.__uaplyMessage(job,m,p):"",
         job:{id:job.id,co:job.co,role:job.role,url:job.url||"https://example.com/example-listing",source:job.source,loc:job.loc,contact:job.contact||"",mode:job.mode,type:job.type||"job",sal:job.sal,blurb:job.blurb},
         profile:{name:p.name,email:p.email,title:p.title,years:p.years,skills:p.skills,loc:p.loc,edu:p.edu,ext:(w.__uaplyApplyExt?w.__uaplyApplyExt():(p.ext||{}))},
-        resume:(w.__uaplyResume?w.__uaplyResume():null)
+        resume:(w.__uaplyResume?w.__uaplyResume():null),
+        answers:savedAnswers()
       }).then(function(r){
         var j=r.j||{};
-        if(!r.ok){toast(j.error||"Could not send your application.","Try again",deliver,9000);return}
-        var dec=S&&S.decisions&&S.decisions[job.id];
-        if(dec&&j.status!=="duplicate"){dec.sent={at:Date.now(),to:j.to||"",status:j.status};if(save)save()}
-        var cp=receiptNote(j);
-        if(j.status==="delivered_test")toast("Applied to "+job.co+" (test)."+cp,"","",9000);
-        else if(j.status==="sent")toast("Applied to "+job.co+"."+cp,"","",9000);
+        if(!r.ok){
+          /* nothing was sent (a limit, a missing detail, an unverified email): the job goes back to the deck rather than sitting in Applied.
+             A waiting application sent again later stays in Applied, marked not sent, with Try again. */
+          if(retry){if(j.code!=="server")mark("failed");return}          /* a server hiccup keeps it waiting for the next try */
+          revert();
+          var act=j.code==="limit"?["See plans",function(){var b=d.getElementById("nb-prof");if(b){b.click();var it=d.querySelector('.nwrap[data-k=prof] .nitem[data-v=plan]');if(it)it.click()}}]
+                  :j.code==="slow_down"||j.code==="server"?["",null]:(j.code==="signin"||j.code==="verify")?["Open Account",openAccount]:["Open Profile",openProfile];
+          toast((j.error||"Could not send your application.")+" "+job.co+" is back in your deck.",act[0],act[1],9000);return;
+        }
+        if(j.status==="needs_answers"){
+          var qs=Array.isArray(j.questions)?j.questions:[];
+          if(retry||!qs.length){mark("needs_answers");return}      /* asked when the person taps Answer now in Applied */
+          askSheet(job,qs,j.filled||0,j.total||0,deliver,function(){revert();toast("Not sent. "+job.co+" is back in your deck.")});
+          return;
+        }
+        if(j.status==="duplicate"){             /* sent before (then undone, or from another device): show what happened that time */
+          if(j.was)mark(j.was,j.to);
+          if(j.was==="handoff"){toast("Already in Applied, not sent yet: "+job.co+" takes applications on its own site.",job.url?"Finish now":"",function(){if(w.__uaplyOpen)w.__uaplyOpen(job.url)},12000);return}
+        }
+        else mark(j.status,j.to);
+        var cp=receiptNote(j),pl=j.plan;
+        var auto=pl&&pl.total?" UAply filled in "+pl.filled+" of "+pl.total+" answers.":"";
+        if(j.status==="delivered_test")toast("Applied to "+job.co+" (test)."+auto+cp,"","",9000);
+        else if(j.status==="sent")toast("Applied to "+job.co+"."+auto+cp,"","",9000);
         else if(j.status==="duplicate")toast("Already applied to "+job.co+".");
-        else if(j.status==="handoff")toast("Saved. Finish applying at "+job.co+"."+cp,job.url?"Open":"",function(){if(w.__uaplyOpen)w.__uaplyOpen(job.url)},12000);
-        else if(j.status==="failed")toast(j.error||"The email could not be sent.","Try again",deliver,9000);
+        else if(j.status==="handoff")toast("Not sent yet: "+job.co+" takes applications on its own site. It is in Applied, ready to finish."+cp,job.url?"Finish now":"",function(){if(w.__uaplyOpen)w.__uaplyOpen(job.url)},12000);
+        else if(j.status==="failed")toast(j.error||"The application could not be sent.","Try again",deliver,9000);
         else toast("Done.");
-      }).catch(function(){toast("Could not reach the server.","Try again",deliver,9000)});
+      }).catch(function(){
+        /* offline or the server did not answer: kept as waiting, and sent once the connection is back (said once, not on every new try) */
+        var first=!deliver.waiting;deliver.waiting=true;
+        mark("pending");waitToSend(deliver);
+        if(!retry&&first)toast(w.navigator.onLine===false?"You're offline. UAply will send your application to "+job.co+" when you're back online."
+                                                        :"UAply could not reach its server. It will send your application to "+job.co+" as soon as it can.","","",9000);
+      });
     }
     var grace=Math.max(0,w.__uaplyGrace||0);
     if(!live||!target||grace===0){deliver();return}              /* test mode, or nothing to email: nothing to wait for */
     var left=grace,cancelled=false,timer=null,t=null;            /* live: send by itself, with a short window for Undo */
     function tick(){
       if(cancelled)return;
+      if(!(S&&S.decisions&&S.decisions[job.id])){    /* undone some other way (the Undo button, Z, Withdraw): stop and say nothing went */
+        cancelled=true;clearInterval(timer);toast("Cancelled. Nothing was sent to "+job.co+".");return;
+      }
       if(left<=0){clearInterval(timer);deliver();return}
       var msg="Applying to "+job.co+" in "+left+"…";
-      if(t)t.set(msg);else t=toast(msg,"Undo",function(){cancelled=true;clearInterval(timer);undo();toast("Cancelled. Nothing was sent.")},0);
+      if(t)t.set(msg);else t=toast(msg,"Undo",function(){cancelled=true;clearInterval(timer);revert();toast("Cancelled. Nothing was sent.")},0);
       left--;
     }
     timer=setInterval(tick,1000);tick();
@@ -325,6 +466,11 @@ function kitApply(w,host){
     else if(job.url)sheet(job,m,p,undo,S,save);
   };
   w.__uaplyQuiet=!showSheet;
+  if(consentFirst&&!showSheet){
+    /* not while someone is in Hiring mode: employers do not swipe. Hiring mode calls this again when they switch back */
+    w.__uaplyAskConsent=function(){if(!hasConsent()&&!d.body.classList.contains("hire"))ensureConsent(function(){},function(){},true)};
+    w.setTimeout(w.__uaplyAskConsent,700);
+  }
 }
 
 function submitApply(w){

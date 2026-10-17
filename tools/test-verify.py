@@ -30,7 +30,7 @@ def t(name, got, want):
 
 
 mail_file = os.path.join(TMP, "mail.jsonl")
-port = 2533
+port = int(os.environ.get("FAKE_SMTP_PORT", "2533"))      # the stand-in mail server; set another port when 2533 is in use
 proc = subprocess.Popen([sys.executable, os.path.join(HERE, "fake-smtp.py"), str(port), mail_file], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1.5)
 cfg = {"delivery": "test", "smtp": {"host": "127.0.0.1", "port": port, "starttls": False, "from_addr": "uaply@example.com"}, "daily_limit": 20}

@@ -31,7 +31,7 @@ def t(name, got, want):
 
 
 mail_file = os.path.join(TMP, "mail.jsonl")
-port = 2534
+port = int(sys.argv[1]) if len(sys.argv) > 1 else 2534          # a free port can be given: python tools/test-support.py PORT
 proc = subprocess.Popen([sys.executable, os.path.join(HERE, "fake-smtp.py"), str(port), mail_file], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1.5)
 SMTP = {"host": "127.0.0.1", "port": port, "starttls": False, "from_addr": "UAply <noreply@uaply.example>"}
@@ -162,6 +162,21 @@ try:
     # 10. the owner's Feedback page tells the truth about each request
     page = chat_api.feedback_html().decode("utf-8")
     t("the Feedback page shows which requests reached the team by email", all(x in page for x in ("emailed to the team", "NOT emailed (the mail server refused it)", "not emailed (no real email connected)")), True)
+
+    # 11. "Take me there" under an answer: the release build (dev) uses an article's release destination when it has one
+    def go_of(art_id, release):
+        chat_api.RELEASE, chat_api._help["mtime"] = release, None
+        return [a["go"] for a in chat_api.articles() if a["id"] == art_id][0]
+    t("distance: the sandbox goes to Filters (its commute slider), the release build to Profile setup, Where and pay",
+      (go_of("distance", False), go_of("distance", True)), ("prof:filters", "prof:where"))
+    t("an article with no release destination keeps its own in the release build", go_of("resume", True), "prof:back")
+    real_path = chat_api.HELP_PATH
+    bad_file = os.path.join(TMP, "articles.json")
+    with open(bad_file, "w", encoding="utf-8") as f:
+        f.write('{"articles": [ {"id": "x", ')                 # a typo while editing the file
+    chat_api.HELP_PATH = bad_file
+    t("a broken help file keeps the last good articles instead of leaving the assistant empty", len(chat_api.articles()) > 10, True)
+    chat_api.HELP_PATH, chat_api.RELEASE, chat_api._help["mtime"] = real_path, False, None
 finally:
     proc.terminate()
 

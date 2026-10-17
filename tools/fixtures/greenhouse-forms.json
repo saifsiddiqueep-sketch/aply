@@ -1,0 +1,4403 @@
+{
+ "note": "Public Greenhouse Job Board application forms (GET /v1/boards/{board}/jobs/{id}?questions=true), saved so the autofill tests run offline.",
+ "forms": {
+  "waymo": {
+   "company_name": "Waymo",
+   "title": "2027 Summer Intern, BS, Depot Automation",
+   "questions": [
+    {
+     "description": null,
+     "label": "First Name",
+     "required": true,
+     "fields": [
+      {
+       "name": "first_name",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Last Name",
+     "required": true,
+     "fields": [
+      {
+       "name": "last_name",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Email",
+     "required": true,
+     "fields": [
+      {
+       "name": "email",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Phone",
+     "required": true,
+     "fields": [
+      {
+       "name": "phone",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Resume/CV",
+     "required": true,
+     "fields": [
+      {
+       "name": "resume",
+       "type": "input_file",
+       "values": []
+      },
+      {
+       "name": "resume_text",
+       "type": "textarea",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Cover Letter",
+     "required": false,
+     "fields": [
+      {
+       "name": "cover_letter",
+       "type": "input_file",
+       "values": []
+      },
+      {
+       "name": "cover_letter_text",
+       "type": "textarea",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Website",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_69462691",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "LinkedIn Profile",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_69462692",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "How did you hear about this opportunity?",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_69462693",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "A personal contact at Google/Alphabet told me about the opportunity",
+         "value": 753333912
+        },
+        {
+         "label": "A personal contact at Waymo told me about the opportunity",
+         "value": 753333913
+        },
+        {
+         "label": "Academic Contact (professor recommendation, classmate, etc.)",
+         "value": 753333914
+        },
+        {
+         "label": "Agency Recruiter Outreach",
+         "value": 753333915
+        },
+        {
+         "label": "Alphabet's Internal Job Board (Grow)",
+         "value": 753333916
+        },
+        {
+         "label": "Glassdoor",
+         "value": 753333917
+        },
+        {
+         "label": "Handshake",
+         "value": 753333918
+        },
+        {
+         "label": "Indeed",
+         "value": 753333919
+        },
+        {
+         "label": "LinkedIn",
+         "value": 753333920
+        },
+        {
+         "label": "Media (blog post, news article, etc.)",
+         "value": 753333921
+        },
+        {
+         "label": "Social Media (Facebook, Twitter, etc.)",
+         "value": 753333922
+        },
+        {
+         "label": "University Event (info session, tech talk, luncheon, etc.)",
+         "value": 753333923
+        },
+        {
+         "label": "University Job Board",
+         "value": 753333924
+        },
+        {
+         "label": "Waymo Careers Page",
+         "value": 753333925
+        },
+        {
+         "label": "Waymo Industry Event (conference, career fair, etc.)",
+         "value": 753333926
+        },
+        {
+         "label": "Waymo Recruiter Outreach",
+         "value": 753333927
+        },
+        {
+         "label": "Waymo Advertising",
+         "value": 753333928
+        },
+        {
+         "label": "Word of Mouth",
+         "value": 753333929
+        },
+        {
+         "label": "Other",
+         "value": 753333930
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Do you require work authorization?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_69462694",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 753333931
+        },
+        {
+         "label": "No",
+         "value": 753333932
+        },
+        {
+         "label": "Unknown",
+         "value": 753333933
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "If yes, what kind? (If you do not require work authorization sponsorship please select Not Applicable.)",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_69462695",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "CPT",
+         "value": 753333934
+        },
+        {
+         "label": "OPT",
+         "value": 753333935
+        },
+        {
+         "label": "TN (Applicable for citizens of Canada or Mexico)",
+         "value": 753333936
+        },
+        {
+         "label": "J-1",
+         "value": 753333937
+        },
+        {
+         "label": "Other",
+         "value": 753333938
+        },
+        {
+         "label": "I don't know",
+         "value": 753333939
+        },
+        {
+         "label": "Not applicable",
+         "value": 753333940
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": "<p>Internships at Waymo, including those outside the US, involve access to information regulated by US export control laws. These laws require that export controlled information cannot be shared without an export license to individuals whose most recent country of citizenship or permanent residence is Cuba, Iran, North Korea, Syria or Ukrainian territories: Crimea, the so-called Donetsk People's Republic (\"DNR\"), and the so-called Luhansk People's Republic (\"LNR\"). Please understand that applications for these licenses have extended processing times and/or are routinely denied by the U.S. government such that the required license will not be granted by the summer internship start date.</p>\n<p><strong>Note</strong>: <em>License requirements do not apply (i.e., no export license is needed) if a person from one of these countries is also a US citizen, national, or lawful permanent resident or has been granted refugee or asylum status in the US.</em></p>",
+     "label": "Would you require an export license under the circumstances described below?\n",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_69462696",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 753333941
+        },
+        {
+         "label": "No",
+         "value": 753333942
+        },
+        {
+         "label": "I'm not sure",
+         "value": 753333943
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Are you a current or former Alphabet employee, intern, vendor, contractor, or temp (including Google and other Alphabet subsidiaries)?\n",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_69462697",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Current Alphabet Employee or Intern",
+         "value": 753333944
+        },
+        {
+         "label": "Former Alphabet Employee or Intern",
+         "value": 753333945
+        },
+        {
+         "label": "Current or Former member of Alphabet extended workforce",
+         "value": 753333946
+        },
+        {
+         "label": "Never worked at Alphabet",
+         "value": 753333947
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "If yes, please provide your LDAP.",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_69462698",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": "<p><a href=\"https://careers.withwaymo.com/candidate-privacy-policy\" target=\"_blank\" rel=\"noopener\">Waymo Applicant and Candidate Privacy Policy</a></p>",
+     "label": "Please review and acknowledge our Candidate Privacy Policy linked below:",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_69462699",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "I acknowledge that I have read and understood the terms of the Waymo Applicant and Candidate Privacy Policy.",
+         "value": 753333948
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": "<p>To ensure accuracy of our candidate records (including future employment records should you ultimately join Waymo), please provide your full legal name exactly as it appears on your government-issued ID.</p>",
+     "label": "Please provide your full legal name as it appears on your government ID",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_69462700",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "To ensure a fair and accurate assessment of each candidate's unique capabilities, Waymo prohibits the use of unauthorized outside assistance during the interview process. This includes, but is not limited to, artificial intelligence (AI) tools, generative software, or third-party resources, unless explicitly authorized by the hiring team. By submitting this application, you acknowledge and agree to adhere to these guidelines.",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_69462701",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "I acknowledge the above policies",
+         "value": 753333949
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Please provide the state/region in which you currently reside.",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_69462702",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "New York",
+         "value": 753333950
+        },
+        {
+         "label": "Illinois",
+         "value": 753333951
+        },
+        {
+         "label": "Another State in the US",
+         "value": 753333952
+        },
+        {
+         "label": "APAC",
+         "value": 753333953
+        },
+        {
+         "label": "EMEA",
+         "value": 753333954
+        },
+        {
+         "label": "Other",
+         "value": 753333955
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "location_questions": [
+    {
+     "description": null,
+     "label": "Longitude",
+     "required": true,
+     "fields": [
+      {
+       "name": "longitude",
+       "type": "input_hidden",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Latitude",
+     "required": true,
+     "fields": [
+      {
+       "name": "latitude",
+       "type": "input_hidden",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Location",
+     "required": true,
+     "fields": [
+      {
+       "name": "location",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    }
+   ]
+  },
+  "affirm": {
+   "company_name": "Affirm",
+   "title": "IT Engineer Intern (Early Careers Summer 2027)",
+   "questions": [
+    {
+     "description": null,
+     "label": "First Name",
+     "required": true,
+     "fields": [
+      {
+       "name": "first_name",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Last Name",
+     "required": true,
+     "fields": [
+      {
+       "name": "last_name",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Preferred First Name",
+     "required": false,
+     "fields": [
+      {
+       "name": "preferred_name",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Email",
+     "required": true,
+     "fields": [
+      {
+       "name": "email",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Phone",
+     "required": true,
+     "fields": [
+      {
+       "name": "phone",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Resume/CV",
+     "required": true,
+     "fields": [
+      {
+       "name": "resume",
+       "type": "input_file",
+       "values": []
+      },
+      {
+       "name": "resume_text",
+       "type": "textarea",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "LinkedIn Profile",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_32965827003",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Current Company",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_32965828003",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Preferred Name",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_32965829003",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Name Pronunciation",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_32965830003",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Pronouns\n",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_32965831003",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "He/him/his",
+         "value": 171680913003
+        },
+        {
+         "label": "She/her/hers",
+         "value": 171680914003
+        },
+        {
+         "label": "They/them/theirs",
+         "value": 171680915003
+        },
+        {
+         "label": "My pronouns are not listed",
+         "value": 171680916003
+        },
+        {
+         "label": "I prefer not to say",
+         "value": 171680917003
+        },
+        {
+         "label": "I prefer to self describe",
+         "value": 171680918003
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Do you require immigration sponsorship to work for Affirm in the United States?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_32965832003",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 1
+        },
+        {
+         "label": "No",
+         "value": 0
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Will you require immigration sponsorship at any point in the future to maintain authorization to work in the United States?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_32965833003",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 1
+        },
+        {
+         "label": "No",
+         "value": 0
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Which U.S. State or Canadian Province do you reside in?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_32965834003",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Alabama",
+         "value": 171680919003
+        },
+        {
+         "label": "Alaska",
+         "value": 171680920003
+        },
+        {
+         "label": "Arizona",
+         "value": 171680921003
+        },
+        {
+         "label": "Arkansas",
+         "value": 171680922003
+        },
+        {
+         "label": "California",
+         "value": 171680923003
+        },
+        {
+         "label": "Colorado",
+         "value": 171680924003
+        },
+        {
+         "label": "Connecticut",
+         "value": 171680925003
+        },
+        {
+         "label": "District of Columbia",
+         "value": 171680926003
+        },
+        {
+         "label": "Delaware",
+         "value": 171680927003
+        },
+        {
+         "label": "Florida",
+         "value": 171680928003
+        },
+        {
+         "label": "Georgia",
+         "value": 171680929003
+        },
+        {
+         "label": "Hawaii",
+         "value": 171680930003
+        },
+        {
+         "label": "Idaho",
+         "value": 171680931003
+        },
+        {
+         "label": "Illinois",
+         "value": 171680932003
+        },
+        {
+         "label": "Indiana",
+         "value": 171680933003
+        },
+        {
+         "label": "Iowa",
+         "value": 171680934003
+        },
+        {
+         "label": "Kansas",
+         "value": 171680935003
+        },
+        {
+         "label": "Kentucky",
+         "value": 171680936003
+        },
+        {
+         "label": "Louisiana",
+         "value": 171680937003
+        },
+        {
+         "label": "Maine",
+         "value": 171680938003
+        },
+        {
+         "label": "Maryland",
+         "value": 171680939003
+        },
+        {
+         "label": "Massachusetts",
+         "value": 171680940003
+        },
+        {
+         "label": "Michigan",
+         "value": 171680941003
+        },
+        {
+         "label": "Minnesota",
+         "value": 171680942003
+        },
+        {
+         "label": "Mississippi",
+         "value": 171680943003
+        },
+        {
+         "label": "Missouri",
+         "value": 171680944003
+        },
+        {
+         "label": "Montana",
+         "value": 171680945003
+        },
+        {
+         "label": "Nebraska",
+         "value": 171680946003
+        },
+        {
+         "label": "Nevada",
+         "value": 171680947003
+        },
+        {
+         "label": "New Hampshire",
+         "value": 171680948003
+        },
+        {
+         "label": "New Jersey",
+         "value": 171680949003
+        },
+        {
+         "label": "New Mexico",
+         "value": 171680950003
+        },
+        {
+         "label": "New York",
+         "value": 171680951003
+        },
+        {
+         "label": "North Carolina",
+         "value": 171680952003
+        },
+        {
+         "label": "North Dakota",
+         "value": 171680953003
+        },
+        {
+         "label": "Ohio",
+         "value": 171680954003
+        },
+        {
+         "label": "Oklahoma",
+         "value": 171680955003
+        },
+        {
+         "label": "Oregon",
+         "value": 171680956003
+        },
+        {
+         "label": "Pennsylvania",
+         "value": 171680957003
+        },
+        {
+         "label": "Rhode Island",
+         "value": 171680958003
+        },
+        {
+         "label": "South Carolina",
+         "value": 171680959003
+        },
+        {
+         "label": "South Dakota",
+         "value": 171680960003
+        },
+        {
+         "label": "Tennessee",
+         "value": 171680961003
+        },
+        {
+         "label": "Texas",
+         "value": 171680962003
+        },
+        {
+         "label": "Utah",
+         "value": 171680963003
+        },
+        {
+         "label": "Vermont",
+         "value": 171680964003
+        },
+        {
+         "label": "Virginia",
+         "value": 171680965003
+        },
+        {
+         "label": "Washington",
+         "value": 171680966003
+        },
+        {
+         "label": "West Virginia",
+         "value": 171680967003
+        },
+        {
+         "label": "Wisconsin",
+         "value": 171680968003
+        },
+        {
+         "label": "Wyoming",
+         "value": 171680969003
+        },
+        {
+         "label": "Alberta",
+         "value": 171680970003
+        },
+        {
+         "label": "Ontario",
+         "value": 171680971003
+        },
+        {
+         "label": "British Columbia",
+         "value": 171680972003
+        },
+        {
+         "label": "Saskatchewan",
+         "value": 171680973003
+        },
+        {
+         "label": "Manitoba",
+         "value": 171680974003
+        },
+        {
+         "label": "Nova Scotia",
+         "value": 171680975003
+        },
+        {
+         "label": "New Brunswick",
+         "value": 171680976003
+        },
+        {
+         "label": "Newfoundland",
+         "value": 171680977003
+        },
+        {
+         "label": "Prince Edward Island",
+         "value": 171680978003
+        },
+        {
+         "label": "Quebec",
+         "value": 171680979003
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": " How did you first learn about Affirm as an employer? ",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_32965835003",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Affirm blog",
+         "value": 171680980003
+        },
+        {
+         "label": "Affirm Recruiting Team reached out",
+         "value": 171680981003
+        },
+        {
+         "label": "Affirm’s Career Site",
+         "value": 171680982003
+        },
+        {
+         "label": "AfroTech",
+         "value": 171680983003
+        },
+        {
+         "label": "Alumni Forum",
+         "value": 171680984003
+        },
+        {
+         "label": "Built In",
+         "value": 171680985003
+        },
+        {
+         "label": "Facebook",
+         "value": 171680986003
+        },
+        {
+         "label": "Glassdoor",
+         "value": 171680987003
+        },
+        {
+         "label": "I have used Affirm as a product",
+         "value": 171680988003
+        },
+        {
+         "label": "I know someone that works at Affirm",
+         "value": 171680989003
+        },
+        {
+         "label": "Include.io",
+         "value": 171680990003
+        },
+        {
+         "label": "Indeed",
+         "value": 171680991003
+        },
+        {
+         "label": "Infoshare",
+         "value": 171680992003
+        },
+        {
+         "label": "Instagram",
+         "value": 171680993003
+        },
+        {
+         "label": "LinkedIn",
+         "value": 171680994003
+        },
+        {
+         "label": "Nextplay",
+         "value": 171680995003
+        },
+        {
+         "label": "POCIT",
+         "value": 171680996003
+        },
+        {
+         "label": "SheTO",
+         "value": 171680997003
+        },
+        {
+         "label": "The Muse",
+         "value": 171680998003
+        },
+        {
+         "label": "Twitter",
+         "value": 171680999003
+        },
+        {
+         "label": "Other",
+         "value": 171681000003
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "GitHub",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_32965836003",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Other Links",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_32965839003",
+       "type": "textarea",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Have you previously been employed at Affirm for any length of time?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_32965840003",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "I have not previously been employed at Affirm",
+         "value": 171681001003
+        },
+        {
+         "label": "I have been employed at Affirm as a full-time employee",
+         "value": 171681002003
+        },
+        {
+         "label": "I have been employed at Affirm as a part-time employee",
+         "value": 171681003003
+        },
+        {
+         "label": "I have been employed at Affirm as an intern",
+         "value": 171681004003
+        },
+        {
+         "label": "I have been employed at Affirm as a contractor",
+         "value": 171681005003
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "location_questions": [
+    {
+     "description": null,
+     "label": "Longitude",
+     "required": true,
+     "fields": [
+      {
+       "name": "longitude",
+       "type": "input_hidden",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Latitude",
+     "required": true,
+     "fields": [
+      {
+       "name": "latitude",
+       "type": "input_hidden",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Location",
+     "required": true,
+     "fields": [
+      {
+       "name": "location",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    }
+   ]
+  },
+  "dropbox": {
+   "company_name": "Dropbox",
+   "title": "Customer Evidence Manager",
+   "questions": [
+    {
+     "description": null,
+     "label": "First Name",
+     "required": true,
+     "fields": [
+      {
+       "name": "first_name",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Last Name",
+     "required": true,
+     "fields": [
+      {
+       "name": "last_name",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Email",
+     "required": true,
+     "fields": [
+      {
+       "name": "email",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Phone",
+     "required": true,
+     "fields": [
+      {
+       "name": "phone",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Resume/CV",
+     "required": true,
+     "fields": [
+      {
+       "name": "resume",
+       "type": "input_file",
+       "values": []
+      },
+      {
+       "name": "resume_text",
+       "type": "textarea",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Cover Letter",
+     "required": false,
+     "fields": [
+      {
+       "name": "cover_letter",
+       "type": "input_file",
+       "values": []
+      },
+      {
+       "name": "cover_letter_text",
+       "type": "textarea",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "LinkedIn Profile",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_68658420",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Website",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_68658421",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": "<p>Please confirm your legal first name.</p>",
+     "label": "What is your legal first name?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68658422",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "What are your personal pronouns?",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_68658423",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "She / Her / Hers",
+         "value": 748600037
+        },
+        {
+         "label": "He / Him / His",
+         "value": 748600038
+        },
+        {
+         "label": "They / Them / Their",
+         "value": 748600039
+        },
+        {
+         "label": "Zie / Ze / Zir / Hir / Zir",
+         "value": 748600040
+        },
+        {
+         "label": "Please use my name",
+         "value": 748600041
+        },
+        {
+         "label": "Multiple pronouns - Please ask me",
+         "value": 748600042
+        },
+        {
+         "label": "Other - Please ask me",
+         "value": 748600043
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Current Location",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68658424",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Australia",
+         "value": 748600044
+        },
+        {
+         "label": "Canada - Alberta",
+         "value": 748600045
+        },
+        {
+         "label": "Canada - British Columbia",
+         "value": 748600046
+        },
+        {
+         "label": "Canada - Ontario",
+         "value": 748600047
+        },
+        {
+         "label": "Canada - Quebec",
+         "value": 748600048
+        },
+        {
+         "label": "Canada - Saskatchewan",
+         "value": 748600049
+        },
+        {
+         "label": "Canada - New Brunswick",
+         "value": 748600050
+        },
+        {
+         "label": "Canada - Newfoundland and Labrador",
+         "value": 748600051
+        },
+        {
+         "label": "Canada - Northwest Territories",
+         "value": 748600052
+        },
+        {
+         "label": "Canada - Nova Scotia",
+         "value": 748600053
+        },
+        {
+         "label": "Canada - Nunavut",
+         "value": 748600054
+        },
+        {
+         "label": "Canada - Manitoba",
+         "value": 748600055
+        },
+        {
+         "label": "Canada - Prince Edward Island",
+         "value": 748600056
+        },
+        {
+         "label": "Canada - Yukon",
+         "value": 748600057
+        },
+        {
+         "label": "United Kingdom",
+         "value": 748600058
+        },
+        {
+         "label": "France",
+         "value": 748600059
+        },
+        {
+         "label": "Germany",
+         "value": 748600060
+        },
+        {
+         "label": "Ireland",
+         "value": 748600061
+        },
+        {
+         "label": "Israel",
+         "value": 748600062
+        },
+        {
+         "label": "Japan",
+         "value": 748600063
+        },
+        {
+         "label": "Mexico",
+         "value": 748600064
+        },
+        {
+         "label": "Netherlands",
+         "value": 748600065
+        },
+        {
+         "label": "Poland",
+         "value": 748600066
+        },
+        {
+         "label": "Singapore",
+         "value": 748600067
+        },
+        {
+         "label": "Sweden",
+         "value": 748600068
+        },
+        {
+         "label": "Switzerland",
+         "value": 748600069
+        },
+        {
+         "label": "Taiwan",
+         "value": 748600070
+        },
+        {
+         "label": "US - Alabama",
+         "value": 748600071
+        },
+        {
+         "label": "US - Alaska",
+         "value": 748600072
+        },
+        {
+         "label": "US - Arizona",
+         "value": 748600073
+        },
+        {
+         "label": "US - Arkansas",
+         "value": 748600074
+        },
+        {
+         "label": "US - California",
+         "value": 748600075
+        },
+        {
+         "label": "US - Colorado",
+         "value": 748600076
+        },
+        {
+         "label": "US - Connecticut",
+         "value": 748600077
+        },
+        {
+         "label": "US - Delaware",
+         "value": 748600078
+        },
+        {
+         "label": "US - Florida",
+         "value": 748600079
+        },
+        {
+         "label": "US - Georgia",
+         "value": 748600080
+        },
+        {
+         "label": "US - Hawaii",
+         "value": 748600081
+        },
+        {
+         "label": "US - Idaho",
+         "value": 748600082
+        },
+        {
+         "label": "US - Illinois",
+         "value": 748600083
+        },
+        {
+         "label": "US - Indiana",
+         "value": 748600084
+        },
+        {
+         "label": "US - Iowa",
+         "value": 748600085
+        },
+        {
+         "label": "US - Kansas",
+         "value": 748600086
+        },
+        {
+         "label": "US - Kentucky",
+         "value": 748600087
+        },
+        {
+         "label": "US - Louisiana",
+         "value": 748600088
+        },
+        {
+         "label": "US - Maine",
+         "value": 748600089
+        },
+        {
+         "label": "US - Maryland",
+         "value": 748600090
+        },
+        {
+         "label": "US - Massachusetts",
+         "value": 748600091
+        },
+        {
+         "label": "US - Michigan",
+         "value": 748600092
+        },
+        {
+         "label": "US - Minnesota",
+         "value": 748600093
+        },
+        {
+         "label": "US - Mississippi",
+         "value": 748600094
+        },
+        {
+         "label": "US - Missouri",
+         "value": 748600095
+        },
+        {
+         "label": "US - Montana",
+         "value": 748600096
+        },
+        {
+         "label": "US - Nebraska",
+         "value": 748600097
+        },
+        {
+         "label": "US - Nevada",
+         "value": 748600098
+        },
+        {
+         "label": "US - New Hampshire",
+         "value": 748600099
+        },
+        {
+         "label": "US - New Jersey",
+         "value": 748600100
+        },
+        {
+         "label": "US - New Mexico",
+         "value": 748600101
+        },
+        {
+         "label": "US - New York",
+         "value": 748600102
+        },
+        {
+         "label": "US - North Carolina",
+         "value": 748600103
+        },
+        {
+         "label": "US - North Dakota",
+         "value": 748600104
+        },
+        {
+         "label": "US - Ohio",
+         "value": 748600105
+        },
+        {
+         "label": "US - Oklahoma",
+         "value": 748600106
+        },
+        {
+         "label": "US - Oregon",
+         "value": 748600107
+        },
+        {
+         "label": "US - Pennsylvania",
+         "value": 748600108
+        },
+        {
+         "label": "US - Rhode Island",
+         "value": 748600109
+        },
+        {
+         "label": "US - South Carolina",
+         "value": 748600110
+        },
+        {
+         "label": "US - South Dakota",
+         "value": 748600111
+        },
+        {
+         "label": "US - Tennessee",
+         "value": 748600112
+        },
+        {
+         "label": "US - Texas",
+         "value": 748600113
+        },
+        {
+         "label": "US - Utah",
+         "value": 748600114
+        },
+        {
+         "label": "US - Vermont",
+         "value": 748600115
+        },
+        {
+         "label": "US - Virginia",
+         "value": 748600116
+        },
+        {
+         "label": "US - Washington",
+         "value": 748600117
+        },
+        {
+         "label": "US - Washington, D.C",
+         "value": 748600118
+        },
+        {
+         "label": "US - West Virginia",
+         "value": 748600119
+        },
+        {
+         "label": "US - Wisconsin",
+         "value": 748600120
+        },
+        {
+         "label": "Other Location",
+         "value": 748600121
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Please provide the zip code of your primary residence.",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68658425",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Will you now or in the future require sponsorship or a visa transfer for employment visa status (ie: H-1B visa)?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68658426",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "No, I can work for any US employer without sponsorship (eg: US citizen, permanent resident, EAD, etc.)",
+         "value": 748600122
+        },
+        {
+         "label": "Yes, I require sponsorship or a visa transfer (eg: J-1, F-1 CPT/OPT, H-1B, TN, etc.)",
+         "value": 748600123
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "How did you hear about this role? (Please select all that apply)",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68658427[]",
+       "type": "multi_value_multi_select",
+       "values": [
+        {
+         "label": "BuiltIn",
+         "value": 748600124
+        },
+        {
+         "label": "Contacted by Recruiter",
+         "value": 748600125
+        },
+        {
+         "label": "Dropbox Career Site",
+         "value": 748600126
+        },
+        {
+         "label": "Dropbox Talent Community",
+         "value": 748600127
+        },
+        {
+         "label": "Facebook",
+         "value": 748600128
+        },
+        {
+         "label": "Glassdoor",
+         "value": 748600129
+        },
+        {
+         "label": "Google Search",
+         "value": 748600130
+        },
+        {
+         "label": "In Person Event",
+         "value": 748600131
+        },
+        {
+         "label": "Indeed",
+         "value": 748600132
+        },
+        {
+         "label": "InHerSight",
+         "value": 748600133
+        },
+        {
+         "label": "Instagram",
+         "value": 748600134
+        },
+        {
+         "label": "LinkedIn",
+         "value": 748600135
+        },
+        {
+         "label": "Referral from Dropboxer",
+         "value": 748600136
+        },
+        {
+         "label": "The Muse",
+         "value": 748600137
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Have you previously worked for Dropbox?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68658428",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes, former employee",
+         "value": 748600138
+        },
+        {
+         "label": "Yes, former contingent worker or vendor",
+         "value": 748600139
+        },
+        {
+         "label": "No, I have not previously worked for Dropbox",
+         "value": 748600140
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Please email me about future job openings",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68658429",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 1
+        },
+        {
+         "label": "No",
+         "value": 0
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Do you have at least seven years of experience in customer marketing, customer advocacy, or customer evidence?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68658430",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 1
+        },
+        {
+         "label": "No",
+         "value": 0
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Location Cost Tier",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_68658431",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "High Cost",
+         "value": 748600141
+        },
+        {
+         "label": "Mid Cost",
+         "value": 748600142
+        },
+        {
+         "label": "Low Cost",
+         "value": 748600143
+        },
+        {
+         "label": "Unknown",
+         "value": 748600144
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Fingerprint",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_68658432",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Have you built or significantly scaled a customer evidence, customer advocacy, or customer reference program from the ground up?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_69185554",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 1
+        },
+        {
+         "label": "No",
+         "value": 0
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Do you have experience developing customer stories or case studies within a SaaS organization?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_69185555",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 1
+        },
+        {
+         "label": "No",
+         "value": 0
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Have you partnered directly with Sales and Customer Success teams to identify, develop, and activate customer stories?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_69185556",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 1
+        },
+        {
+         "label": "No",
+         "value": 0
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Do you have experience measuring the utilization or business impact of customer evidence, such as its influence on pipeline, deal progression, or closed revenue?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_69185557",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 1
+        },
+        {
+         "label": "No",
+         "value": 0
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "location_questions": []
+  },
+  "coinbase": {
+   "company_name": "Coinbase",
+   "title": "Accounting Intern",
+   "questions": [
+    {
+     "description": null,
+     "label": "First Name",
+     "required": true,
+     "fields": [
+      {
+       "name": "first_name",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Last Name",
+     "required": true,
+     "fields": [
+      {
+       "name": "last_name",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Email",
+     "required": true,
+     "fields": [
+      {
+       "name": "email",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Phone",
+     "required": true,
+     "fields": [
+      {
+       "name": "phone",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Resume/CV",
+     "required": true,
+     "fields": [
+      {
+       "name": "resume",
+       "type": "input_file",
+       "values": []
+      },
+      {
+       "name": "resume_text",
+       "type": "textarea",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Cover Letter",
+     "required": false,
+     "fields": [
+      {
+       "name": "cover_letter",
+       "type": "input_file",
+       "values": []
+      },
+      {
+       "name": "cover_letter_text",
+       "type": "textarea",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Linkedin Profile URL",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68945599",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "I am available to begin a potential full-time role before September 2028",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_69051586",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 1
+        },
+        {
+         "label": "No",
+         "value": 0
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Are you at least 18 years of age?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68945600",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 1
+        },
+        {
+         "label": "No",
+         "value": 0
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Have you previously been employed by Coinbase in any capacity?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68945601",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 1
+        },
+        {
+         "label": "No",
+         "value": 0
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "How did you hear about this job?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68945602",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Career Page",
+         "value": 749914036
+        },
+        {
+         "label": "LinkedIn",
+         "value": 749914037
+        },
+        {
+         "label": "Indeed",
+         "value": 749914038
+        },
+        {
+         "label": "BuiltIn",
+         "value": 749914039
+        },
+        {
+         "label": "Job Board",
+         "value": 749914040
+        },
+        {
+         "label": "PompCryptoJobs",
+         "value": 749914041
+        },
+        {
+         "label": "Glassdoor",
+         "value": 749914042
+        },
+        {
+         "label": "Coinbase Event",
+         "value": 749914043
+        },
+        {
+         "label": "On Campus Recruiting",
+         "value": 749914044
+        },
+        {
+         "label": "Conference",
+         "value": 749914045
+        },
+        {
+         "label": "Referral",
+         "value": 749914046
+        },
+        {
+         "label": "Family/Friend",
+         "value": 749914047
+        },
+        {
+         "label": "Coinbase Blog",
+         "value": 749914048
+        },
+        {
+         "label": "Twitter Ad",
+         "value": 749914049
+        },
+        {
+         "label": "Farcaster",
+         "value": 749914050
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Please confirm receipt of the above linked Global Data Privacy Notice and US Arbitration Agreement.",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68945603",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Confirmed",
+         "value": 749914051
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "I understand that Coinbase may use AI tools to assist in the application and interview process.  \n",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68945604",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 749914052
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Which of the following best describes how you use AI tools today?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68945605",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "I am opposed to using AI tools in my workflow and prefer traditional/manual workflows.",
+         "value": 749914053
+        },
+        {
+         "label": "I do not use AI tools for my work but I am not against it.",
+         "value": 749914054
+        },
+        {
+         "label": "I have experimented with AI tools (professionally and/or personally).",
+         "value": 749914055
+        },
+        {
+         "label": "I regularly use AI tools to speed up existing tasks (e.g., drafting, summarizing, debugging, basic analysis).",
+         "value": 749914056
+        },
+        {
+         "label": "I design or automate workflows with AI tools (e.g., building agents, integrating AI into team processes).",
+         "value": 749914057
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Are you legally authorized to work in the country where this position is located?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68945606",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 1
+        },
+        {
+         "label": "No",
+         "value": 0
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Will you require sponsorship for employment visa status now or in the future?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68945607",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 1
+        },
+        {
+         "label": "No",
+         "value": 0
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Are you a current government official or were you a government official in the last five years (e.g., employee of a government agency or a government owned/controlled company, holder of public office or a civil service position)?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68945608",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "No, I am not a current or former Government Official",
+         "value": 749914058
+        },
+        {
+         "label": "Yes, I am a current Government Official",
+         "value": 749914059
+        },
+        {
+         "label": "Yes, I am a former Government Official",
+         "value": 749914060
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Are you a close relative of a government official (i.e., child/step-child, spouse/partner, parent/guardian, aunt/uncle, first cousin, in-law)?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68945609",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes, I am a relative of a government official.",
+         "value": 749914061
+        },
+        {
+         "label": "No, I am not a relative of a government official.",
+         "value": 749914062
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "To your knowledge, do you or a close relative currently hold a role, have a significant financial interest in, or maintain a close personal relationship with a senior leader at a company connected to Coinbase that could create an actual or perceived conflict of interest?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68945610",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 1
+        },
+        {
+         "label": "No",
+         "value": 0
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": "<p>(<em>Note: Personal use of the Coinbase or Base app as a regular retail customer does not qualify as a client relationship for this question)&nbsp;</em></p>\n<div id=\"fortidlp-input-element-parent\"></div>",
+     "label": "To your knowledge, were you referred to this position by a senior leader or decision‑maker at a current or prospective institutional client, business partner, or vendor of Coinbase?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_68945611",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 1
+        },
+        {
+         "label": "No",
+         "value": 0
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "location_questions": [
+    {
+     "description": null,
+     "label": "Longitude",
+     "required": true,
+     "fields": [
+      {
+       "name": "longitude",
+       "type": "input_hidden",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Latitude",
+     "required": true,
+     "fields": [
+      {
+       "name": "latitude",
+       "type": "input_hidden",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Location",
+     "required": true,
+     "fields": [
+      {
+       "name": "location",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    }
+   ]
+  },
+  "duolingo": {
+   "company_name": "Duolingo",
+   "title": "Data Scientist, Intern",
+   "questions": [
+    {
+     "description": null,
+     "label": "First Name",
+     "required": true,
+     "fields": [
+      {
+       "name": "first_name",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Last Name",
+     "required": true,
+     "fields": [
+      {
+       "name": "last_name",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Email",
+     "required": true,
+     "fields": [
+      {
+       "name": "email",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Phone",
+     "required": true,
+     "fields": [
+      {
+       "name": "phone",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Resume/CV",
+     "required": true,
+     "fields": [
+      {
+       "name": "resume",
+       "type": "input_file",
+       "values": []
+      },
+      {
+       "name": "resume_text",
+       "type": "textarea",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Cover Letter",
+     "required": false,
+     "fields": [
+      {
+       "name": "cover_letter",
+       "type": "input_file",
+       "values": []
+      },
+      {
+       "name": "cover_letter_text",
+       "type": "textarea",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Preferred First Name",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_38795085002",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "How do you pronounce your name?  (e.g., 'An-na' or 'Ah-na')",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_38795086002",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "What is your expected graduation timeline?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_38795087002",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Anything before Fall/Winter 2026",
+         "value": 256236640002
+        },
+        {
+         "label": "Fall/Winter 2026",
+         "value": 256236641002
+        },
+        {
+         "label": "Spring/Summer 2027",
+         "value": 256236642002
+        },
+        {
+         "label": "Fall/Winter 2027",
+         "value": 256236643002
+        },
+        {
+         "label": "Spring/Summer 2028",
+         "value": 256236644002
+        },
+        {
+         "label": "Fall/Winter 2028",
+         "value": 256236645002
+        },
+        {
+         "label": "Spring/Summer 2029",
+         "value": 256236646002
+        },
+        {
+         "label": "Anything AFTER Spring/Summer 2029",
+         "value": 256236647002
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Are you willing to work from the office location of the job?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_38795088002",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 1
+        },
+        {
+         "label": "No",
+         "value": 0
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Which office location are you most interested in?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_38795089002",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Pittsburgh, PA",
+         "value": 256236648002
+        },
+        {
+         "label": "New York, NY",
+         "value": 256236649002
+        },
+        {
+         "label": "Seattle, WA",
+         "value": 256236650002
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Undergraduate GPA",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_38795090002",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Do you have a Duolingo account? If yes, what is your username?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_38795091002",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Why are you interested in Duolingo?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_38795092002",
+       "type": "textarea",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "How will your personal experiences make an impact at Duolingo?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_38795093002",
+       "type": "textarea",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Where did you hear about this job?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_38795094002",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "LinkedIn",
+         "value": 256236651002
+        },
+        {
+         "label": "Glassdoor",
+         "value": 256236652002
+        },
+        {
+         "label": "Blind",
+         "value": 256236653002
+        },
+        {
+         "label": "TikTok",
+         "value": 256236654002
+        },
+        {
+         "label": "Twitter / X",
+         "value": 256236655002
+        },
+        {
+         "label": "Instagram",
+         "value": 256236656002
+        },
+        {
+         "label": "Youtube",
+         "value": 256236657002
+        },
+        {
+         "label": "Reddit",
+         "value": 256236658002
+        },
+        {
+         "label": "Mastodon",
+         "value": 256236659002
+        },
+        {
+         "label": "Discord",
+         "value": 256236660002
+        },
+        {
+         "label": "Podcasts",
+         "value": 256236661002
+        },
+        {
+         "label": "Duolingo Employee",
+         "value": 256236662002
+        },
+        {
+         "label": "Recruiter",
+         "value": 256236663002
+        },
+        {
+         "label": "Duolingo Blog",
+         "value": 256236664002
+        },
+        {
+         "label": "In the Duolingo app",
+         "value": 256236665002
+        },
+        {
+         "label": "Article or press",
+         "value": 256236666002
+        },
+        {
+         "label": "Duolingo Careers Page",
+         "value": 256236667002
+        },
+        {
+         "label": "Conference",
+         "value": 256236668002
+        },
+        {
+         "label": "Other",
+         "value": 256236669002
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "What Duolingo sponsored conferences have you attended and/or organizations are you a part of?",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_38795095002[]",
+       "type": "multi_value_multi_select",
+       "values": [
+        {
+         "label": "Rewriting the Code",
+         "value": 256236670002
+        },
+        {
+         "label": "ColorStack",
+         "value": 256236671002
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Alternate Email",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_38795096002",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "LinkedIn Profile",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_38795097002",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Website",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_38795098002",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Are you authorized to work lawfully in the United States for Duolingo?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_38795099002",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 1
+        },
+        {
+         "label": "No",
+         "value": 0
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Will you now, or in the future, require sponsorship (i.e. H-1B visa, etc.) to legally work in the U.S.?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_38795100002",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 1
+        },
+        {
+         "label": "No",
+         "value": 0
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "If so, are you eligible or currently in a period of Optional Practical Training (OPT)?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_38795101002",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 256236672002
+        },
+        {
+         "label": "No",
+         "value": 256236673002
+        },
+        {
+         "label": "NA",
+         "value": 256236674002
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "After the OPT, are you eligible for a 24-month OPT extension or are currently in a 24-month OPT extension based upon a degree from a qualifying U.S. institution in Science, Technology, Engineering, or Mathematics after the Optional Practical Training (OPT)?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_38795102002",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 256236675002
+        },
+        {
+         "label": "No",
+         "value": 256236676002
+        },
+        {
+         "label": "NA",
+         "value": 256236677002
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "location_questions": [
+    {
+     "description": null,
+     "label": "Longitude",
+     "required": true,
+     "fields": [
+      {
+       "name": "longitude",
+       "type": "input_hidden",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Latitude",
+     "required": true,
+     "fields": [
+      {
+       "name": "latitude",
+       "type": "input_hidden",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Location",
+     "required": true,
+     "fields": [
+      {
+       "name": "location",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    }
+   ]
+  },
+  "imc": {
+   "company_name": "IMC",
+   "title": "Deep Learning Research Intern - Summer 2027 - New York",
+   "questions": [
+    {
+     "description": null,
+     "label": "First Name",
+     "required": true,
+     "fields": [
+      {
+       "name": "first_name",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Last Name",
+     "required": true,
+     "fields": [
+      {
+       "name": "last_name",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Email",
+     "required": true,
+     "fields": [
+      {
+       "name": "email",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Phone",
+     "required": true,
+     "fields": [
+      {
+       "name": "phone",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Resume/CV",
+     "required": true,
+     "fields": [
+      {
+       "name": "resume",
+       "type": "input_file",
+       "values": []
+      },
+      {
+       "name": "resume_text",
+       "type": "textarea",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "When did you graduate from High School?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_9176663101",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Before 2021",
+         "value": 66433394101
+        },
+        {
+         "label": "2021",
+         "value": 66433396101
+        },
+        {
+         "label": "2022",
+         "value": 66433397101
+        },
+        {
+         "label": "2023",
+         "value": 66433398101
+        },
+        {
+         "label": "2024",
+         "value": 66433399101
+        },
+        {
+         "label": "2025",
+         "value": 66433400101
+        },
+        {
+         "label": "2026",
+         "value": 66433401101
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Select your Standardized Test score type:",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_9176664101",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "ACT",
+         "value": 66424051101
+        },
+        {
+         "label": "SAT",
+         "value": 66424052101
+        },
+        {
+         "label": "Other",
+         "value": 66424053101
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Provide your best result on SAT:",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_9176665101",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "I don't have SAT score",
+         "value": 66424054101
+        },
+        {
+         "label": "<1200",
+         "value": 66424055101
+        },
+        {
+         "label": "1201 - 1300",
+         "value": 66424056101
+        },
+        {
+         "label": "1301 - 1400",
+         "value": 66424057101
+        },
+        {
+         "label": "1401 - 1500",
+         "value": 66424058101
+        },
+        {
+         "label": "1501 - 1600",
+         "value": 66424059101
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Provide your best result on ACT:",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_9176666101",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "I don't have ACT score",
+         "value": 66424060101
+        },
+        {
+         "label": "<30",
+         "value": 66424061101
+        },
+        {
+         "label": "31",
+         "value": 66424062101
+        },
+        {
+         "label": "32",
+         "value": 66424063101
+        },
+        {
+         "label": "33",
+         "value": 66424064101
+        },
+        {
+         "label": "34",
+         "value": 66424065101
+        },
+        {
+         "label": "35",
+         "value": 66424066101
+        },
+        {
+         "label": "36",
+         "value": 66424067101
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "When is your anticipated graduation date - please select a Graduation Date range:",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_9176667101",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "I've already graduated",
+         "value": 69186216101
+        },
+        {
+         "label": "August 2026 - December 2026",
+         "value": 69186222101
+        },
+        {
+         "label": "January 2027 - July 2027",
+         "value": 69186224101
+        },
+        {
+         "label": "August 2027 - December 2027",
+         "value": 69186226101
+        },
+        {
+         "label": "January 2028 - July 2028",
+         "value": 69186228101
+        },
+        {
+         "label": "August 2028 - December 2028",
+         "value": 69186230101
+        },
+        {
+         "label": "January 2029 - July 2029",
+         "value": 69186232101
+        },
+        {
+         "label": "August 2029 - December 2029",
+         "value": 69186234101
+        },
+        {
+         "label": "January 2030 - July 2030",
+         "value": 69186236101
+        },
+        {
+         "label": "August 2030 - December 2030",
+         "value": 69186238101
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "What is your GPA?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_9176668101",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Below 3.2",
+         "value": 66424077101
+        },
+        {
+         "label": "3.21 - 3.3",
+         "value": 66424078101
+        },
+        {
+         "label": "3.31 - 3.4",
+         "value": 66424079101
+        },
+        {
+         "label": "3.41 - 3.5",
+         "value": 66424080101
+        },
+        {
+         "label": "3.51 - 3.6",
+         "value": 66424081101
+        },
+        {
+         "label": "3.61 - 3.7",
+         "value": 66424082101
+        },
+        {
+         "label": "3.71 - 3.8",
+         "value": 66424083101
+        },
+        {
+         "label": "3.81 - 3.9",
+         "value": 66424084101
+        },
+        {
+         "label": "3.91 - 4.0",
+         "value": 66424085101
+        },
+        {
+         "label": "Above 4.0",
+         "value": 66424086101
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Will you require immigration sponsorship to begin working for IMC? Examples of sponsorship would include (but is not limited to) F-1 OPT, H-1B, H-4 EAD, L-1, L-2, TN, O-1, J-1, E-1/E-2, and E-3.",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_9176669101",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 66424087101
+        },
+        {
+         "label": "No",
+         "value": 66424088101
+        },
+        {
+         "label": "Maybe/I don’t know",
+         "value": 66424089101
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Will you require immigration sponsorship in the future to continue working for IMC? Examples of sponsorship would include (but is not limited to) F-1 OPT, H-1B, H-4 EAD, L-1, L-2, TN, O-1, J-1, E-1/E-2, and E-3.",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_9176670101",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 66424090101
+        },
+        {
+         "label": "No",
+         "value": 66424091101
+        },
+        {
+         "label": "Maybe/I don’t know",
+         "value": 66424092101
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Is there any other context you’d like to share about your U.S. Immigration sponsorship needs?",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_9492160101",
+       "type": "textarea",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Have you applied to this role or another role @IMC within the last 12-18 months?\n\nAs a reminder, if you have already applied for this position during the current recruitment season and were not selected, you may reapply when the next recruitment season begins in 2027.",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_9176671101",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 66424093101
+        },
+        {
+         "label": "No",
+         "value": 66424094101
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Do you currently have any offers? ",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_9176672101",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": 1
+        },
+        {
+         "label": "No",
+         "value": 0
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "If you answered \"Yes\" above, please specify relevant details (company name, job title, deadline date).",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_9176673101",
+       "type": "textarea",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Are you considering or committed to pursuing further education immediately after completing your current academic studies?",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_9176691101",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "No",
+         "value": 66424123101
+        },
+        {
+         "label": "I am considering further education after my current program",
+         "value": 66424124101
+        },
+        {
+         "label": "I have committed to another degree after my current program",
+         "value": 66424125101
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Please provide your university email address.",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_9176674101",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Please indicate which of the following machine learning libraries you are proficient with (select all that apply):",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_9176677101[]",
+       "type": "multi_value_multi_select",
+       "values": [
+        {
+         "label": "PyTorch",
+         "value": 66424110101
+        },
+        {
+         "label": "TensorFlow",
+         "value": 66424111101
+        },
+        {
+         "label": "JAX",
+         "value": 66424112101
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Please select the location of your current university.",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_9177934101",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Afghanistan",
+         "value": 66776232101
+        },
+        {
+         "label": "Albania",
+         "value": 66776233101
+        },
+        {
+         "label": "Algeria",
+         "value": 66776234101
+        },
+        {
+         "label": "Andorra",
+         "value": 66776235101
+        },
+        {
+         "label": "Angola",
+         "value": 66776236101
+        },
+        {
+         "label": "Antigua and Barbuda",
+         "value": 66776237101
+        },
+        {
+         "label": "Argentina",
+         "value": 66776238101
+        },
+        {
+         "label": "Armenia",
+         "value": 66776239101
+        },
+        {
+         "label": "Australia",
+         "value": 66776240101
+        },
+        {
+         "label": "Austria",
+         "value": 66776241101
+        },
+        {
+         "label": "Azerbaijan",
+         "value": 66776242101
+        },
+        {
+         "label": "Bahamas",
+         "value": 66776243101
+        },
+        {
+         "label": "Bahrain",
+         "value": 66776244101
+        },
+        {
+         "label": "Bangladesh",
+         "value": 66776245101
+        },
+        {
+         "label": "Barbados",
+         "value": 66776246101
+        },
+        {
+         "label": "Belarus",
+         "value": 66776248101
+        },
+        {
+         "label": "Belgium",
+         "value": 66776249101
+        },
+        {
+         "label": "Belize",
+         "value": 66776250101
+        },
+        {
+         "label": "Benin",
+         "value": 66776251101
+        },
+        {
+         "label": "Bhutan",
+         "value": 66776252101
+        },
+        {
+         "label": "Bolivia",
+         "value": 66776253101
+        },
+        {
+         "label": "Bosnia and Herzegovina",
+         "value": 66776254101
+        },
+        {
+         "label": "Botswana",
+         "value": 66776255101
+        },
+        {
+         "label": "Brazil",
+         "value": 66776256101
+        },
+        {
+         "label": "Brunei",
+         "value": 66776257101
+        },
+        {
+         "label": "Bulgaria",
+         "value": 66776258101
+        },
+        {
+         "label": "Burkina Faso",
+         "value": 66776259101
+        },
+        {
+         "label": "Burundi",
+         "value": 66776260101
+        },
+        {
+         "label": "Cabo Verde",
+         "value": 66776261101
+        },
+        {
+         "label": "Cambodia",
+         "value": 66776262101
+        },
+        {
+         "label": "Cameroon",
+         "value": 66776263101
+        },
+        {
+         "label": "Canada",
+         "value": 66776264101
+        },
+        {
+         "label": "Central African Republic",
+         "value": 66776265101
+        },
+        {
+         "label": "Chad",
+         "value": 66776266101
+        },
+        {
+         "label": "Chile",
+         "value": 66776267101
+        },
+        {
+         "label": "China",
+         "value": 66776268101
+        },
+        {
+         "label": "Colombia",
+         "value": 66776269101
+        },
+        {
+         "label": "Comoros",
+         "value": 66776270101
+        },
+        {
+         "label": "Costa Rica",
+         "value": 66776271101
+        },
+        {
+         "label": "Côte d'Ivoire",
+         "value": 66776272101
+        },
+        {
+         "label": "Croatia",
+         "value": 66776273101
+        },
+        {
+         "label": "Cuba",
+         "value": 66776274101
+        },
+        {
+         "label": "Cyprus",
+         "value": 66776275101
+        },
+        {
+         "label": "Czechia",
+         "value": 66776276101
+        },
+        {
+         "label": "Democratic Republic of the Congo",
+         "value": 66776278101
+        },
+        {
+         "label": "Denmark",
+         "value": 66776279101
+        },
+        {
+         "label": "Djibouti",
+         "value": 66776280101
+        },
+        {
+         "label": "Dominica",
+         "value": 66776281101
+        },
+        {
+         "label": "Dominican Republic",
+         "value": 66776282101
+        },
+        {
+         "label": "Ecuador",
+         "value": 66776283101
+        },
+        {
+         "label": "Egypt",
+         "value": 66776284101
+        },
+        {
+         "label": "El Salvador",
+         "value": 66776285101
+        },
+        {
+         "label": "Equatorial Guinea",
+         "value": 66776286101
+        },
+        {
+         "label": "Eritrea",
+         "value": 66776287101
+        },
+        {
+         "label": "Estonia",
+         "value": 66776288101
+        },
+        {
+         "label": "Eswatini",
+         "value": 66776289101
+        },
+        {
+         "label": "Ethiopia",
+         "value": 66776290101
+        },
+        {
+         "label": "Fiji",
+         "value": 66776291101
+        },
+        {
+         "label": "Finland",
+         "value": 66776292101
+        },
+        {
+         "label": "France",
+         "value": 66776293101
+        },
+        {
+         "label": "Gabon",
+         "value": 66776294101
+        },
+        {
+         "label": "Gambia",
+         "value": 66776295101
+        },
+        {
+         "label": "Georgia",
+         "value": 66776296101
+        },
+        {
+         "label": "Germany",
+         "value": 66776297101
+        },
+        {
+         "label": "Ghana",
+         "value": 66776298101
+        },
+        {
+         "label": "Greece",
+         "value": 66776299101
+        },
+        {
+         "label": "Grenada",
+         "value": 66776300101
+        },
+        {
+         "label": "Guatemala",
+         "value": 66776301101
+        },
+        {
+         "label": "Guinea",
+         "value": 66776302101
+        },
+        {
+         "label": "Guinea-Bissau",
+         "value": 66776303101
+        },
+        {
+         "label": "Guyana",
+         "value": 66776304101
+        },
+        {
+         "label": "Haiti",
+         "value": 66776305101
+        },
+        {
+         "label": "Honduras",
+         "value": 66776306101
+        },
+        {
+         "label": "Hong Kong",
+         "value": 66776307101
+        },
+        {
+         "label": "Hungary",
+         "value": 66776308101
+        },
+        {
+         "label": "Iceland",
+         "value": 66776309101
+        },
+        {
+         "label": "India",
+         "value": 66776310101
+        },
+        {
+         "label": "Indonesia",
+         "value": 66776311101
+        },
+        {
+         "label": "Iran",
+         "value": 66776312101
+        },
+        {
+         "label": "Iraq",
+         "value": 66776313101
+        },
+        {
+         "label": "Ireland",
+         "value": 66776314101
+        },
+        {
+         "label": "Israel",
+         "value": 66776315101
+        },
+        {
+         "label": "Italy",
+         "value": 66776316101
+        },
+        {
+         "label": "Jamaica",
+         "value": 66776317101
+        },
+        {
+         "label": "Japan",
+         "value": 66776318101
+        },
+        {
+         "label": "Jordan",
+         "value": 66776319101
+        },
+        {
+         "label": "Kazakhstan",
+         "value": 66776320101
+        },
+        {
+         "label": "Kenya",
+         "value": 66776321101
+        },
+        {
+         "label": "Kiribati",
+         "value": 66776322101
+        },
+        {
+         "label": "Kuwait",
+         "value": 66776323101
+        },
+        {
+         "label": "Kyrgyzstan",
+         "value": 66776324101
+        },
+        {
+         "label": "Laos",
+         "value": 66776325101
+        },
+        {
+         "label": "Latvia",
+         "value": 66776326101
+        },
+        {
+         "label": "Lebanon",
+         "value": 66776327101
+        },
+        {
+         "label": "Lesotho",
+         "value": 66776328101
+        },
+        {
+         "label": "Liberia",
+         "value": 66776329101
+        },
+        {
+         "label": "Libya",
+         "value": 66776330101
+        },
+        {
+         "label": "Liechtenstein",
+         "value": 66776331101
+        },
+        {
+         "label": "Lithuania",
+         "value": 66776332101
+        },
+        {
+         "label": "Luxembourg",
+         "value": 66776333101
+        },
+        {
+         "label": "Macau",
+         "value": 66776334101
+        },
+        {
+         "label": "Madagascar",
+         "value": 66776335101
+        },
+        {
+         "label": "Malawi",
+         "value": 66776336101
+        },
+        {
+         "label": "Malaysia",
+         "value": 66776337101
+        },
+        {
+         "label": "Maldives",
+         "value": 66776338101
+        },
+        {
+         "label": "Mali",
+         "value": 66776339101
+        },
+        {
+         "label": "Malta",
+         "value": 66776340101
+        },
+        {
+         "label": "Marshall Islands",
+         "value": 66776341101
+        },
+        {
+         "label": "Mauritania",
+         "value": 66776342101
+        },
+        {
+         "label": "Mauritius",
+         "value": 66776343101
+        },
+        {
+         "label": "Mexico",
+         "value": 66776344101
+        },
+        {
+         "label": "Micronesia",
+         "value": 66776345101
+        },
+        {
+         "label": "Moldova",
+         "value": 66776346101
+        },
+        {
+         "label": "Monaco",
+         "value": 66776347101
+        },
+        {
+         "label": "Mongolia",
+         "value": 66776348101
+        },
+        {
+         "label": "Montenegro",
+         "value": 66776349101
+        },
+        {
+         "label": "Morocco",
+         "value": 66776350101
+        },
+        {
+         "label": "Mozambique",
+         "value": 66776351101
+        },
+        {
+         "label": "Myanmar",
+         "value": 66776352101
+        },
+        {
+         "label": "Namibia",
+         "value": 66776353101
+        },
+        {
+         "label": "Nauru",
+         "value": 66776354101
+        },
+        {
+         "label": "Nepal",
+         "value": 66776355101
+        },
+        {
+         "label": "Netherlands",
+         "value": 66776356101
+        },
+        {
+         "label": "New Zealand",
+         "value": 66776357101
+        },
+        {
+         "label": "Nicaragua",
+         "value": 66776358101
+        },
+        {
+         "label": "Niger",
+         "value": 66776359101
+        },
+        {
+         "label": "Nigeria",
+         "value": 66776360101
+        },
+        {
+         "label": "North Korea",
+         "value": 66776361101
+        },
+        {
+         "label": "North Macedonia",
+         "value": 66776362101
+        },
+        {
+         "label": "Norway",
+         "value": 66776363101
+        },
+        {
+         "label": "Oman",
+         "value": 66776364101
+        },
+        {
+         "label": "Pakistan",
+         "value": 66776365101
+        },
+        {
+         "label": "Palau",
+         "value": 66776366101
+        },
+        {
+         "label": "Palestine",
+         "value": 66776367101
+        },
+        {
+         "label": "Panama",
+         "value": 66776368101
+        },
+        {
+         "label": "Papua New Guinea",
+         "value": 66776369101
+        },
+        {
+         "label": "Paraguay",
+         "value": 66776370101
+        },
+        {
+         "label": "Peru",
+         "value": 66776371101
+        },
+        {
+         "label": "Philippines",
+         "value": 66776372101
+        },
+        {
+         "label": "Poland",
+         "value": 66776373101
+        },
+        {
+         "label": "Portugal",
+         "value": 66776374101
+        },
+        {
+         "label": "Qatar",
+         "value": 66776375101
+        },
+        {
+         "label": "Republic of the Congo",
+         "value": 66776376101
+        },
+        {
+         "label": "Romania",
+         "value": 66776377101
+        },
+        {
+         "label": "Russia",
+         "value": 66776378101
+        },
+        {
+         "label": "Rwanda",
+         "value": 66776379101
+        },
+        {
+         "label": "Saint Kitts and Nevis",
+         "value": 66776380101
+        },
+        {
+         "label": "Saint Lucia",
+         "value": 66776381101
+        },
+        {
+         "label": "Saint Vincent and the Grenadines",
+         "value": 66776382101
+        },
+        {
+         "label": "Samoa",
+         "value": 66776383101
+        },
+        {
+         "label": "San Marino",
+         "value": 66776384101
+        },
+        {
+         "label": "Sao Tome and Principe",
+         "value": 66776385101
+        },
+        {
+         "label": "Saudi Arabia",
+         "value": 66776386101
+        },
+        {
+         "label": "Senegal",
+         "value": 66776387101
+        },
+        {
+         "label": "Serbia",
+         "value": 66776388101
+        },
+        {
+         "label": "Seychelles",
+         "value": 66776389101
+        },
+        {
+         "label": "Sierra Leone",
+         "value": 66776390101
+        },
+        {
+         "label": "Singapore",
+         "value": 66776391101
+        },
+        {
+         "label": "Slovakia",
+         "value": 66776392101
+        },
+        {
+         "label": "Slovenia",
+         "value": 66776393101
+        },
+        {
+         "label": "Solomon Islands",
+         "value": 66776394101
+        },
+        {
+         "label": "Somalia",
+         "value": 66776395101
+        },
+        {
+         "label": "South Africa",
+         "value": 66776396101
+        },
+        {
+         "label": "South Korea",
+         "value": 66776397101
+        },
+        {
+         "label": "South Sudan",
+         "value": 66776398101
+        },
+        {
+         "label": "Spain",
+         "value": 66776399101
+        },
+        {
+         "label": "Sri Lanka",
+         "value": 66776400101
+        },
+        {
+         "label": "Sudan",
+         "value": 66776401101
+        },
+        {
+         "label": "Suriname",
+         "value": 66776402101
+        },
+        {
+         "label": "Sweden",
+         "value": 66776403101
+        },
+        {
+         "label": "Switzerland",
+         "value": 66776404101
+        },
+        {
+         "label": "Syria",
+         "value": 66776405101
+        },
+        {
+         "label": "Taiwan",
+         "value": 66776406101
+        },
+        {
+         "label": "Tajikistan",
+         "value": 66776407101
+        },
+        {
+         "label": "Tanzania",
+         "value": 66776408101
+        },
+        {
+         "label": "Thailand",
+         "value": 66776409101
+        },
+        {
+         "label": "Timor-Leste",
+         "value": 66776410101
+        },
+        {
+         "label": "Togo",
+         "value": 66776411101
+        },
+        {
+         "label": "Tonga",
+         "value": 66776412101
+        },
+        {
+         "label": "Trinidad and Tobago",
+         "value": 66776413101
+        },
+        {
+         "label": "Tunisia",
+         "value": 66776414101
+        },
+        {
+         "label": "Turkey",
+         "value": 66776415101
+        },
+        {
+         "label": "Turkmenistan",
+         "value": 66776416101
+        },
+        {
+         "label": "Tuvalu",
+         "value": 66776417101
+        },
+        {
+         "label": "Uganda",
+         "value": 66776418101
+        },
+        {
+         "label": "Ukraine",
+         "value": 66776419101
+        },
+        {
+         "label": "United Arab Emirates",
+         "value": 66776420101
+        },
+        {
+         "label": "United Kingdom",
+         "value": 66776421101
+        },
+        {
+         "label": "United States",
+         "value": 66776422101
+        },
+        {
+         "label": "Uruguay",
+         "value": 66776423101
+        },
+        {
+         "label": "Uzbekistan",
+         "value": 66776424101
+        },
+        {
+         "label": "Vanuatu",
+         "value": 66776425101
+        },
+        {
+         "label": "Vatican City",
+         "value": 66776426101
+        },
+        {
+         "label": "Venezuela",
+         "value": 66776427101
+        },
+        {
+         "label": "Vietnam",
+         "value": 66776428101
+        },
+        {
+         "label": "Yemen",
+         "value": 66776429101
+        },
+        {
+         "label": "Zambia",
+         "value": 66776430101
+        },
+        {
+         "label": "Zimbabwe",
+         "value": 66776431101
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "What is your preferred work location?\n",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_9176675101",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Chicago",
+         "value": 66424095101
+        },
+        {
+         "label": "New York",
+         "value": 66424096101
+        },
+        {
+         "label": "London",
+         "value": 66424097101
+        },
+        {
+         "label": "Amsterdam",
+         "value": 66424098101
+        },
+        {
+         "label": "Zug",
+         "value": 66424099101
+        },
+        {
+         "label": "Sydney",
+         "value": 66424100101
+        },
+        {
+         "label": "Hong Kong",
+         "value": 66424101101
+        },
+        {
+         "label": "Seoul",
+         "value": 66424102101
+        },
+        {
+         "label": "Mumbai",
+         "value": 66424103101
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "From the cities above, are there any other IMC locations you'd consider? Select up to 2.",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_9213975101[]",
+       "type": "multi_value_multi_select",
+       "values": [
+        {
+         "label": "London",
+         "value": 67120444101
+        },
+        {
+         "label": "Amsterdam",
+         "value": 67120445101
+        },
+        {
+         "label": "Zug",
+         "value": 67120446101
+        },
+        {
+         "label": "New York",
+         "value": 67120447101
+        },
+        {
+         "label": "Chicago",
+         "value": 67120448101
+        },
+        {
+         "label": "Hong Kong",
+         "value": 67120449101
+        },
+        {
+         "label": "Sydney",
+         "value": 67120450101
+        },
+        {
+         "label": "Seoul",
+         "value": 67120451101
+        },
+        {
+         "label": "Mumbai",
+         "value": 67120452101
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Please list your PhD advisor(s) below:",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_9221962101",
+       "type": "textarea",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Provide any relevant profile URLs (LinkedIn, Google Scholar, GitHub)",
+     "required": false,
+     "fields": [
+      {
+       "name": "question_9177935101",
+       "type": "textarea",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": "<p><!--StartFragment-->Please read the terms and conditions of the&nbsp;<a href=\"https://www.imc.com/eu/privacy-statement/\" target=\"_blank\" rel=\"noopener\">IMC Privacy Statement</a>.<!--EndFragment--></p>",
+     "label": "Privacy Statement",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_9176678101",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "I Agree",
+         "value": 66424113101
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "description": "<p><!--StartFragment--></p>\n<p>Please review and agree to the <a href=\"https://www.imc.com/us/careers/code-of-conduct\" target=\"_blank\" rel=\"noopener\">IMC Interview Code of Conduct</a> before submitting your application.</p>\n<p><!--EndFragment--></p>",
+     "label": "Interview Code of Conduct",
+     "required": true,
+     "fields": [
+      {
+       "name": "question_9176679101",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "I agree",
+         "value": 66424114101
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "location_questions": [
+    {
+     "description": null,
+     "label": "Longitude",
+     "required": true,
+     "fields": [
+      {
+       "name": "longitude",
+       "type": "input_hidden",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Latitude",
+     "required": true,
+     "fields": [
+      {
+       "name": "latitude",
+       "type": "input_hidden",
+       "values": []
+      }
+     ]
+    },
+    {
+     "description": null,
+     "label": "Location",
+     "required": true,
+     "fields": [
+      {
+       "name": "location",
+       "type": "input_text",
+       "values": []
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

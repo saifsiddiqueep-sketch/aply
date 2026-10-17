@@ -20,10 +20,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install the Python linter
-        run: python -m pip install pyflakes
+      - name: Install the Python linters
+        run: python -m pip install pyflakes ruff
       - name: Run all checks
         run: node check.js
+      # Ruff with only the rules that mean "this will crash": syntax errors, undefined names, invalid comparisons and prints
+      - name: Python syntax and undefined names (Ruff)
+        run: python -m ruff check --select E9,F63,F7,F82 --output-format github .
+      # Every page and email the server builds renders, every script parses, no line break JavaScript would join, shell scripts parse
+      - name: Pages, scripts and shell scripts
+        run: python tools/test-pages.py
       - name: Audit every file
         run: |
           python -m pip install pyyaml
@@ -40,3 +46,8 @@ jobs:
           python tools/test-support.py
           python tools/test-ats.py
           python tools/test-ats-flow.py
+          python tools/test-billing.py
+          python tools/test-autofill.py
+      # The server started exactly as Render starts it (Linux shell, $PORT, a disk folder, SIGTERM at each deploy), on Render's Python version
+      - name: Test the Render deploy (start, restart on the same disk, stop)
+        run: python tools/test-render.py

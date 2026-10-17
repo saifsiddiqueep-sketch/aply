@@ -1,11 +1,13 @@
 /* "profile" experiment: an application-ready profile, modeled on what LinkedIn Easy Apply, Indeed Apply,
    ZipRecruiter 1-Click Apply and Handshake collect so a person can apply quickly and completely.
-   Adds to Profile, Settings: phone, headline, resume link, about you, LinkedIn, portfolio, school, major,
-   graduation month, GPA (optional), most recent employer.
-   Adds to Profile, Preferences: work authorization, sponsorship, earliest start, opportunity types, a default note.
+   Adds to Profile setup: phone, headline, resume link, about you, LinkedIn, portfolio, school, major,
+   graduation month, GPA (optional), most recent employer, work authorization, sponsorship, earliest start,
+   opportunity types and the questions employers' own forms ask. uaply-nav.js puts each field on its step (STEPS there);
+   the group headings below ("sec", "title") only sort the fields and are not shown in the guided setup.
    Shows an "application readiness" score with one-tap links to whatever is missing, validates links and phone,
    and warns when the authorization and sponsorship answers contradict each other.
-   Deliberately does not ask for demographic or EEO data. Everything is optional except what an employer needs.
+   This file does not ask for demographic or EEO data (the optional voluntary questions live in uaply-nav.js and are
+   never sent). Everything is optional except what an employer needs.
    Fields are listed in SPEC, so adding one is a one-line change. */
 (function(){
 function once(src,a,b){if(src.indexOf(a)<0)throw new Error("patch target not found: "+a.slice(0,40));return src.replace(a,function(){return b})}
@@ -44,7 +46,17 @@ var SPEC=[
   {k:"sponsor",label:"Will you now or in the future need visa sponsorship?",type:"select",full:1,hint:"Answer this the same way on every application.",opts:[["","Choose"],["no","No"],["yes","Yes"]]},
   {k:"start",label:"Earliest start",type:"select",opts:START}]},
  {sec:"preferences",title:"What you are looking for",items:[
-  {k:"types",label:"Opportunity types",type:"checks",full:1,opts:[["fulltime","Full-time"],["parttime","Part-time"],["internship","Internship"],["coop","Co-op"]]}]}
+  {k:"types",label:"Opportunity types",type:"checks",full:1,opts:[["fulltime","Full-time"],["parttime","Part-time"],["internship","Internship"],["coop","Co-op"]]}]},
+ /* the questions most employers' own application forms ask; answered once here, UAply fills them in on every application
+    (relocation comes from "Willing to relocate" under Work style) */
+ {sec:"preferences",title:"Questions employers ask",items:[
+  {k:"office",label:"Willing to work from the job's office (hybrid or on-site)?",type:"select",opts:[["","Choose"],["yes","Yes"],["no","No"]]},
+  {k:"former",label:"Have you worked at the companies you apply to?",type:"select",full:1,hint:"Choose No only if you have never worked at any company you swipe right on.",opts:[["","Ask me each time"],["no","No, never"]]},
+  {k:"govt",label:"Are you, or a close relative, a government official?",type:"select",opts:[["","Choose"],["no","No"],["yes","Yes"]]},
+  {k:"phd",label:"Currently in a PhD program?",type:"select",opts:[["","Choose"],["no","No"],["yes","Yes"]]},
+  {k:"pronouns",label:"Pronouns (optional)",type:"text",max:30,ph:"she/her, he/him, they/them"},
+  {k:"ack",label:"Employers' privacy and AI-use notices",type:"select",full:1,hint:"Many forms ask you to confirm you read their privacy notice. Choose Yes only if you want UAply to confirm it for you.",opts:[["","Ask me each time"],["yes","Yes, confirm them for me"]]},
+  {k:"why",label:"Why you want to work there (your own words)",type:"textarea",full:1,max:600,ph:"I'm excited about {company} because...",hint:"Used when a form asks why you want to join. {company} and {role} are filled in for each job."}]}
 ];
 
 var CSS=".px-h{margin-top:6px}.px-h h3{margin:0}"+
@@ -128,6 +140,7 @@ function apply(w){
   ];
   function curSection(){var b=d.querySelector("#secTitle");return b?b.textContent.toLowerCase():""}
   function goTo(sec,fieldId){
+    if(w.__uaplyGoField){w.__uaplyGoField(sec,fieldId);return}   /* the guided setup knows which step the field is on */
     function focus(){var c=d.getElementById(fieldId);if(c){c.scrollIntoView({block:"center"});c.focus()}}
     if(curSection()===sec){focus();return}
     var nb=d.getElementById("nb-prof");if(!nb)return;

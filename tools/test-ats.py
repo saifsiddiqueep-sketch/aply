@@ -10,7 +10,7 @@ import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
-PORT = 8795
+PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8795          # a free port can be given: python tools/test-ats.py PORT
 os.environ["UAPLY_ATS_BASE_GREENHOUSE"] = "http://127.0.0.1:%d" % PORT
 os.environ["UAPLY_ATS_BASE_LEVER"] = "http://127.0.0.1:%d" % PORT
 import ats_api  # noqa: E402

@@ -13,7 +13,8 @@ module.exports = async ({ ev, sleep, nav }) => {
 
   // skill chips
   await ev(F + ".getElementById('nb-prof').click()"); await sleep(400);
-  await click("Settings"); await sleep(500);
+  await click("Profile setup"); await sleep(500);
+  await ev("(()=>{const b=" + F + ".querySelector('.wzDots button[data-step=\"1\"]');if(b)b.click()})()"); await sleep(500);   // step 2, Jobs you want: skills
   const before = await ev(F + ".getElementById('pSkills').value");
   const chips = JSON.parse(await ev("JSON.stringify([...(" + F + ").querySelectorAll('button')].filter(b=>b.offsetParent&&/^\\+ /.test(b.innerText.trim())).map(b=>b.innerText.trim()))"));
   console.log("  skills before:", JSON.stringify(before), "| chips shown:", chips.join(", "));

@@ -16,6 +16,7 @@ Serves ROOT; each urlpath=file alias maps one URL to a file outside ROOT (e.g. /
   POST /api/auth/change-password   signed in: change the password (needs the current one)
   GET  /setup             owner checklist: Google keys, email login, test email (setup_api.py)
   POST /api/setup/test-mail   send the owner one test email
+  POST /api/setup/save-feed-keys   the Job feed keys box (this computer only): save the USAJOBS and The Muse API keys; never echoed back
   POST /api/setup/save-mail   the Connect Gmail form (this computer only): save the Gmail address and App Password, then send a test
   GET  /api/auth/providers      which sign-in methods are on (google_auth.py)
   GET  /api/auth/google/start   "Continue with Google": send the browser to Google
@@ -25,10 +26,22 @@ Serves ROOT; each urlpath=file alias maps one URL to a file outside ROOT (e.g. /
   POST /api/feedback      store feedback sent through the assistant
   GET  /feedback          the feedback summary page (this server only listens on this computer)
   GET  /help/articles.json  the help articles the assistant answers from
+  POST /api/auth/verify, /api/auth/resend   the 6-digit code that proves an email is the person's own
+  POST /api/auth/google/token   "Continue with Google" through Google's own button
+  POST /api/setup/save-google, save-stripe, save-ats, remove-ats   the other boxes on /setup (this computer only)
+  GET  /api/billing/status, POST /api/billing/checkout, /api/billing/portal, /api/billing/webhook   Plus and Pro (billing_api.py)
+  GET  /api/employer/me, /api/employer/logo/<id>, POST /api/employer/...   Hiring mode, sandbox only (employers_api.py)
+  GET  /healthz           for the host's health check
 Accounts use an HttpOnly session cookie. When a signed-in user swipes right, a receipt goes to their email."""
-import sys, os, json, http.server, base64, hmac
+import sys, os, re, json, http.server, base64, hmac, threading, time, signal
 
-port = int(sys.argv[1])
+LEGAL_NAME = re.compile(r"^[A-Za-z0-9_-]+\.(html|css|png)$")       # the files in legal/: terms.html, style.css, favicon-32.png ...
+
+try:
+    port = int(sys.argv[1])
+except (IndexError, ValueError):            # e.g. a host's start command whose $PORT came out empty
+    sys.exit("[uaply] usage: python serve.py PORT ROOT [--api]. PORT must be a number (got %r). On Render the start command is "
+             "python serve.py ${PORT:-10000} dev --api" % (sys.argv[1] if len(sys.argv) > 1 else ""))
 # Locally the server only listens on this computer. A host sets HOST=0.0.0.0 so the public can reach it (always behind HTTPS).
 BIND = os.environ.get("HOST", "127.0.0.1")
 PUBLIC = BIND not in ("127.0.0.1", "localhost", "::1")
@@ -46,19 +59,50 @@ for a in rest:
     alias[u] = os.path.abspath(f)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def data_folder():
+    """Where accounts, applications, feedback and the job cache are kept (UAPLY_DATA_DIR on a host, ./data here). It must be writable: without it
+    nobody can sign up, so the server stops at once with a plain reason in the log instead of a traceback (on Render: the disk is not attached).
+    Returns (folder, persistent) where persistent is False when Render runs this without a separate disk at that folder, None when unknown."""
+    d = os.path.abspath(os.environ.get("UAPLY_DATA_DIR") or os.path.join(HERE, "data"))
+    try:
+        os.makedirs(d, exist_ok=True)
+        probe = os.path.join(d, ".write-check-%d" % os.getpid())
+        with open(probe, "w") as f:
+            f.write("ok")
+        os.remove(probe)
+    except OSError as e:
+        sys.exit("[uaply] cannot write the data folder %s (%s: %s). Accounts and applications are kept there. On Render: open the service, "
+                 "Disks, and check a disk is attached with the same mount path as UAPLY_DATA_DIR." % (d, type(e).__name__, e))
+    # Render sets RENDER=true. Its persistent disk is a separate file system mounted at the folder (or a folder above it); anything else is
+    # wiped at every deploy.
+    if not os.environ.get("RENDER"):
+        return d, None
+    p = d
+    while os.path.dirname(p) != p:
+        if os.path.ismount(p):
+            return d, True
+        p = os.path.dirname(p)
+    return d, False
+
+
 if api:
+    DATA_DIR, PERSISTENT = data_folder()
     # the sandbox and dev pages load these shared files and a copy of the production page; no command-line aliases needed
     for url, rel in (("/uaply-envs.js", "shared/uaply-envs.js"), ("/uaply-nav.js", "shared/uaply-nav.js"),
                      ("/uaply-live.js", "shared/uaply-live.js"), ("/uaply-profile.js", "shared/uaply-profile.js"),
-                     ("/uaply-chat.js", "shared/uaply-chat.js"), ("/help/articles.json", "help/articles.json"),
+                     ("/uaply-chat.js", "shared/uaply-chat.js"), ("/uaply-employers.js", "shared/uaply-employers.js"),
+                     ("/uaply-learn.js", "shared/uaply-learn.js"),
+                     ("/help/articles.json", "help/articles.json"),
                      ("/prod-index.html", "prod/index.html")):
         alias.setdefault(url, os.path.join(HERE, rel))
-    import jobs_api, uaply_api, auth_api, chat_api, google_auth, setup_api
+    import jobs_api, uaply_api, auth_api, chat_api, google_auth, setup_api, billing_api, employers_api
     uaply_api.init(os.path.basename(root))
+    employers_api.init(os.path.basename(root))                    # Hiring mode: on for the sandbox only
     auth_api.init(os.path.basename(root))
     chat_api.init(os.path.basename(root))
     uaply_api.hide_errors = jobs_api.hide_errors = PUBLIC       # a hosted server never shows visitors raw error text; the owner's own computer still does
-    import threading
     threading.Thread(target=jobs_api.get_jobs, daemon=True).start()   # warm the job cache so the first visitor does not wait
 
 OOPS = "Something went wrong on our side. Try again in a moment."
@@ -72,13 +116,49 @@ def log_oops(where, e):
 
 MAX_BODY = 40000
 MAX_APPLY_BODY = 1500000
+MAX_COMPANY_BODY = 200000
+
+# Swipes per visitor per minute. A person swipes a few times a minute; a script hammering the server would otherwise fill its disk and memory.
+SWIPE_LIMITS = {"/api/apply": 40, "/api/decision": 150}
+_swipes, _swipes_lock = {}, threading.Lock()
+
+
+def too_fast(path, ip):
+    limit = SWIPE_LIMITS.get(path)
+    if not limit:
+        return False
+    now = time.time()
+    with _swipes_lock:
+        if len(_swipes) > 20000:                          # forget visitors who have gone quiet
+            for k in [k for k, v in _swipes.items() if not v or now - v[-1] > 60]:
+                del _swipes[k]
+        hits = [t for t in _swipes.get((path, ip), []) if now - t < 60]
+        if len(hits) >= limit:
+            _swipes[(path, ip)] = hits
+            return True
+        hits.append(now)
+        _swipes[(path, ip)] = hits
+        return False
 
 class H(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **k):
         super().__init__(*a, directory=root, **k)
 
+    def handle_one_request(self):
+        """Count the requests being answered, so a stop (a deploy) can let them finish first. An idle kept-open connection is not counted."""
+        self._counted = False
+        try:
+            super().handle_one_request()
+        finally:
+            if self._counted:
+                with _busy_lock:
+                    _busy[0] -= 1
+
     def parse_request(self):
         """A null byte in the address (raw or as %00) is never valid: answer 400 instead of letting the file lookup fail and drop the connection."""
+        with _busy_lock:                                     # a request line arrived: from here on this request is "in progress"
+            _busy[0] += 1
+        self._counted = True
         if not super().parse_request():
             return False
         if "\x00" in self.path or "%00" in self.path.lower():
@@ -88,8 +168,11 @@ class H(http.server.SimpleHTTPRequestHandler):
 
     def translate_path(self, path):
         p = path.split("?", 1)[0].split("#", 1)[0]
-        if api and p.startswith("/legal/") and ".." not in p:           # Terms, Privacy, AI disclosure, Copyright
-            return os.path.join(HERE, "legal", p[len("/legal/"):] or "index.html")
+        if api and p.startswith("/legal/"):                              # Terms, Privacy, AI disclosure, Copyright
+            # only a plain file name inside legal/. Joining the raw rest of the address once let /legal//etc/passwd (or
+            # /legal/C:/...) read ANY file on the server, because joining onto an absolute path throws the folder away.
+            name = p[len("/legal/"):] or "index.html"
+            return os.path.join(HERE, "legal", name if LEGAL_NAME.match(name) else "not-a-legal-page")
         return alias.get(p) or super().translate_path(path)
 
     def _send(self, code, body, ctype="application/json", headers=()):
@@ -102,6 +185,19 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
+
+    def _refuse(self, code, body):
+        """Answer a request whose body is not read (or not wanted), then hang up cleanly. Closing a connection while the client's body is still
+        unread makes the system reset it, and the client can lose the answer before reading it (seen on Windows with a garbled Content-Length).
+        So: say "Connection: close", then read away whatever is still arriving for a moment before the server closes."""
+        self._send(code, body, headers=(("Connection", "close"),))
+        try:
+            self.connection.settimeout(0.2)
+            for _ in range(32):                                  # at most about 2 MB, and never longer than the client keeps sending
+                if not self.connection.recv(65536):
+                    break
+        except OSError:
+            pass
 
     def _cookie_value(self, name):
         """One cookie's value from the request ('' if absent). Parsed by hand on purpose: other sites' tools set cookies with quotes and commas in
@@ -164,7 +260,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         err, user, token = auth_api.oauth_login(ident["provider"], ident["subject"], ident["email"], agreed, ident.get("trusted", True))
         if err:
             return self._redirect("/?auth_error=" + err, [self._oauth_cookie("")])
-        return self._redirect("/?signed_in=google", self._cookie(token) + [self._oauth_cookie("")])
+        return self._redirect("/?signed_in=google" + ("&password_removed=1" if user.get("passwordRemoved") else ""), self._cookie(token) + [self._oauth_cookie("")])
 
     def _owner_ok(self):
         """Owner pages: open on this computer; on a public server only with OWNER_PASSWORD (any username)."""
@@ -183,6 +279,8 @@ class H(http.server.SimpleHTTPRequestHandler):
         p = self.path.split("?", 1)[0]
         if p == "/healthz":                                                 # for the host's health check
             return self._send(200, {"ok": True})
+        if api and p == "/legal":                                           # a typed uaply.net/legal (no slash) finds the legal pages too
+            return self._redirect("/legal/")
         if api and p in OWNER_PAGES and not self._owner_ok():
             if not OWNER_PASSWORD:
                 return self._send(403, {"error": "Owner pages are off on this server. Set OWNER_PASSWORD to use them."})
@@ -206,6 +304,13 @@ class H(http.server.SimpleHTTPRequestHandler):
                     return self._send(200, google_auth.public_config(*self._origin_parts()))
                 if p in ("/api/auth/google/start", "/api/auth/google/callback"):
                     return self._google(p)
+                if p == "/api/billing/status":
+                    return self._send(200, billing_api.status(auth_api.user_for(self._token())))
+                if p == "/api/employer/me":
+                    return self._send(*employers_api.me(auth_api.user_for(self._token())))
+                if p.startswith("/api/employer/logo/"):
+                    img = employers_api.logo(p[len("/api/employer/logo/"):])
+                    return self._send(200, img[1], img[0]) if img else self._send(404, {"error": "not found"})
                 if p == "/api/chat/config":
                     return self._send(200, dict(chat_api.public_config(), owner=not PUBLIC))      # "owner": this server runs on the owner's own computer, so owner-only hints may be shown
                 if p == "/feedback":
@@ -219,30 +324,50 @@ class H(http.server.SimpleHTTPRequestHandler):
 
     def do_POST(self):
         p = self.path.split("?", 1)[0]
+        if api and p == "/api/billing/webhook":        # from Stripe, not from our pages: its signature replaces the same-site check
+            try:
+                n = int(self.headers.get("Content-Length") or 0)
+            except ValueError:
+                n = 0
+            if not 0 < n <= 512000:
+                return self._refuse(400, {"error": "bad size"})
+            try:
+                code, out = billing_api.webhook(self.rfile.read(n), self.headers.get("Stripe-Signature") or "")
+            except Exception as e:                      # say so (Stripe then sends the event again later) instead of dropping the connection
+                log_oops(p, e)
+                code, out = 500, {"error": OOPS}
+            return self._send(code, out)
         if not api or p not in ("/api/apply", "/api/decision", "/api/auth/signup", "/api/auth/login", "/api/auth/logout",
                                 "/api/auth/delete", "/api/auth/forgot", "/api/auth/reset", "/api/auth/change-password",
-                                "/api/setup/test-mail", "/api/setup/save-mail", "/api/setup/save-google", "/api/setup/save-ats", "/api/setup/remove-ats", "/api/auth/google/token", "/api/auth/verify", "/api/auth/resend", "/api/chat", "/api/feedback"):
-            return self._send(404, {"error": "not found"})
+                                "/api/setup/test-mail", "/api/setup/save-mail", "/api/setup/save-google", "/api/setup/save-ats", "/api/setup/remove-ats", "/api/setup/save-stripe", "/api/setup/save-feed-keys", "/api/auth/google/token", "/api/auth/verify", "/api/auth/resend", "/api/chat", "/api/feedback", "/api/billing/checkout", "/api/billing/portal",
+                                "/api/employer/company", "/api/employer/job", "/api/employer/job/status", "/api/employer/applicant",
+                                "/api/employer/import"):
+            return self._refuse(404, {"error": "not found"})
         # Only accept requests made by this site's own pages (blocks cross-site forms and scripts).
         origin = self.headers.get("Origin")
         host = self.headers.get("Host") or ""
         if origin not in ("http://" + host, "https://" + host) or (PUBLIC and origin != "https://" + host and
                                                                   self.headers.get("X-Forwarded-Proto") == "https"):
-            return self._send(403, {"error": "cross-site request refused"})
+            return self._refuse(403, {"error": "cross-site request refused"})
         try:
             n = int(self.headers.get("Content-Length") or 0)
             if n <= 0:                                                                     # nothing was sent: a bad request, not a too-large one
-                return self._send(400, {"error": "bad request"})
-            if n > (MAX_APPLY_BODY if p == "/api/apply" else MAX_BODY):                    # an application may carry a resume file (up to 1 MB, sent as text)
-                return self._send(413, {"error": "bad size"})
+                return self._refuse(400, {"error": "bad request"})
+            # an application may carry a resume file (up to 1 MB, sent as text); a company profile may carry its logo (up to 120 KB)
+            if n > (MAX_APPLY_BODY if p == "/api/apply" else MAX_COMPANY_BODY if p == "/api/employer/company" else MAX_BODY):
+                if p == "/api/apply":                    # the app shows this sentence to the person, so it says what to do
+                    return self._refuse(413, {"error": "This application is too large to send. Use a resume file under 1 MB (Profile setup, Background and links).", "code": "too_big"})
+                return self._refuse(413, {"error": "bad size"})
             payload = json.loads(self.rfile.read(n).decode("utf-8"))
             if not isinstance(payload, dict):
                 raise ValueError("not an object")
-        except Exception:
-            return self._send(400, {"error": "bad request"})
+        except Exception:                                        # a garbled Content-Length, a body that is not JSON, or one that is not an object
+            return self._refuse(400, {"error": "bad request"})
         ip = self.client_address[0]
         if PUBLIC and self.headers.get("X-Forwarded-For"):          # behind the host's proxy: the visitor's own address
             ip = self.headers["X-Forwarded-For"].split(",")[0].strip()[:64] or ip
+        if too_fast(p, ip):
+            return self._send(429, {"error": "You're swiping faster than UAply can keep up. Wait a moment and try again.", "code": "slow_down"})
         try:
             if p == "/api/auth/signup":
                 code, out, token = auth_api.signup(payload.get("email"), payload.get("password"), ip, payload.get("agree"))
@@ -260,12 +385,26 @@ class H(http.server.SimpleHTTPRequestHandler):
                     return self._send(403, {"ok": False, "message": "On a hosted server, add the Google client ID in the host's dashboard (UAPLY_CONFIG_JSON), not here."})
                 code, out = setup_api.save_google(payload)
                 return self._send(code, out)
+            if p == "/api/setup/save-stripe":
+                if not self._owner_ok():
+                    return self._send(403, {"error": "Owner pages are off or need the owner password."})
+                if PUBLIC:
+                    return self._send(403, {"ok": False, "message": "On a hosted server, add the Stripe keys in the host's dashboard (STRIPE_SECRET_KEY and the others), not here."})
+                code, out = setup_api.save_stripe(payload)
+                return self._send(code, out)
             if p in ("/api/setup/save-ats", "/api/setup/remove-ats"):
                 if not self._owner_ok():
                     return self._send(403, {"error": "Owner pages are off or need the owner password."})
                 if PUBLIC:                                      # a host keeps keys in its dashboard (UAPLY_ATS_JSON), not in a file a page can write
                     return self._send(403, {"ok": False, "message": "On a hosted server, add employers' keys in the host's dashboard (UAPLY_ATS_JSON), not here."})
                 code, out = (setup_api.save_ats if p.endswith("save-ats") else setup_api.remove_ats)(payload)
+                return self._send(code, out)
+            if p == "/api/setup/save-feed-keys":
+                if not self._owner_ok():
+                    return self._send(403, {"error": "Owner pages are off or need the owner password."})
+                if PUBLIC:                                      # a hosted server keeps its keys in its dashboard, not in a file the page can write
+                    return self._send(403, {"ok": False, "message": "On a hosted server, add the job feed keys in the host's dashboard (UAPLY_CONFIG_JSON, feed_keys), not here."})
+                code, out = setup_api.save_feed_keys(payload)
                 return self._send(code, out)
             if p == "/api/setup/save-mail":
                 if not self._owner_ok():
@@ -289,7 +428,10 @@ class H(http.server.SimpleHTTPRequestHandler):
                     err, user, token = auth_api.oauth_login(ident["provider"], ident["subject"], ident["email"], payload.get("agree") is True, ident.get("trusted", True))
                 if err:
                     return self._send(429 if err == "limited" else 400, {"error": msg.get(err, msg["failed"]), "code": err})
-                return self._send(200, {"user": user}, headers=self._cookie(token))
+                out = {"user": user}
+                if user.pop("passwordRemoved", False):           # a password nobody had proven was the owner's was removed (auth_api.oauth_login)
+                    out["passwordRemoved"] = True
+                return self._send(200, out, headers=self._cookie(token))
             if p == "/api/auth/verify":
                 code, out = auth_api.verify_code(self._token(), payload.get("code"), ip)
                 return self._send(code, out)
@@ -336,7 +478,23 @@ class H(http.server.SimpleHTTPRequestHandler):
             elif p == "/api/feedback":
                 code, out = chat_api.feedback(payload, ip, auth_api.user_for(self._token()), notify=uaply_api.send_support_ticket)
             elif p == "/api/apply":
-                code, out = uaply_api.submit(payload, auth_api.user_for(self._token()))
+                u = auth_api.user_for(self._token())
+                over = billing_api.limit_reached(u)
+                code, out = (402, {"error": over, "code": "limit"}) if over else uaply_api.submit(payload, u, self._site_base())
+            elif p == "/api/billing/checkout":
+                code, out = billing_api.checkout(auth_api.user_for(self._token()), payload.get("plan"), self._site_base())
+            elif p == "/api/billing/portal":
+                code, out = billing_api.portal(auth_api.user_for(self._token()), self._site_base())
+            elif p == "/api/employer/company":
+                code, out = employers_api.save_company(auth_api.user_for(self._token()), payload)
+            elif p == "/api/employer/job":
+                code, out = employers_api.save_job(auth_api.user_for(self._token()), payload)
+            elif p == "/api/employer/job/status":
+                code, out = employers_api.set_status(auth_api.user_for(self._token()), payload)
+            elif p == "/api/employer/applicant":
+                code, out = employers_api.set_stage(auth_api.user_for(self._token()), payload)
+            elif p == "/api/employer/import":
+                code, out = employers_api.import_page(auth_api.user_for(self._token()), payload.get("url"))
             else:
                 code, out = uaply_api.record_decision(payload)
         except Exception as e:
@@ -360,4 +518,51 @@ class H(http.server.SimpleHTTPRequestHandler):
 class Server(http.server.ThreadingHTTPServer):
     request_queue_size = 128         # Python's default of 5 refuses connections outright when a burst of visitors arrives at once
 
-Server((BIND, port), H).serve_forever()
+
+def startup_summary():
+    """One line in the host's log saying what this server will do: where records go and which features are on. Never a secret, only on/off."""
+    if not api:
+        return "[uaply] serving %s on %s:%d" % (root, BIND, port)
+    try:
+        json.loads(os.environ.get("UAPLY_CONFIG_JSON") or "{}")
+        cfg_note = "valid" if os.environ.get("UAPLY_CONFIG_JSON") else "not set"
+    except ValueError:
+        cfg_note = "NOT VALID JSON, ignored"
+    bill = billing_api.settings()
+    disk = {True: "persistent disk", False: "NOT a persistent disk: everything is lost at the next deploy", None: "local folder"}[PERSISTENT]
+    return ("[uaply] %s on %s:%d (%s) | data: %s (%s) | feeds: %s | email: %s | owner pages: %s | AI answers: %s | payments: %s | UAPLY_CONFIG_JSON: %s"
+            % (os.path.basename(root), BIND, port, "public" if PUBLIC else "this computer only", DATA_DIR, disk,
+               ",".join(sorted(jobs_api.feeds_allowed())) or "off", "on" if uaply_api.mail_ready() else "off (test inbox only)",
+               ("on" if OWNER_PASSWORD else "off (no OWNER_PASSWORD)") if PUBLIC else "on", "on" if chat_api.ai_ready() else "off",
+               ("on, %s mode" % ("test" if bill["test"] else "LIVE")) if bill["on"] else "off", cfg_note))
+
+
+_busy, _busy_lock = [0], threading.Lock()
+srv = Server((BIND, port), H)
+
+
+def _stop(signum, frame):
+    """A host stops the server with SIGTERM at every deploy (Render then waits 30 seconds before forcing it). Stop taking new requests, let the
+    ones in progress finish (a swipe that is sending an email, a sign-up), then exit normally."""
+    sys.stderr.write("[uaply] stopping (signal %d): finishing %d request(s) in progress\n" % (signum, _busy[0]))
+    sys.stderr.flush()
+    threading.Thread(target=srv.shutdown, daemon=True).start()     # shutdown() waits for serve_forever, so it cannot run on this thread
+
+
+for _sig in ("SIGTERM", "SIGBREAK"):          # SIGBREAK: Ctrl+Break on Windows, the same stop on the owner's own computer
+    if hasattr(signal, _sig):
+        signal.signal(getattr(signal, _sig), _stop)
+
+sys.stderr.write(startup_summary() + "\n")
+if PUBLIC and api and PERSISTENT is False:
+    sys.stderr.write("[uaply] WARNING: %s is not on a persistent disk. Accounts, applications and feedback will disappear at the next deploy. "
+                     "In Render: the service, Disks, add a disk with mount path %s.\n" % (DATA_DIR, DATA_DIR))
+sys.stderr.flush()
+srv.serve_forever()
+time.sleep(0.2)                               # a connection accepted just before the stop gets to read its request line
+_until = time.time() + 20                    # well inside Render's 30 seconds before it forces the stop
+while _busy[0] > 0 and time.time() < _until:
+    time.sleep(0.05)
+srv.server_close()
+sys.stderr.write("[uaply] stopped%s\n" % ("" if _busy[0] <= 0 else " (%d request(s) did not finish in time)" % _busy[0]))
+sys.stderr.flush()
