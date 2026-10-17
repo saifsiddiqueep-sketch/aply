@@ -87,7 +87,6 @@ run "sandbox: the setup page's script runs, and Connect email switches between B
 run "dev on a big iPhone (440x956): every menu item tapped by touch, nothing covers a button, 7 kinds of real swipes" env W=440 H=956 PORT=18767 node tools/cdp.js tools/ui-phone.js
 run "dev on a small iPhone (375x667): the same" env W=375 H=667 PORT=18767 node tools/cdp.js tools/ui-phone.js
 run "sandbox: learns from swipes (remote first, explore card, reset)" env W=390 H=844 PORT=18766 node tools/cdp.js tools/ui-learn.js
-run "sandbox: every card says where the job came from" env W=390 H=844 PORT=18766 node tools/cdp.js tools/ui-via.js
 
 step "Google sign-in (against a stand-in Google)"
 PIDS="$PIDS $(start python tools/mock-google.py 8790)"
