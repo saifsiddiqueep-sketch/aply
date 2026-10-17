@@ -6,6 +6,21 @@ production page and only changes when the owner decides.
 
 ## Unreleased (sandbox and dev)
 
+### Phone apps ready for the stores
+- The apps now open **https://uaply.net** (was the Render dev address).
+- **Google Play's new rule:** since August 31, 2026 new apps must target Android 16 (API 36). The Android project targeted
+  API 35 and would have been refused; it now targets API 36 (Android Gradle Plugin 8.10.1, which API 36 needs).
+- **Offline screen really shows now:** the "can't connect" page existed but was never wired up, so a phone without internet
+  saw a blank error. It now appears whenever the site does not load, and Try again (or reconnecting) goes back to the site.
+- Android 15 and 16 draw apps edge to edge; the app now keeps the page between the status bar and the navigation bar.
+- **"Continue with Google" is hidden inside the phone apps** (Android too, not only iPhone): Google refuses its sign-in
+  inside an app's built-in web view, so the button could only fail there. The website keeps it.
+- iPhone project: iPhone-only (no iPad screenshots or iPad review), and it declares standard encryption only, so App Store
+  Connect stops asking the export question on every build.
+- New `mobile/build-android.ps1`: one command builds the Android test app or the signed Play bundle on Windows (downloads the
+  free tools with checksum checks; you accept Google's SDK license yourself; the upload key and its password never go in git).
+- New `codemagic.yaml`: builds, signs and uploads the iPhone app to TestFlight on Codemagic's free cloud Mac (manual start only).
+
 ### Post a job from an existing job post (sandbox) — Mohammed
 - **Post a job** shows two options on one page. Option 1, at the top: "Start from your existing job post": paste a link, or
   paste the job text, and UAply fills in the form (title, job type, work style, place, pay, years, education, skills, majors,

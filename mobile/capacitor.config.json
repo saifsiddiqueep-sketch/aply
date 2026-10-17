@@ -3,9 +3,10 @@
   "appName": "UAply",
   "webDir": "www",
   "server": {
-    "url": "https://uaply-dev.onrender.com",
-    "cleartext": false
+    "url": "https://uaply.net",
+    "cleartext": false,
+    "errorPath": "index.html"
   },
   "ios": { "contentInset": "always" },
-  "android": { "allowMixedContent": false }
+  "android": { "allowMixedContent": false, "adjustMarginsForEdgeToEdge": "auto" }
 }
