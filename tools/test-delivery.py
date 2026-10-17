@@ -61,7 +61,7 @@ HOOK = "http://127.0.0.1:%d/apply" % srv.server_address[1]
 
 # ---- a stand-in mail server ----
 mail_file = os.path.join(TMP, "mail.jsonl")
-smtp_port = 2529
+smtp_port = int(sys.argv[1]) if len(sys.argv) > 1 else 2529           # another port can be given, so two test runs never collide
 proc = subprocess.Popen([sys.executable, os.path.join(HERE, "fake-smtp.py"), str(smtp_port), mail_file], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1.5)
 
@@ -155,6 +155,21 @@ open(mail_file, "w").close()
 code, out = apply("Email Only Co", email_addr="alex@example.com", resume=None)
 time.sleep(1)
 t("email-only: sent by email, no webhook call", (out["status"], uaply_api.APPS[-1]["channels"], len(Employer.calls)), ("sent", ["email"], 0))
+
+# 4b. a name that looks like an address must never become the address the employer's Reply goes to, and the sender is named UAply
+reset()
+open(mail_file, "w").close()
+j = jobs["Email Only Co"]
+hostile = {"consent": True, "confirm_real": True, "job": {"id": j["id"], "co": j["co"], "role": j["role"], "url": j["url"], "loc": j["loc"], "contact": j["contact"]},
+           "profile": {"name": "Sam <attacker@evil.example>", "email": "sam.h@example.com"}}
+code, out = uaply_api.submit(hostile, {"id": 3, "email": "sam.h@example.com", "emailVerified": True})
+time.sleep(1)
+got = [email.message_from_string(json.loads(x)["raw"], policy=email.policy.default) for x in open(mail_file, encoding="utf-8") if x.strip()]
+to_employer = [m for m in got if m["To"] == "hr@emailonly.example"]
+rt = to_employer[0]["Reply-To"].addresses if to_employer else ()
+t("a name shaped like an address: the employer's Reply still goes only to the verified email",
+  (out["status"], [a.addr_spec for a in rt], [a.display_name for a in rt]), ("sent", ["sam.h@example.com"], ["Sam <attacker@evil.example>"]))
+t("the sender shows as UAply even when only a bare address is set up", [m["From"].addresses[0].display_name for m in got], ["UAply"] * len(got))
 
 # 5. retries
 reset()

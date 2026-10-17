@@ -11,7 +11,7 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-PORT = 8797
+PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8797                # another port can be given, so two test runs never collide
 os.environ["UAPLY_ATS_BASE_GREENHOUSE"] = "http://127.0.0.1:%d" % PORT
 os.environ["UAPLY_ATS_BASE_LEVER"] = "http://127.0.0.1:%d" % PORT
 os.environ["UAPLY_DATA_DIR"] = tempfile.mkdtemp()

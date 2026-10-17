@@ -35,6 +35,7 @@ import urllib.request
 import uuid
 import html
 from email.message import EmailMessage
+from email.utils import formataddr, parseaddr
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(ROOT, "data")
@@ -328,12 +329,21 @@ def _post_webhook(url, secret, payload):
     return False, reason
 
 
+def _from(cfg):
+    """The sender of every UAply email. A bare address (what /setup saves) gets the name "UAply", so inboxes show UAply as the sender
+    instead of the part before the @; an address that already carries a name is used as it is."""
+    v = (cfg.get("smtp") or {}).get("from_addr") or ""
+    name, addr = parseaddr(v)
+    return v if name or not addr else formataddr(("UAply", addr))
+
+
 def _send_email(cfg, to, cand, job, note, original="", resume=None):
     s = cfg["smtp"]
     msg = EmailMessage()
-    msg["From"] = s["from_addr"]
+    msg["From"] = _from(cfg)
     msg["To"] = to
-    msg["Reply-To"] = "%s <%s>" % (cand["name"], cand["email"])
+    # the name is quoted, so a name such as "Sam <someone@else.example>" can never become the address the employer's Reply goes to
+    msg["Reply-To"] = formataddr((cand["name"], cand["email"]))
     test = _redirect(cfg) == to
     msg["Subject"] = "%sApplication: %s - %s" % ("[TEST] " if test else "", job["role"], cand["name"])
     extra = ("\nTest redirect: this would have gone to %s.\n" % (original or "the company's application page")) if test else ""
@@ -407,7 +417,7 @@ def _copy_message(cfg, rec):
     """The owner's copy of one application, as plain text plus an HTML version (built apart from sending so it can be tested)."""
     subject, text, page = emails.owner_copy(_mail_ctx(cfg, rec, rec.get("note", "")))
     msg = EmailMessage()
-    msg["From"], msg["To"], msg["Subject"] = cfg["smtp"]["from_addr"], _owner_copy(cfg), subject
+    msg["From"], msg["To"], msg["Subject"] = _from(cfg), _owner_copy(cfg), subject
     msg.set_content(text)
     msg.add_alternative(page, subtype="html")
     return msg
@@ -434,7 +444,7 @@ def _send_owner_copy(cfg, rec):
 def _send_receipt(cfg, to, subject, body, page=None, reply_to=None):
     s = cfg["smtp"]
     msg = EmailMessage()
-    msg["From"] = s["from_addr"]
+    msg["From"] = _from(cfg)
     msg["To"] = to
     msg["Subject"] = subject
     if reply_to and EMAIL_RE.match(reply_to):             # pressing Reply answers this address (only a plain, valid address is ever used)

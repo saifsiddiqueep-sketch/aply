@@ -101,7 +101,7 @@ t("owner copy: lists the applicant and the job", "Sam Rivera" in text and "THE J
 
 # ---- a real send through the stand-in mail server ----
 mail_file = os.path.join(TMP, "mail.jsonl")
-port = 2527
+port = int(sys.argv[1]) if len(sys.argv) > 1 else 2527                # another port can be given, so two test runs never collide
 proc = subprocess.Popen([sys.executable, os.path.join(HERE, "fake-smtp.py"), str(port), mail_file], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 try:
     time.sleep(1.5)
