@@ -147,7 +147,7 @@
    "body": "There are three plans. Free: 50 applications a week. Plus ($9.99 a month): 250 a week, plus extra filters and Message the hiring manager. Pro ($19.99 a month): unlimited applications. Limits count the last 7 days. Open Profile, then Plan and billing to see your usage, switch or cancel. In this test version no real payments are taken: choosing a plan only records a test payment and no card is ever asked for.",
    "go": "prof:plan",
    "release": {
-    "body": "Open Profile, then Plan and billing. Free includes 50 applications a week; Plus ($9.99 a month) gives 250 a week, extra filters and Message the hiring manager; Pro ($19.99 a month) has unlimited applications. Limits count the last 7 days, and jobs you finish on the employer's own site do not count. You need an account to choose a plan. Payments are made on Stripe's own secure page, so UAply never sees your card number, and you can cancel any time in Manage billing. If the screen says payments are not switched on yet, every account is on Free with no weekly limit and nothing can be charged."
+    "body": "Open Profile, then Plan and billing. While it says paid plans are coming, UAply is free during early access: no weekly limit on applications, every filter and Message the hiring manager are included, and nothing is charged. When paid plans start, the page shows Free (50 applications a week), Plus ($9.99 a month, 250 a week) and Pro ($19.99 a month, unlimited). You need an account to choose one, payment is made on Stripe's own secure page so UAply never sees your card number, and you can cancel any time in Manage billing."
    }
   },
   {
@@ -168,7 +168,7 @@
    "id": "contact",
    "title": "Talk to a person",
    "tags": "human person agent support contact email help team call",
-   "body": "Tap Talk to a person in this chat to email the UAply team, or leave a message here with your email and someone will get back to you.",
+   "body": "Tap Talk to a person in this chat to email the UAply team, or leave a message here with your email and someone will get back to you. You can also email uaplytechnologies@uaply.net; the Support page (linked at the bottom of the app) says what to include, and we usually reply within 2 business days.",
    "go": ""
   },
   {

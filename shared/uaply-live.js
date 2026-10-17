@@ -35,7 +35,7 @@ function patch(s){
   /* every real listing names its source and links to the original; example listings say they are examples */
   s=once(s,"<p class=\"blurb\">'+esc(j.blurb)+'</p>","<p class=\"blurb\">'+esc(j.blurb)+'</p>'+(j.url?'<button type=\"button\" class=\"linkbtn\" data-open=\"'+esc(j.url)+'\">View original posting ↗</button>':'')+(j.live?'<small class=\"note\">Source: '+esc(j.source||'the employer')+'</small>':'<small class=\"note\">Example listing, not a real opening.</small>')+'");
   s=once(s,'toast(dir==="applied"?"Applied to "+job.co+" · "+m.pct+"% match":"Passed on "+job.co,"Undo",undo);',
-    'if(dir==="applied"&&(job.live||window.__uaplyMode==="test")&&window.__uaplyQuiet&&window.__uaplySubmitOn){}else if(dir==="applied"&&job.url&&!window.__uaplyOnApplied){toast("Saved "+job.co+" · "+m.pct+"% match. Finish on their site.","Open",function(){window.__uaplyOpen(job.url)})}else{toast(dir==="applied"?"Saved "+job.co+" to Applied · "+m.pct+"% match":"Passed on "+job.co,"Undo",undo)}');
+    'if(dir==="applied"&&(job.live||window.__uaplyMode==="test")&&window.__uaplyQuiet&&window.__uaplySubmitOn){}else if(dir==="applied"&&job.url&&!window.__uaplyOnApplied){toast("Saved "+job.co+" · "+m.pct+"% match. Finish on their site.","Open",function(){window.__uaplyOpen(job.url)})}else{toast(dir==="applied"?"Saved "+job.co+" to Applied · "+m.pct+"% match"+(window.__uaplyPreview&&window.__uaplyPreview()?". "+window.__uaplyPreviewText:""):"Passed on "+job.co,"Undo",undo)}');
   return s;
 }
 
@@ -70,7 +70,10 @@ function apply(w,host){
     try{w.__uaply.renderAll()}catch(e){}
   }
   say("Loading real postings…");
-  return fetch("/api/jobs").then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}).then(function(data){
+  return fetch("/api/jobs").then(function(r){
+    /* a plain web host with no UAply server (a 404, or an HTML page): a preview. Show the example jobs and say so; a 5xx stays an outage */
+    if(r.status===404||(r.ok&&/text\/html/i.test(r.headers.get("content-type")||""))){var pe=new Error("preview");pe.preview=true;throw pe}
+    if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}).then(function(data){
     w.__uaplyLoadingJobs=false;
     var now=Date.now(),fresh=(data.jobs||[]).map(function(j){j.seen=now;return j});
     if(fresh.length>=5)w.__uaplyHideSamples=true;      /* set before adding, so the deck renders once */
@@ -82,7 +85,9 @@ function apply(w,host){
     writeCache(all);
     var src=Object.keys(data.sources||{}).map(function(k){return k+": "+data.sources[k]}).join(" · ");
     say("Real postings: "+fresh.length+" loaded ("+added+" new). "+src);
-  }).catch(function(e){w.__uaplyLoadingJobs=false;if(REL)w.__uaplyJobsFailed=true;if(REL){try{w.__uaply.renderAll()}catch(x){}}say(REL?"Could not load jobs ("+e.message+"). Check your connection and try again.":"Could not load real postings ("+e.message+"). Showing the example jobs.")});
+  }).catch(function(e){w.__uaplyLoadingJobs=false;
+    if(e&&e.preview){w.__uaplyPreviewOn=true;w.__uaplyHideSamples=false;w.__uaplyJobsFailed=false;try{w.__uaply.renderAll()}catch(x){}say(w.__uaplyPreviewText||"Preview: example jobs only.");return}
+    if(REL)w.__uaplyJobsFailed=true;if(REL){try{w.__uaply.renderAll()}catch(x){}}say(REL?"Could not load jobs ("+e.message+"). Check your connection and try again.":"Could not load real postings ("+e.message+"). Showing the example jobs.")});
 }
 
 /* ---------------- kit + submit ---------------- */
@@ -105,6 +110,7 @@ function kitApply(w,host){
   function post(path,body){
     /* a reply that is not JSON (a host's "Bad gateway" page, say) is a server problem, not "you're offline": only a request that never
        arrived rejects, which is what queues the application for when the connection is back */
+    if(w.__uaplyPreview&&w.__uaplyPreview())return Promise.resolve({ok:false,j:{error:w.__uaplyPreviewText,code:"preview"}});   /* no server here: say so */
     return w.fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j}},function(){return {ok:false,j:{error:"UAply's server had a problem and nothing was sent. Try again in a moment.",code:"server"}}})});
   }
   /* contact lines under the note, from the Application profile experiment (empty if it is off) */
@@ -407,7 +413,7 @@ function kitApply(w,host){
           if(retry){if(j.code!=="server")mark("failed");return}          /* a server hiccup keeps it waiting for the next try */
           revert();
           var act=j.code==="limit"?["See plans",function(){var b=d.getElementById("nb-prof");if(b){b.click();var it=d.querySelector('.nwrap[data-k=prof] .nitem[data-v=plan]');if(it)it.click()}}]
-                  :j.code==="slow_down"||j.code==="server"?["",null]:(j.code==="signin"||j.code==="verify")?["Open Account",openAccount]:["Open Profile",openProfile];
+                  :j.code==="slow_down"||j.code==="server"||j.code==="preview"?["",null]:(j.code==="signin"||j.code==="verify")?["Open Account",openAccount]:["Open Profile",openProfile];
           toast((j.error||"Could not send your application.")+" "+job.co+" is back in your deck.",act[0],act[1],9000);return;
         }
         if(j.status==="needs_answers"){
@@ -455,6 +461,7 @@ function kitApply(w,host){
 
   w.__uaplyOnApplied=sheet;   /* tells the live patch the apply assistant is on */
   w.__uaplyOnDecision=function(dir,job,m,p,undo,S,save){
+    if(w.__uaplyPreview&&w.__uaplyPreview())return;          /* a preview with no server: the swipe is only saved here, and the toast says so */
     var ready=!!(w.__uaplySubmitOn&&w.__uaplyMode);
     if(ready){
       post("/api/decision",{session:session(),dir:dir==="applied"?"apply":"pass",jobId:job.id,co:job.co,role:job.role,pct:m.pct}).catch(function(){});
@@ -466,6 +473,11 @@ function kitApply(w,host){
     else if(job.url)sheet(job,m,p,undo,S,save);
   };
   w.__uaplyQuiet=!showSheet;
+  /* Data and privacy: when this browser agreed (null if never, or only to an earlier version), and Show it again, which forgets the
+     saved agreement for this build and opens the box; `done(agreed)` is called with the answer */
+  w.__uaplyConsentInfo=function(){try{var c=JSON.parse(w.localStorage.getItem(consentKey()));return c&&typeof c==="object"?{at:+c.at||0,current:c.v===CONSENT_V}:null}catch(e){return null}};
+  w.__uaplyConsentAgain=function(done){try{w.localStorage.removeItem(consentKey())}catch(e){}var o=d.getElementById("kitConsent");if(o)o.remove();
+    ensureConsent(function(){if(done)done(true)},function(){if(done)done(false)},true)};
   if(consentFirst&&!showSheet){
     /* not while someone is in Hiring mode: employers do not swipe. Hiring mode calls this again when they switch back */
     w.__uaplyAskConsent=function(){if(!hasConsent()&&!d.body.classList.contains("hire"))ensureConsent(function(){},function(){},true)};

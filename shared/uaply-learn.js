@@ -17,7 +17,7 @@ var K={
   slow:-0.6,fast:-0.25,undoRight:-0.3,/* swipe left after reading (2 s or more); swipe left in under 0.7 s; Undo of a swipe right */
   fastMs:700,slowMs:2000,             /* a swipe left between the two is weighed in between, in a straight line */
   keep:300,fade:0.98,                 /* only the last 300 swipes count; each day of age multiplies a swipe's weight by 0.98 */
-  cap:1.5,                            /* one attribute adds at most +1.5 to the log-odds */
+  cap:1.5,                            /* one attribute moves the log-odds at most 1.5 either way (+1.5 or -1.5), so a few passes never bury a whole kind of job */
   early:30,capEarly:25,capLate:40,    /* the learned part of a score: at most 25 points either way before 30 swipes, 40 after */
   every:5,                            /* one card in every five comes from outside the top of the learned ranking */
   priorN:8,                           /* the card draw (Thompson sampling) counts the match score as 8 swipes of evidence, so a weak job is not over-explored */
@@ -100,7 +100,7 @@ function evidence(list,now){
 }
 function logit(p){return Math.log(p/(1-p))}
 function sig(z){return 1/(1+Math.exp(-z))}
-/* logit(p) = logit(p0) + sum over the job's attributes of min(1.5, log((likes+1)/(dislikes+1)) - log((all yes+1)/(all no+1)));
+/* logit(p) = logit(p0) + sum over the job's attributes of a value held between -1.5 and +1.5 of log((likes+1)/(dislikes+1)) - log((all yes+1)/(all no+1));
    the learned part is then limited to 25 points (40 from 30 swipes on). fit = the profile match (0-100).
    An attribute never swiped adds nothing (never shown = unknown, not a no). */
 function score(j,fit,E){
@@ -108,7 +108,7 @@ function score(j,fit,E){
   var p0=Math.min(0.99,Math.max(0.01,fit/100)),z=logit(p0),parts=[],mass=0,base=K.center?Math.log(((E.L||0)+1)/((E.D||0)+1)):0;
   attrs(j).forEach(function(a){
     var l=E.like[a]||0,d=E.dis[a]||0;if(!l&&!d)return;
-    var raw=Math.log((l+1)/(d+1))-base,c=Math.min(K.cap,raw);
+    var raw=Math.log((l+1)/(d+1))-base,c=Math.max(-K.cap,Math.min(K.cap,raw));
     z+=c;mass+=l+d;parts.push({a:a,raw:raw,c:c});
   });
   var p=sig(z),lim=E.n<K.early?K.capEarly:K.capLate,pts=Math.max(-lim,Math.min(lim,100*(p-p0)));

@@ -86,6 +86,6 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   await sleep(500);
   check("assistant panel appears", await ev("!!" + F + ".querySelector('#uaChat, .uaChat, [id^=uaChat]:not(#uaChatBtn)')"));
   // legal bar
-  check("legal bar links", (await ev(F + ".querySelectorAll('#legalbar a').length")) === 4);
+  check("legal bar links (Terms, Privacy, AI and matching, Copyright, Support)", (await ev(F + ".querySelectorAll('#legalbar a').length")) === 5);
   console.log(bad ? "\n" + bad + " check(s) failed" : "\nAll sweep checks passed");
 };

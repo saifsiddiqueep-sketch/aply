@@ -1,5 +1,5 @@
 // Release check for the dev build at phone size: no test or developer content anywhere, real jobs only, a blank new profile,
-// no paid plans, and a working account area.
+// buy buttons only where the server allows them (keys set, or the owner's own computer), and a working account area.
 //   W=390 H=844 PORT=8767 node tools/cdp.js tools/ui-release.js
 const PORT = process.env.PORT || "8767";
 module.exports = async ({ ev, sleep, nav, logs }) => {
@@ -11,16 +11,19 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   const sub = (s) => ev("(()=>{const e=[...(" + F + ").querySelectorAll('button,a,[role=tab]')].find(b=>b.offsetParent&&b.innerText.split(/\\s+/).join(' ').trim().startsWith(" + JSON.stringify(s) + "));if(e)e.click();return !!e})()");
   const setVal = (id, v) => ev("(()=>{const e=" + F + ".getElementById('" + id + "');if(!e)return false;e.value=" + JSON.stringify(v) + ";e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
   // words that must never reach a real user of the release build
-  const BANNED = /SANDBOX|TEST MODE|\(test\)|simulated|Sandbox controls|Northwind|Calloway|Ironbridge|Seaside Software|Redwood Marketing|Atlas Robotics|Harbor Bank|Summit Health|Corner Table|Brightpath|Lumen Labs|Release candidate|Choose Plus|Choose Pro|Jordan Lee/i;
+  const BANNED = /SANDBOX|TEST MODE|\(test\)|simulated|Sandbox controls|Northwind|Calloway|Ironbridge|Seaside Software|Redwood Marketing|Atlas Robotics|Harbor Bank|Summit Health|Corner Table|Brightpath|Lumen Labs|Release candidate|Jordan Lee/i;
   // words no visitor may see on any screen, even on the owner's own computer: developer addresses, filler, coding-tool names,
   // promises the app does not keep (no profile sync between devices, password reset exists)
-  const NEVER = /localhost|127\.0\.0\.1|example\.com|lorem|\bTODO\b|test version|Claude|Anthropic|follow you to any device|isn't available yet/i;
+  const NEVER = /localhost|127\.0\.0\.1|example\.com|lorem|\bTODO\b|test version|Claude|Anthropic|follow you to any device|isn't available yet|\bTBD\b|Switch to hiring/i;
   // owner-only hints ("test inbox", "on this computer") are fine on the owner's own computer, never on a hosted server
   const owner = JSON.parse(await (async () => { try { return JSON.stringify((await (await fetch("http://127.0.0.1:" + PORT + "/api/chat/config")).json()).owner === true); } catch (e) { return "false"; } })());
   const OWNER_ONLY = /test inbox|on this computer|Connect Gmail|Connect Stripe/i;
+  // the buy buttons: on a public server only when Stripe keys are set; then, or with the owner's test links, labelled as test mode
+  const BILL = JSON.parse(await (async () => { try { return JSON.stringify(await (await fetch("http://127.0.0.1:" + PORT + "/api/billing/status")).json()); } catch (e) { return "{}"; } })());
+  const TESTY = /TEST MODE|Choose Plus|Choose Pro/i;
   const scan = async (where) => {
-    const t = await pageText();
-    const m = t.match(BANNED) || t.match(NEVER) || (!owner && t.match(OWNER_ONLY));
+    const t = (await pageText()).split("Test mode: no real charges").join(" ");   // the one allowed test-mode label (Plan and billing)
+    const m = t.match(BANNED) || t.match(NEVER) || (!owner && t.match(OWNER_ONLY)) || (!BILL.buttons && t.match(TESTY));
     check("no test or developer wording on " + where, !m, m ? "found: " + m[0] : "");
   };
 
@@ -31,6 +34,16 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   check("jobs loaded from the server", (await ev("document.querySelector('iframe').contentWindow.__uaplyHideSamples === true")));
   check("a new visitor is told the scores use an example profile", await ev("getComputedStyle(" + F + ".getElementById('banner')).display !== 'none'"));
   check("no 'N jobs left' counters in the release build", await ev("getComputedStyle(" + F + ".getElementById('progress')).display === 'none'"));
+  // the agreement is asked once, at first open (consentFirst), with the wording Bot 7 corrected
+  for (let i = 0; i < 10 && !(await ev("!!" + F + ".getElementById('kcYes')")); i++) await sleep(300);
+  const agree = String(await ev("((" + F + ").getElementById('kitConsent')||{}).innerText||''"));
+  check("a clean browser is asked for the agreement at first open, before any swipe", /Before you start swiping/.test(agree), agree.slice(0, 60));
+  check("the agreement says what is sent (resume file included), that voluntary answers are never sent, and links the legal pages",
+    /resume file/.test(agree) && /voluntary answers .* are never sent/.test(agree) && /never emails a company that has not agreed/.test(agree) &&
+    (await ev("(" + F + ").querySelectorAll('#kitConsent a[href*=legal]').length")) === 3, agree.slice(0, 120));
+  await scan("the first screen, with the agreement open");
+  await ev(F + ".getElementById('kcYes').click()"); await sleep(500);
+  check("Hiring mode is not in the release build (no Switch to hiring pill)", !/Switch to hiring/.test(await pageText()));
   await scan("the first screen");
   console.log("   first card:", (await ev("(" + F + ").body.innerText.split(" + nl + ").filter(x=>x.trim()).slice(3,12).join(' | ')")).slice(0, 180));
 
@@ -58,16 +71,29 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
       check("account area shows the real sign-up form", !!(await ev("!!" + F + ".getElementById('sAgree')")), (await pageText()).slice(0, 140));
       check("no simulated sign-in buttons", !(await ev("!!" + F + ".querySelector('[data-auth=google],[data-auth=apple],[data-auth=sendlink],[data-auth=sendcode]')")));
     }
-    if (s === "Data") { await sleep(700);  const n = await ev(F + ".querySelectorAll('[data-legal]').length"); check("Data & privacy lists the legal pages", n === 5, "found " + n); }
+    if (s === "Data") {
+      await sleep(700); const n = await ev(F + ".querySelectorAll('[data-legal]').length"); check("Data & privacy lists the legal pages", n === 5, "found " + n);
+      const line = await ev("((" + F + ").getElementById('aAgreed')||{}).textContent||''");
+      check("Data & privacy says when you agreed", /^You agreed to the Terms and Privacy Policy on .*[0-9]{4}[.]$/.test(line), line);
+      await sub("Show it again"); await sleep(700);
+      check("Show it again clears the saved agreement and opens the box", await ev("!!" + F + ".getElementById('kcYes')") && (await ev("(()=>{try{return " + F + ".defaultView.localStorage.getItem(" + F + ".defaultView.__uaplyKey+'.consent')}catch(e){return 'x'}})()")) === null);
+      await ev(F + ".getElementById('kcYes').click()"); await sleep(600);
+      check("agreeing again saves it and the line comes back", /^You agreed to the Terms and Privacy Policy on /.test(await ev("((" + F + ").getElementById('aAgreed')||{}).textContent||''")));
+    }
+    if (s === "Plan") {
+      const t = await pageText(), choose = await ev("(" + F + ").querySelectorAll('[data-bill=plus],[data-bill=pro],[data-bill=signin]').length");   // with keys and no account yet: Sign in to choose Plus / Pro
+      if (BILL.buttons) check("Plan and billing offers Choose Plus and Choose Pro here, labelled as test mode when it is (server: buttons on)", choose === 2 && (!(BILL.test || !BILL.enabled) || /Test mode: no real charges/.test(t)), "buttons " + choose);
+      else check("Plan and billing on a public server without Stripe keys: no buy buttons, early access said plainly", choose === 0 && /Paid plans are coming. UAply is free during early access./.test(t), "buttons " + choose);
+    }
   }
 
   // every link a visitor can tap here (Data & privacy, the fine print under the menu) opens the right page, and so does every link
   // inside those legal pages. The legal pages must also not name screens that no longer exist.
   const hrefs = JSON.parse(await ev("JSON.stringify([...new Set([...(" + F + ").querySelectorAll('a[href]'),...document.querySelectorAll('a[href]')].map(a=>a.href))])"));
-  const TITLES = { "terms.html": "Terms of Service", "privacy.html": "Privacy Policy", "ai-and-employment.html": "AI and matching", "copyright.html": "Copyright and content", "index.html": "UAply legal", "": "UAply legal" };
+  const TITLES = { "support.html": "UAply Support", "terms.html": "Terms of Service", "privacy.html": "Privacy Policy", "ai-and-employment.html": "AI and matching", "copyright.html": "Copyright and content", "index.html": "UAply legal", "": "UAply legal" };
   const OLD_SCREENS = /Profile, Settings|Profile, Preferences|Resume and links|Profile, Resume|Settings screen/;
   const seen = new Set(), queue = hrefs.filter((u) => u.includes("/legal/"));
-  check("the legal links are there to tap", queue.length >= 5, queue.length + " legal links");
+  check("the legal links are there to tap, Support included", queue.length >= 6 && queue.some((u) => u.endsWith("/legal/support.html")), queue.length + " legal links");
   while (queue.length) {
     const u = queue.shift().split("#")[0];
     if (seen.has(u)) continue;
@@ -83,6 +109,14 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
       if (next.startsWith("http://127.0.0.1:" + PORT + "/legal/") && !seen.has(next)) queue.push(next);
     }
   }
+
+  // Help, then Talk to a person: the Support page is offered and opens
+  await ev("(()=>{const b=(" + F + ").getElementById('uaChatBtn');if(b)b.click()})()"); await sleep(900);
+  await ev("(()=>{const e=[...(" + F + ").querySelectorAll('#uaChat button')].find(b=>b.innerText.trim()==='Talk to a person');if(e)e.click()})()"); await sleep(900);
+  const sup = await ev("((" + F + ").querySelector('#uaChat a[data-support]')||{}).href||''");
+  const supSt = sup ? await ev("fetch(" + JSON.stringify(sup) + ").then(r=>r.status)") : 0;
+  check("Help, Talk to a person links the Support page, and it opens", /\/legal\/support\.html$/.test(sup) && supSt === 200, sup + " " + supSt);
+  await ev("(()=>{const b=(" + F + ").getElementById('uaChatX');if(b)b.click()})()"); await sleep(300);
 
   // the help assistant's answers to its own starter questions, as the release build gives them
   const ask = (q) => ev("fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:" + JSON.stringify(q) + "}]})}).then(r=>r.json()).then(j=>JSON.stringify({a:j.answer||j.error||'',src:(j.sources||[]).map(s=>s.id)}))");
@@ -123,17 +157,19 @@ module.exports = async ({ ev, sleep, nav, logs }) => {
   // swiping right on a real job: consent once, then the hand-off to the employer's own page, and it appears under Applied
   await pick("nb-svc", "Internships"); await sleep(800);
   await ev(F + ".getElementById('btnYes').click()"); await sleep(1200);
-  // the first-swipe agreement says what really happens: the resume file goes too, voluntary answers never do, nobody unasked is emailed
-  const agree = String(await ev("((" + F + ").getElementById('kitConsent')||{}).innerText||''"));
-  check("the first-swipe agreement says what is sent (resume file included), that voluntary answers are never sent, and links the legal pages",
-    /resume file/.test(agree) && /voluntary answers .* are never sent/.test(agree) && /never emails a company that has not agreed/.test(agree) &&
-    (await ev("(" + F + ").querySelectorAll('#kitConsent a[href*=\"legal/\"]').length")) === 3, agree.slice(0, 120));
+  check("no agreement box at the first swipe right (it was answered at first open)", !(await ev("!!" + F + ".getElementById('kcYes')")));
   await ev("(()=>{const m=" + F + ".getElementById('kcYes');if(m)m.click()})()"); await sleep(2200);
   const after = await pageText();
   check("swiping right on a real job says plainly what happened (applied, or finish at the employer)", /Saved\. Finish applying at|Not sent yet: .* takes applications on its own site|Applied to/i.test(after), after.slice(-160));
   await ev(F + ".getElementById('nb-dash').click()"); await sleep(400);
   await sub("Applied"); await sleep(600);
   check("the swiped job appears under Dashboard > Applied", (await ev(F + ".querySelectorAll('.app,.appitem,[data-app],article,.row').length")) > 0 || /intern/i.test(await pageText()));
+  // Learns from your swipes is in dev: after a few swipes the learner holds them, and a card carries the "Learned from your swipes" line
+  await ev(F + ".getElementById('nb-svc').click()"); await sleep(300); await sub("Full-time"); await sleep(800);
+  for (let i = 0; i < 8; i++) { await ev("(()=>{const b=" + F + ".getElementById('btnNo');if(b)b.click()})()"); await sleep(700); }
+  const lr = JSON.parse(await ev("JSON.stringify((()=>{const w=document.querySelector('iframe').contentWindow;return {on:!!(w.__uaplyLearn&&w.__uaplyLearnOrder),n:w.__uaplyLearn?w.__uaplyLearn.state().ev.length:-1,line:[...w.document.querySelectorAll('.card .learned')].map(x=>x.textContent).filter(Boolean)[0]||''}})())"));
+  check("Learns from your swipes is on in dev and counted the swipes", lr.on && lr.n >= 6, JSON.stringify(lr).slice(0, 120));
+  check("after the swipes a card says 'Learned from your swipes'", /^Learned from your swipes/.test(lr.line), lr.line.slice(0, 120));
   check("no script errors", logs.length === 0, logs.join(" / ").slice(0, 160));
   console.log(bad ? "\n" + bad + " check(s) failed" : "\nAll release checks passed");
 };
