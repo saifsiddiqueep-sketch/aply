@@ -18,7 +18,7 @@ out_dir = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.expanduser(
 os.makedirs(out_dir, exist_ok=True)
 today = datetime.date.today().isoformat()
 
-rows, bad, empty = [], [], []
+rows, bad, empty, skipped = [], [], [], []
 for src in jobs_api.SOURCES:
     kind, token, name = src
     t0 = time.time()
@@ -28,23 +28,28 @@ for src in jobs_api.SOURCES:
         jobs, status = [], "error: %s" % type(e).__name__
     secs = time.time() - t0
     n = len(jobs)
-    state = "down" if status.startswith("error") else ("empty" if n == 0 else ("slow" if secs > 10 else "ok"))
+    state = ("skipped" if status == "no key" else                  # a feed that needs a key the owner has not added yet (USAJOBS): not down, just off
+             "down" if status.startswith("error") else ("empty" if n == 0 else ("slow" if secs > 10 else "ok")))
     if state == "down":
         bad.append(name + " (" + kind + "/" + token + ")")
     elif state == "empty":
         empty.append(name + " (" + kind + "/" + token + ")")
+    elif state == "skipped":
+        skipped.append(name + " (" + kind + "/" + token + ")")
     student = sum(1 for j in jobs if j.get("type") in ("internship", "coop", "parttime"))
     rows.append((state, name, kind, token, n, student, round(secs, 1), status))
 
-order = {"down": 0, "empty": 1, "slow": 2, "ok": 3}
+order = {"down": 0, "empty": 1, "skipped": 2, "slow": 3, "ok": 4}
 rows.sort(key=lambda r: (order[r[0]], r[1]))
 ok = sum(1 for r in rows if r[0] == "ok")
 lines = ["# UAply feed health, " + today, "",
-         "%d of %d boards answered with jobs. %d down, %d empty." % (ok + sum(1 for r in rows if r[0] == "slow"), len(rows), len(bad), len(empty)), ""]
+         "%d of %d boards answered with jobs. %d down, %d empty, %d skipped (no key)." % (ok + sum(1 for r in rows if r[0] == "slow"), len(rows), len(bad), len(empty), len(skipped)), ""]
 if bad:
     lines += ["**Down:** " + ", ".join(bad), ""]
 if empty:
     lines += ["**Empty (answered, but no jobs UAply can show):** " + ", ".join(empty), ""]
+if skipped:
+    lines += ["**Skipped (no key yet; add it in the Job feed keys box at /setup):** " + ", ".join(skipped), ""]
 lines += ["| State | Board | Source | Jobs | Internships, co-ops, part-time | Seconds | What the board said |", "|---|---|---|---|---|---|---|"]
 for state, name, kind, token, n, student, secs, status in rows:
     lines.append("| %s | %s | %s/%s | %d | %d | %s | %s |" % (state, name, kind, token, n, student, secs, status.replace("|", "/")[:120]))

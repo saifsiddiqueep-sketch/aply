@@ -15,7 +15,13 @@ plans, and it starts every new profile blank. `sandbox` is the test bench and ke
    the test inbox, so a real person cannot reset a password.
 4. **Real jobs:** `render.yaml` sets `UAPLY_FEEDS=greenhouse,lever,ashby` for dev and sandbox (link-out only: UAply never emails those
    employers). Those boards are public, but their terms do not clearly cover aggregators; have your attorney confirm, or remove the
-   line to switch them off (and keep `feeds` out of `UAPLY_CONFIG_JSON`, which would switch them on again). USAJOBS (free key) is the cleanest official source if you want to add one.
+   line to switch them off. More sources (each switched on by adding its name to `UAPLY_FEEDS` or to `"feeds"` in
+   `UAPLY_CONFIG_JSON`): `smartrecruiters` (City of Philadelphia, no key), `usajobs` (federal jobs; needs a free key from
+   https://developer.usajobs.gov/APIRequest/, skipped with the status "no key" until then), `muse` (register a free key at
+   https://www.themuse.com/developers/api/v2), `jobicy`, `remotive`. Keys go in `"feed_keys"`: on this computer paste them in the
+   "Job feed keys" box at `/setup`; on Render put them in `UAPLY_CONFIG_JSON`, e.g.
+   `{"feeds":["smartrecruiters","usajobs","muse","jobicy"],"feed_keys":{"usajobs":"","usajobs_email":"","muse":""}}`.
+   To switch one source off by name without touching the rest: `"feeds_off":["remotive"]` (or `UAPLY_FEEDS_OFF=remotive`).
 5. **Legal pages:** fill every yellow blank in `legal/` (company legal name, street address, contact and privacy email, launch date,
    DMCA agent, liability amount, governing state and county, how long records are kept, host, response time) and have a lawyer
    review them. They say "draft, not reviewed by a lawyer" until you do.

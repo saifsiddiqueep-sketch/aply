@@ -590,6 +590,11 @@ def submit(p, user=None):
     sal = known.get("sal") or pj.get("sal")
     job["sal"] = [int(sal[0]), int(sal[1])] if isinstance(sal, list) and len(sal) == 2 and all(isinstance(x, (int, float)) for x in sal) else [0, 0]
     job["desc"] = _s(known.get("desc") or known.get("blurb") or pj.get("blurb"), 900)
+    # where the posting came from ("via USAJOBS; apply on the official announcement"), from this server's own copy only: kept in the record and named in the receipt
+    if known.get("credit"):
+        job["via"] = _s(known.get("credit"), 200)
+    if _https(known.get("announcement")):
+        job["announcement"] = _https(known.get("announcement"))
     prof = p["profile"]
     cand = {"name": _s(prof.get("name"), 100), "email": _s(prof.get("email"), 200).lower(),
             "title": _s(prof.get("title"), 100), "loc": _s(prof.get("loc"), 100), "edu": _s(prof.get("edu"), 40)}

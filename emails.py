@@ -59,7 +59,8 @@ def _https(u):
 def _summary_rows(job, match):
     rows = [("Company", job.get("co")), ("Job title", job.get("role")), ("Location", job.get("loc")),
             ("Job type", TYPE_LABEL.get(job.get("type") or "job", "")), ("Work style", MODE_LABEL.get(job.get("mode"), "")),
-            ("Pay", _money(job.get("sal"))), ("Your match", ("%d%%" % match) if match else "")]
+            ("Pay", _money(job.get("sal"))), ("Your match", ("%d%%" % match) if match else ""),
+            ("Source", job.get("via")), ("Official announcement", _https(job.get("announcement")))]      # the feed is credited, as its terms ask
     return [(k, v) for k, v in rows if v]
 
 

@@ -1,0 +1,5811 @@
+{
+ "note": "Recorded October 16, 2026 from the public SmartRecruiters Posting API (no key): GET https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings?limit=100&offset=0 (list) and GET .../postings/{id} (three details). Used by tools/test-feeds.py; never served as jobs.",
+ "list": {
+  "offset": 0,
+  "limit": 100,
+  "totalFound": 67,
+  "content": [
+   {
+    "id": "744000155798810",
+    "name": "EBS Technical – Interface Lead",
+    "uuid": "8ca88f83-dfdb-4753-b40a-155ef0d20f4a",
+    "jobAdId": "68249072-654d-4ae4-a38a-724734e81591",
+    "defaultJobAd": true,
+    "refNumber": "REF4585L",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-10-15T15:58:25.580Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "4 East Penn Square",
+     "postalCode": "19103",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9521104",
+     "longitude": "-75.1628819",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16180811",
+     "label": "Finance - Interface Lead"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16180811",
+      "valueLabel": "Finance - Interface Lead"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000155798810",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000155760329",
+    "name": "Assistant City Solicitor or Deputy City Solicitor – Health and Adult Services Unit",
+    "uuid": "38fdd1e3-6685-49e9-b86e-d0c3a26ff505",
+    "jobAdId": "4de350d0-3150-4120-8f95-4d5e2cd20073",
+    "defaultJobAd": true,
+    "refNumber": "REF4611D",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-10-15T13:21:53.862Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1515 Arch Street",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9550887",
+     "longitude": "-75.16573149999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16421871",
+     "label": "La Law Department – Health and Adult Services Unit - Assistant City Solicitor or Deputy City Solicitor"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16421871",
+      "valueLabel": "La Law Department – Health and Adult Services Unit - Assistant City Solicitor or Deputy City Solicitor"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000155760329",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000155755699",
+    "name": "IT Network Engineer",
+    "uuid": "85a67699-d269-47ec-8073-9bcdef3be946",
+    "jobAdId": "ed9506fc-e1ba-4279-87e2-2f29df531243",
+    "defaultJobAd": true,
+    "refNumber": "REF4612T",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-10-15T13:01:29.521Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518153",
+     "longitude": "-75.1611403",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000155755699",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000155577744",
+    "name": "Mayor’s Office of Education - Student Loan Education Officer",
+    "uuid": "5d2625fc-21d7-4d12-a184-dd621cdab29b",
+    "jobAdId": "800c4f42-19e2-4df2-9608-e6ee1c5a702f",
+    "defaultJobAd": true,
+    "refNumber": "REF4610L",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-10-14T17:35:44.888Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "30 South 15th Street",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.951451",
+     "longitude": "-75.1659264",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16404531",
+     "label": "Mayor's Office of Education - Student Loan Education Officer"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16404531",
+      "valueLabel": "Mayor's Office of Education - Student Loan Education Officer"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000155577744",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000155577329",
+    "name": "Legal Assistant – Real Estate and Development Unit",
+    "uuid": "b1893570-225d-4430-b608-ed5292ef68f6",
+    "jobAdId": "9083e907-eb02-490d-a09b-b3f9af8fbafa",
+    "defaultJobAd": true,
+    "refNumber": "REF4609U",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-10-14T17:20:35.939Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1515 Arch Street",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9550887",
+     "longitude": "-75.16573149999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16404888",
+     "label": "Law Dept. - Legal Assistant – Real Estate and Development Unit"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16404888",
+      "valueLabel": "Law Dept. - Legal Assistant – Real Estate and Development Unit"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "61a0559f-5d55-4a02-9fe5-5a89767a8db8",
+      "valueLabel": "High School/GED"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000155577329",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000155573554",
+    "name": "Chief Deputy City Solicitor - Civil Rights Unit",
+    "uuid": "98347e7a-5ef7-4dc2-b308-5aa80ef788c3",
+    "jobAdId": "085d8fff-ec67-4430-94f2-569d5970e542",
+    "defaultJobAd": true,
+    "refNumber": "REF4608N",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-10-14T17:05:56.057Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1515 Arch Street",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9550887",
+     "longitude": "-75.16573149999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16404871",
+     "label": "Law Dept. - Chief Deputy City Solicitor - Civil Rights Unit"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16404871",
+      "valueLabel": "Law Dept. - Chief Deputy City Solicitor - Civil Rights Unit"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000155573554",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000155555952",
+    "name": "Software Engineer Manager-Mobile Development",
+    "uuid": "4f315af2-1e77-4a73-8c2c-22f3b24e2d61",
+    "jobAdId": "6760c698-4e31-49c5-b48c-15ea8ae3e25a",
+    "defaultJobAd": true,
+    "refNumber": "REF4607O",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-10-14T15:48:58.678Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518153",
+     "longitude": "-75.1611403",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "director",
+     "label": "Director"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000155555952",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000155516385",
+    "name": "Senior Software Engineer – Mobile Development (Android) ",
+    "uuid": "908677cf-1198-48dd-99df-d47d4dd6edc3",
+    "jobAdId": "522a8cb1-9b8a-4abe-ba7d-5437d9911773",
+    "defaultJobAd": true,
+    "refNumber": "REF4501D",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-10-14T13:40:53.472Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518029",
+     "longitude": "-75.1609222",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000155516385",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000155340769",
+    "name": "IT Analyst 3-Free Library Data Analyst ",
+    "uuid": "d7a57943-9f8c-4621-a09b-268c3e8a1e84",
+    "jobAdId": "e99dac52-4d82-40d0-b857-7e92cc368dac",
+    "defaultJobAd": true,
+    "refNumber": "REF4605Z",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-10-13T19:09:01.494Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518153",
+     "longitude": "-75.1611403",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000155340769",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000155338399",
+    "name": "Technical Support Specialist",
+    "uuid": "a786bacf-5849-40be-94b0-5bcdb8810ac9",
+    "jobAdId": "fd42a1b4-61b0-47a1-9c72-39e064e437aa",
+    "defaultJobAd": true,
+    "refNumber": "REF4604B",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-10-13T18:53:42.884Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518153",
+     "longitude": "-75.1611403",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "entry_level",
+     "label": "Entry Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000155338399",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000155280159",
+    "name": "Community School Coordinator",
+    "uuid": "16ab40d3-f0e0-42e8-863d-5d1fb0bc3173",
+    "jobAdId": "cb168125-1d30-4b37-86be-8e1db027686d",
+    "defaultJobAd": true,
+    "refNumber": "REF4603F",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-10-13T14:25:43.890Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "30 South 15th Street",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.951451",
+     "longitude": "-75.1659264",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16385151",
+     "label": "Mayor's Office of Education - Community School Coordinator 1"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16385151",
+      "valueLabel": "Mayor's Office of Education - Community School Coordinator 1"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "61a0559f-5d55-4a02-9fe5-5a89767a8db8",
+      "valueLabel": "High School/GED"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000155280159",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000154473335",
+    "name": "Senior Project Manager of Early Childhood Initiatives and Partnerships ",
+    "uuid": "418c8d67-2e0e-4df2-b7c3-99ab8b5f7af1",
+    "jobAdId": "214392aa-f61e-46e2-8507-9a46210288f0",
+    "defaultJobAd": true,
+    "refNumber": "REF4577Q",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-10-08T15:29:47.141Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1515 Arch Street",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9550887",
+     "longitude": "-75.16573149999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16137971",
+     "label": "Human Services - Senior Project Manager of Early Childhood Initiatives and Partnerships"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16137971",
+      "valueLabel": "Human Services - Senior Project Manager of Early Childhood Initiatives and Partnerships"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000154473335",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000154468061",
+    "name": "Senior Project Manager of Early Childhood Strategy, Policy and Planning",
+    "uuid": "89447889-20e0-4cd2-b3b3-838948426b8d",
+    "jobAdId": "a5837e33-c161-49cf-bb59-7ffbc9b7eea2",
+    "defaultJobAd": true,
+    "refNumber": "REF4578E",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-10-08T15:29:03.510Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1515 Arch Street",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9550887",
+     "longitude": "-75.16573149999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16146811",
+     "label": "MOE - DHS - Senior Project Manager of Early Childhood Strategy, Policy and Planning"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16146811",
+      "valueLabel": "MOE - DHS - Senior Project Manager of Early Childhood Strategy, Policy and Planning"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000154468061",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000154140042",
+    "name": "Graphic Designer - Mayor's Office of Communications",
+    "uuid": "dd66b0bf-2fcc-4808-942d-92911513f022",
+    "jobAdId": "8cf3b913-7b20-4ee1-b254-1d4eae23e030",
+    "defaultJobAd": true,
+    "refNumber": "REF4601J",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-10-07T15:36:06.798Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1400 John F Kennedy Boulevard",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9529176",
+     "longitude": "-75.1635407",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16344011",
+     "label": "Mayor's Office - Graphic Designer"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16344011",
+      "valueLabel": "Mayor's Office - Graphic Designer"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000154140042",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000154133829",
+    "name": "Content Creator - Mayor's Office of Communications",
+    "uuid": "f3816b99-5012-4084-a618-ecd27ec622b5",
+    "jobAdId": "426004ae-e348-4397-86d8-5ab317669b11",
+    "defaultJobAd": true,
+    "refNumber": "REF4600J",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-10-07T15:06:50.249Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1400 John F Kennedy Boulevard",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9529176",
+     "longitude": "-75.1635407",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16343671",
+     "label": "Mayor's Office - Content Creator"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16343671",
+      "valueLabel": "Mayor's Office - Content Creator"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "61a0559f-5d55-4a02-9fe5-5a89767a8db8",
+      "valueLabel": "High School/GED"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000154133829",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000153758214",
+    "name": "Deputy Managing Director, General Services",
+    "uuid": "6fd7a313-d5c1-430d-9be3-e69390b2878c",
+    "jobAdId": "27ad1fbe-aae5-4ba1-ab4c-a7b744a88b26",
+    "defaultJobAd": true,
+    "refNumber": "REF4297V",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-10-06T13:08:40.756Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1401 John F Kennedy Boulevard",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9540977",
+     "longitude": "-75.16448729999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "14187391",
+     "label": "Managing Director's Office - Deputy Managing Director, Division"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "14187391",
+      "valueLabel": "Managing Director's Office - Deputy Managing Director, Division"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000153758214",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000153742624",
+    "name": "Deputy Managing Director, Health and Human Services",
+    "uuid": "17983b75-0511-48aa-8ad5-99ec586c5492",
+    "jobAdId": "84da7a60-722f-45ac-b5e6-80d3eb20228b",
+    "defaultJobAd": true,
+    "refNumber": "REF4599B",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-10-06T12:15:13.150Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1401 John F Kennedy Boulevard",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9540977",
+     "longitude": "-75.16448729999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16329051",
+     "label": "MDO - Health and Human Services - Deputy Managing Director, Health and Human Services"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16329051",
+      "valueLabel": "MDO - Health and Human Services - Deputy Managing Director, Health and Human Services"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000153742624",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000153591049",
+    "name": "Deputy Executive Director of Insights and Communications",
+    "uuid": "2b1d7d05-63ab-4216-845d-85a10508e388",
+    "jobAdId": "ddae9e8f-d0f3-4c10-b457-cb0f2b432668",
+    "defaultJobAd": true,
+    "refNumber": "REF4598C",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-10-05T18:41:12.304Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1617 John F Kennedy Boulevard",
+     "postalCode": "19103",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9540447",
+     "longitude": "-75.1674188",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16278731",
+     "label": "Community Empowerment & Opportunity - Deputy Executive Director of Insights and Communications"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16278731",
+      "valueLabel": "Community Empowerment & Opportunity - Deputy Executive Director of Insights and Communications"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000153591049",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000153167279",
+    "name": "Parks & Recreation - Green Stormwater Infrastructure Program Manager",
+    "uuid": "8ac8ae92-a760-44f5-80dd-bd70a00c2186",
+    "jobAdId": "3e744073-a6b1-4bed-a905-c4516abca707",
+    "defaultJobAd": true,
+    "refNumber": "REF4597V",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-10-02T12:17:14.740Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1515 Arch Street",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9550887",
+     "longitude": "-75.16573149999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16276011",
+     "label": "Parks & Recreation - Green Stormwater Infrastructure Program Manager"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16276011",
+      "valueLabel": "Parks & Recreation - Green Stormwater Infrastructure Program Manager"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "61a0559f-5d55-4a02-9fe5-5a89767a8db8",
+      "valueLabel": "High School/GED"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000153167279",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000153030739",
+    "name": "Accounts Payable Specialist - Mayor's Office of Education",
+    "uuid": "01ab25e0-3e8c-4fc1-8efd-3c27e7b925e3",
+    "jobAdId": "87dd7e27-4951-4e2a-9192-c14ee5128bda",
+    "defaultJobAd": true,
+    "refNumber": "REF4596E",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-10-01T20:53:10.352Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "30 South 15th Street",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.951451",
+     "longitude": "-75.1659264",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16275671",
+     "label": "Mayor's Office of Education - Accounts Payable Specialist"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16275671",
+      "valueLabel": "Mayor's Office of Education - Accounts Payable Specialist"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000153030739",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000152745014",
+    "name": "Skilled Trades Administrative Manager",
+    "uuid": "025cc199-8480-444a-80c9-0be38968935e",
+    "jobAdId": "248289eb-d624-417a-8e6d-8ad7181766de",
+    "defaultJobAd": true,
+    "refNumber": "REF4305O",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-09-30T18:17:27.125Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1515 Arch Street",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9550887",
+     "longitude": "-75.16573149999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "14199631",
+     "label": "Parks and Recreation - Skilled Trades Administrative Manager"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "14199631",
+      "valueLabel": "Parks and Recreation - Skilled Trades Administrative Manager"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000152745014",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000152497939",
+    "name": "Network Security Analyst",
+    "uuid": "9d2c83ca-d722-4652-897b-afa037e209e7",
+    "jobAdId": "164983b9-df4e-4b6a-9b3a-efdc32cd1aec",
+    "defaultJobAd": true,
+    "refNumber": "REF4332Y",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-09-29T16:51:35.325Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.95187800000001",
+     "longitude": "-75.160975",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000152497939",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000152467399",
+    "name": "IT Infrastructure Project Manager ",
+    "uuid": "8f490f73-eff7-47d1-b1f9-d4bb6a7a6e5c",
+    "jobAdId": "5ac0658b-4cfb-482e-b506-6be80254e783",
+    "defaultJobAd": true,
+    "refNumber": "REF4483E",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-09-29T14:55:55.663Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518029",
+     "longitude": "-75.1609222",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000152467399",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000152436282",
+    "name": "Environmental Stewardship Manager",
+    "uuid": "0dde7723-7c31-4056-a6ff-19c0316aa7ca",
+    "jobAdId": "6508979e-989b-4643-9a8e-1446654e584c",
+    "defaultJobAd": true,
+    "refNumber": "REF4594D",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-09-29T13:21:01.278Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1515 Arch Street",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9550887",
+     "longitude": "-75.16573149999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16243031",
+     "label": "Parks & Recreation - Environmental Stewardship Manager"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16243031",
+      "valueLabel": "Parks & Recreation - Environmental Stewardship Manager"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000152436282",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000152432088",
+    "name": "Senior Data Analyst",
+    "uuid": "72f0cbd9-25b9-4413-b92d-dd3f10094016",
+    "jobAdId": "d77cc0dc-a430-40fd-b6ac-c979e44b634a",
+    "defaultJobAd": true,
+    "refNumber": "REF4593Y",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-09-29T13:12:43.657Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518153",
+     "longitude": "-75.1611403",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "associate",
+     "label": "Associate"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000152432088",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000152260664",
+    "name": "Deputy City Solicitor – Tax Litigation and Collections Unit – Real Estate Tax Division",
+    "uuid": "849d8a5e-479c-43a8-b939-e360c884662d",
+    "jobAdId": "59be7d4c-fc52-472f-b77f-16a1e74935c3",
+    "defaultJobAd": true,
+    "refNumber": "REF4590N",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-09-28T19:42:11.323Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1401 John F Kennedy Boulevard",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9540977",
+     "longitude": "-75.16448729999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16233511",
+     "label": "Law Dept. - Deputy City Solicitor – Tax Litigation and Collections Unit – Real Estate Tax Division"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16233511",
+      "valueLabel": "Law Dept. - Deputy City Solicitor – Tax Litigation and Collections Unit – Real Estate Tax Division"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000152260664",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000151882414",
+    "name": "Commerce - Digital Manager",
+    "uuid": "8b4e8ee6-9990-4ef6-8ee1-92056b1b20fb",
+    "jobAdId": "80c727e5-6428-4e23-826b-68ed09c3ab1a",
+    "defaultJobAd": true,
+    "refNumber": "REF4588U",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-09-25T15:36:15.585Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1401 John F Kennedy Boulevard",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9540977",
+     "longitude": "-75.16448729999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16216171",
+     "label": "Commerce - Digital Manager"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16216171",
+      "valueLabel": "Commerce - Digital Manager"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000151882414",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000151677997",
+    "name": "ERP Organizational Change Management Trainer",
+    "uuid": "d09f29a2-0639-4652-bd74-84c02a80f136",
+    "jobAdId": "ae3aef72-e5d3-47cb-9256-d3aa83767b83",
+    "defaultJobAd": true,
+    "refNumber": "REF4587U",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-09-24T17:48:34.857Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518153",
+     "longitude": "-75.1611403",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000151677997",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000151670078",
+    "name": "Chief Information Security Officer ",
+    "uuid": "29ea2cce-20b8-4ee1-9900-a48ee872e095",
+    "jobAdId": "e7862101-48d4-4af5-a2be-8f963e7a3eb1",
+    "defaultJobAd": true,
+    "refNumber": "REF4586A",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-09-24T16:53:31.449Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "8500 Essington Avenue",
+     "postalCode": "19153",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.8779187",
+     "longitude": "-75.2419857",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "executive",
+     "label": "Executive"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000151670078",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000151453810",
+    "name": "City Council - Zoning & Community Development Representative",
+    "uuid": "040a533f-c04d-4e0a-a6ab-3e4efb142c43",
+    "jobAdId": "695ba386-0333-4d3f-ae3d-790303abbc13",
+    "defaultJobAd": true,
+    "refNumber": "REF4572J",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-09-23T19:12:08.757Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1400 John F Kennedy Boulevard",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9529176",
+     "longitude": "-75.1635407",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16113151",
+     "label": "City Council - Zoning & Community Development Representative"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16113151",
+      "valueLabel": "City Council - Zoning & Community Development Representative"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000151453810",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000151082970",
+    "name": "External Labor Relations Advisor",
+    "uuid": "ae535efb-65a4-4070-8530-938481ab88e9",
+    "jobAdId": "81089130-fafa-4f68-a9a5-45bbad0a6e16",
+    "defaultJobAd": true,
+    "refNumber": "REF4584I",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-09-22T16:17:37.989Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1401 John F Kennedy Boulevard",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9540977",
+     "longitude": "-75.16448729999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16165171",
+     "label": "Office of the Chief Administrative Officer - External Labor Relations Advisor"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16165171",
+      "valueLabel": "Office of the Chief Administrative Officer - External Labor Relations Advisor"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000151082970",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000150772169",
+    "name": "SIEM Engineer",
+    "uuid": "3f593873-14f1-4329-af58-fc3fb30b7d23",
+    "jobAdId": "5bcf0d5d-0e01-4898-ae9c-621b0a508d3d",
+    "defaultJobAd": true,
+    "refNumber": "REF3779C",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-09-21T19:27:51.695Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "Market Street 1234",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9519255",
+     "longitude": "-75.1610652",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "11815211",
+     "label": "Office of Innovation & Technology - Network"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "11815211",
+      "valueLabel": "Office of Innovation & Technology - Network"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000150772169",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000150766529",
+    "name": "Divisional Deputy City Solicitor - Child Welfare Unit",
+    "uuid": "b99dbec7-5f66-425c-824a-313226a1514a",
+    "jobAdId": "f86f41f4-cb61-4520-a632-fe2d1f8efaeb",
+    "defaultJobAd": true,
+    "refNumber": "REF4583Q",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-09-21T18:47:21.648Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1515 Arch Street",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9550887",
+     "longitude": "-75.16573149999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16161091",
+     "label": "Law Department - Divisional Deputy City Solicitor - Child Welfare Unit 2"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16161091",
+      "valueLabel": "Law Department - Divisional Deputy City Solicitor - Child Welfare Unit 2"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000150766529",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000150191750",
+    "name": "Manager, Passenger Accessibility - Aviation",
+    "uuid": "98aec6b5-f69d-41bc-959f-fd151bede1ff",
+    "jobAdId": "9d981864-1d3a-4850-a3d7-45dd7a54c35e",
+    "defaultJobAd": true,
+    "refNumber": "REF4575V",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-09-17T18:28:40.725Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "2 International Plaza Drive",
+     "postalCode": "19113",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.8735988",
+     "longitude": "-75.25854629999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16135591",
+     "label": "Department of Aviation - Manager, Passenger Accessibility"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16135591",
+      "valueLabel": "Department of Aviation - Manager, Passenger Accessibility"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000150191750",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000149917329",
+    "name": "Technical Support Specialist",
+    "uuid": "397d2410-4af6-4a83-81ce-bd6c807ca0d5",
+    "jobAdId": "6a6dd581-2a26-497e-a3e1-a759cf49f8e7",
+    "defaultJobAd": true,
+    "refNumber": "REF4573J",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-09-16T16:32:31.514Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518153",
+     "longitude": "-75.1611403",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "entry_level",
+     "label": "Entry Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000149917329",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000149641259",
+    "name": "Technical Support Specialist-Police",
+    "uuid": "39327820-151a-4843-a036-7eeed4765612",
+    "jobAdId": "47711108-1bc6-4f1d-80da-134be0dba4ae",
+    "defaultJobAd": true,
+    "refNumber": "REF4540D",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-09-15T14:57:09.014Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "400 North Broad Street",
+     "postalCode": "19130",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9599856",
+     "longitude": "-75.16234419999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "entry_level",
+     "label": "Entry Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000149641259",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000149614219",
+    "name": "Assistant City Solicitor or Deputy City Solicitor – Regulatory Law Unit – Airport Division",
+    "uuid": "3f1fe3d0-f9f5-4622-9363-f9465fe385c4",
+    "jobAdId": "b24276d0-e67d-4320-8705-765c238e2ee0",
+    "defaultJobAd": true,
+    "refNumber": "REF4415X",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-09-15T13:57:02.870Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "8000 Essington Avenue",
+     "postalCode": "19153",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.8808199",
+     "longitude": "-75.2373223",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "14788511",
+     "label": "Law Department – Regulatory Law Unit – Airport Division -Assistant City Solicitor or   Deputy City Solicitor"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "14788511",
+      "valueLabel": "Law Department – Regulatory Law Unit – Airport Division -Assistant City Solicitor or   Deputy City Solicitor"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000149614219",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000148823619",
+    "name": "Producer",
+    "uuid": "42636817-47cd-4a0b-9c19-26a9d6c8c9fb",
+    "jobAdId": "c5aa6c29-e2e8-4bf5-9941-7c78b9940e79",
+    "defaultJobAd": true,
+    "refNumber": "REF4570A",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-09-10T16:06:53.935Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518153",
+     "longitude": "-75.1611403",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "entry_level",
+     "label": "Entry Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000148823619",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000146751579",
+    "name": "Assistant City Solicitor - Tort Litigation Unit",
+    "uuid": "44584fc6-a074-4efe-97a3-51c7f48aaae5",
+    "jobAdId": "b2677034-1210-43af-93c8-63987f41ba22",
+    "defaultJobAd": true,
+    "refNumber": "REF4568X",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-09-01T15:02:10.398Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1515 Arch Street",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9550887",
+     "longitude": "-75.16573149999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "16024411",
+     "label": "Law Dept. - Assistant City Solicitor - Tort Litigation Unit"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "16024411",
+      "valueLabel": "Law Dept. - Assistant City Solicitor - Tort Litigation Unit"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000146751579",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000146549279",
+    "name": "Technical Relationship Manager",
+    "uuid": "4d02f682-53cc-48f1-a7d1-7a91d3db9347",
+    "jobAdId": "a3b5ad86-d690-4258-a909-42d6cd1913a0",
+    "defaultJobAd": true,
+    "refNumber": "REF4518Q",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-08-31T20:26:50.023Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518029",
+     "longitude": "-75.1609222",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000146549279",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000146547940",
+    "name": "Low Code Specialist ",
+    "uuid": "0e2fbf91-2ab9-4a37-b97d-0d7d046af1e2",
+    "jobAdId": "e0a3968c-be58-49b0-8dfc-ecde3f4ab940",
+    "defaultJobAd": true,
+    "refNumber": "REF4265Z",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-08-31T20:25:11.995Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.95187800000001",
+     "longitude": "-75.160975",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000146547940",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000146469759",
+    "name": "Junior Cloud Engineer",
+    "uuid": "a688021f-9d27-414a-8f53-2de088b20a93",
+    "jobAdId": "d94a3a57-963f-4e14-941f-80b2224741d4",
+    "defaultJobAd": true,
+    "refNumber": "REF4565K",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-08-31T13:17:11.465Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518153",
+     "longitude": "-75.1611403",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "entry_level",
+     "label": "Entry Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000146469759",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000146047860",
+    "name": "Business Analyst",
+    "uuid": "dfdfc6b3-19f2-40d0-b184-5ea4337863b7",
+    "jobAdId": "376fada7-d52f-4931-81b7-b4471c2e5e9e",
+    "defaultJobAd": true,
+    "refNumber": "REF4563F",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-08-27T18:27:34.602Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518153",
+     "longitude": "-75.1611403",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000146047860",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000145338811",
+    "name": "Deputy City Solicitor - Tax Litigation and Collections Unit - Business Tax Division",
+    "uuid": "8936929d-511f-48dc-8d68-8070bb13f434",
+    "jobAdId": "a51c08e8-49aa-4ce8-9707-56b94f778d02",
+    "defaultJobAd": true,
+    "refNumber": "REF4559E",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-08-24T18:00:54.113Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1401 John F Kennedy Boulevard",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9540977",
+     "longitude": "-75.16448729999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "15989731",
+     "label": "Law Department - Deputy City Solicitor - Tax Litigation and Collections Unit - Business Tax Division"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "15989731",
+      "valueLabel": "Law Department - Deputy City Solicitor - Tax Litigation and Collections Unit - Business Tax Division"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000145338811",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000144567389",
+    "name": "Senior Producer-Series Showrunner",
+    "uuid": "2f5aa608-a2f4-4c33-ae03-70b9ac1fcd19",
+    "jobAdId": "16ab4fe7-e2e9-46a7-a2be-ab89b9980258",
+    "defaultJobAd": true,
+    "refNumber": "REF4556Q",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-08-20T14:08:30.613Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518153",
+     "longitude": "-75.1611403",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000144567389",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000144146820",
+    "name": "Accounts Payable Associate - MDO",
+    "uuid": "e8b9bb66-8245-4b7e-abf0-a2cf5f247986",
+    "jobAdId": "3d6e34f5-e6d6-4ce8-9c17-9d92c4a27e5c",
+    "defaultJobAd": true,
+    "refNumber": "REF4553F",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-08-18T18:35:12.224Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1401 John F Kennedy Boulevard",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9540977",
+     "longitude": "-75.16448729999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "15946211",
+     "label": "MDO - Accounts Payable Associate"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "15946211",
+      "valueLabel": "MDO - Accounts Payable Associate"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000144146820",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000143831920",
+    "name": "Director of Property Concessions Management",
+    "uuid": "5e73eba4-02ed-4a94-83f7-e53ee8809454",
+    "jobAdId": "dceaead7-127b-42ca-b2c8-fcbce3349944",
+    "defaultJobAd": true,
+    "refNumber": "REF4537Z",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-08-17T13:29:04.964Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1515 Arch Street",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9550887",
+     "longitude": "-75.16573149999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "15775208",
+     "label": "Parks and Recreation - Director of Property Concessions Management"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "15775208",
+      "valueLabel": "Parks and Recreation - Director of Property Concessions Management"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "61a0559f-5d55-4a02-9fe5-5a89767a8db8",
+      "valueLabel": "High School/GED"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000143831920",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000143329919",
+    "name": "Multiplatform Producer - Field, Studio & Digital ",
+    "uuid": "707ec028-51b8-4b6f-8b84-fe7ea5fc8a6d",
+    "jobAdId": "b70939c7-6a61-4840-8163-b5e2f32b672a",
+    "defaultJobAd": true,
+    "refNumber": "REF4550A",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-08-13T14:18:07.367Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518153",
+     "longitude": "-75.1611403",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "associate",
+     "label": "Associate"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000143329919",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000143329389",
+    "name": "Executive Producer-PHLgovTV",
+    "uuid": "16dc8bfc-ea1a-481d-8d22-46b2dce9aba2",
+    "jobAdId": "46320f2c-9207-4a8f-bb67-828c37c1ef55",
+    "defaultJobAd": true,
+    "refNumber": "REF4549I",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-08-13T14:15:56.386Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518153",
+     "longitude": "-75.1611403",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000143329389",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000143116764",
+    "name": "Sr IT Administrative Analyst",
+    "uuid": "3a21044c-d70c-44a2-8ea8-5bd5c99f87ae",
+    "jobAdId": "49cdb75f-78f1-4982-9990-2d8a6ef20493",
+    "defaultJobAd": true,
+    "refNumber": "REF4547V",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-08-12T14:21:12.587Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518153",
+     "longitude": "-75.1611403",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000143116764",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000142209719",
+    "name": "Procurement Analyst",
+    "uuid": "f0a21fbf-415c-4a9b-adad-0d0222d1a7f9",
+    "jobAdId": "21faafb4-c006-48ba-9978-6069467c1570",
+    "defaultJobAd": true,
+    "refNumber": "REF4488R",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-08-07T20:02:42.209Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1101 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9521992",
+     "longitude": "-75.1584353",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "entry_level",
+     "label": "Entry Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000142209719",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000141904229",
+    "name": "Deputy City Solicitor - Code & Public Nuisance Litigation Unit",
+    "uuid": "aa12671f-c4a9-434d-9c56-75820dc2a011",
+    "jobAdId": "b3410191-5b01-42ee-960d-ca87732fa54f",
+    "defaultJobAd": true,
+    "refNumber": "REF4541X",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-08-06T12:02:06.056Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1515 Arch Street",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9550887",
+     "longitude": "-75.16573149999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "15878211",
+     "label": "Law Department - Deputy City Solicitor - Code & Public Nuisance Litigation Unit"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "15878211",
+      "valueLabel": "Law Department - Deputy City Solicitor - Code & Public Nuisance Litigation Unit"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000141904229",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000140326119",
+    "name": "Project Manager",
+    "uuid": "a8281f0e-d656-41ac-9d8c-a3f28e7a9dc1",
+    "jobAdId": "905fe511-e725-4d6b-8d2d-b40af82a33e7",
+    "defaultJobAd": true,
+    "refNumber": "REF4532U",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-07-28T19:25:58.793Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518153",
+     "longitude": "-75.1611403",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000140326119",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000140140636",
+    "name": "Senior Attorney - Civil Rights Unit",
+    "uuid": "ca58ef70-d97e-4032-be95-d7c7901eba09",
+    "jobAdId": "44639e0e-105d-4a94-a1d1-0ef3206ccaae",
+    "defaultJobAd": true,
+    "refNumber": "REF4528Y",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-07-28T02:07:26.673Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1515 Arch Street",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9550887",
+     "longitude": "-75.16573149999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "15759891",
+     "label": "Law Department - Senior Attorney"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "15759891",
+      "valueLabel": "Law Department - Senior Attorney"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000140140636",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000140079861",
+    "name": "Product Services and Technical Portfolio",
+    "uuid": "7acf8a61-3403-4fca-9900-8c46f406f232",
+    "jobAdId": "b76fa7b4-0e38-4b37-9374-93a2f90737d0",
+    "defaultJobAd": true,
+    "refNumber": "REF4264F",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-07-27T19:39:37.602Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.95187800000001",
+     "longitude": "-75.160975",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000140079861",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000139608299",
+    "name": "ERP System and Security Analyst ",
+    "uuid": "a578ed87-ded2-4592-af98-63b8e3825373",
+    "jobAdId": "bca74165-59a1-4a16-953b-6fbb3462383f",
+    "defaultJobAd": true,
+    "refNumber": "REF4523X",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-07-24T13:36:00.633Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518029",
+     "longitude": "-75.1609222",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000139608299",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000139365820",
+    "name": "ERP Data Analytics and Reporting Analyst",
+    "uuid": "d41cb20c-48d6-43db-97a1-961684c0ec09",
+    "jobAdId": "dbef0b97-8a25-4134-b596-4da844e45435",
+    "defaultJobAd": true,
+    "refNumber": "REF4522S",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-07-23T21:02:26.307Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518029",
+     "longitude": "-75.1609222",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000139365820",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000139285683",
+    "name": "Grants Manager - Police",
+    "uuid": "a653ae49-ec0b-4dcd-873b-325e07f8db74",
+    "jobAdId": "2c321563-3995-4a41-814c-0ed7e716a0d3",
+    "defaultJobAd": true,
+    "refNumber": "REF4486Q",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-07-23T13:25:33.637Z",
+    "location": {
+     "city": "Philadelphia, PA",
+     "region": "PA",
+     "country": "us",
+     "address": "1401 JFK Blvd Phila., Pa 19102",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "fullLocation": "Philadelphia, PA, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "15357671",
+     "label": "Police -Grants Manager"
+    },
+    "function": {
+     "id": "other",
+     "label": "Other"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "15357671",
+      "valueLabel": "Police -Grants Manager"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000139285683",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000139128014",
+    "name": "IT Director of Public Safety",
+    "uuid": "11e39a6d-7d39-4ee8-b5f0-8f73fe82a826",
+    "jobAdId": "7328638a-bf4a-4e78-940d-25e756f95501",
+    "defaultJobAd": true,
+    "refNumber": "REF4137Q",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-07-22T17:28:59.448Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.95187800000001",
+     "longitude": "-75.160975",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "director",
+     "label": "Director"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000139128014",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000138714832",
+    "name": "Web & SQL Developer",
+    "uuid": "8508bff7-ff70-4260-8f24-cab7f9edde1e",
+    "jobAdId": "6d006b72-3717-4c41-95b1-5872166cb3cf",
+    "defaultJobAd": true,
+    "refNumber": "REF4517Z",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-07-20T19:00:35.009Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1401 John F Kennedy Boulevard",
+     "postalCode": "19102",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9540977",
+     "longitude": "-75.16448729999999",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000138714832",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000138406889",
+    "name": "Employee Development & Engagement Coordinator",
+    "uuid": "6bd96c28-2ac3-43af-bd51-aa6291fded11",
+    "jobAdId": "0e9108ae-b7b5-433e-a0fc-cce194682423",
+    "defaultJobAd": true,
+    "refNumber": "REF4515F",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-07-17T20:25:41.208Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518029",
+     "longitude": "-75.1609222",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000138406889",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000137467481",
+    "name": "Data Architect / Quality Assurance Engineer",
+    "uuid": "4a37f56f-a57a-49a8-a939-0169d8fb88c1",
+    "jobAdId": "bc4483cc-fe11-4fb7-8da0-baac0e226dc0",
+    "defaultJobAd": true,
+    "refNumber": "REF4505B",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-07-13T14:05:12.262Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518029",
+     "longitude": "-75.1609222",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "65984bc2953138061efc8c44",
+      "fieldLabel": "Minimum Education Required",
+      "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+      "valueLabel": "College degree"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000137467481",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000124972529",
+    "name": "Enterprise Resource Planning (ERP) Data Analytics and Reporting Analyst",
+    "uuid": "52c2b953-3ab7-44fe-994b-02e0e7faf067",
+    "jobAdId": "279ff548-a65c-4a02-845d-57502f9c19be",
+    "defaultJobAd": true,
+    "refNumber": "REF4431Y",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-05-06T18:50:04.951Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518029",
+     "longitude": "-75.1609222",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000124972529",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000124966149",
+    "name": "Change Management Lead",
+    "uuid": "801d52e8-f4a0-4d90-b6b5-4acdc904ee77",
+    "jobAdId": "dd996857-23db-42e5-b3dc-e50c207e6f3a",
+    "defaultJobAd": true,
+    "refNumber": "REF4430O",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-05-06T18:00:39.750Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518029",
+     "longitude": "-75.1609222",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000124966149",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000123731829",
+    "name": "Business Analyst-Project Health Check",
+    "uuid": "cfc6fd67-37be-4042-ade8-6c071b201de2",
+    "jobAdId": "3fa42fe5-374e-4baa-bece-181f2c58da40",
+    "defaultJobAd": true,
+    "refNumber": "REF4402P",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-04-29T15:50:13.170Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518029",
+     "longitude": "-75.1609222",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "entry_level",
+     "label": "Entry Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000123731829",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000120802277",
+    "name": "ADABAS Natural Developer",
+    "uuid": "cf26a96a-2fa9-4ed4-98cf-2bcda372b7db",
+    "jobAdId": "25fad712-aa8c-4f8c-82c8-5687309c9f99",
+    "defaultJobAd": true,
+    "refNumber": "REF4403G",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2026-04-14T20:08:53.456Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.9518029",
+     "longitude": "-75.1609222",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000120802277",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   },
+   {
+    "id": "744000093791515",
+    "name": "IT Security Operations Administrator",
+    "uuid": "2253d98b-bae3-4840-94dd-b61bba59a968",
+    "jobAdId": "d6b5c37c-5f89-435a-b224-4dbcd9387dab",
+    "defaultJobAd": true,
+    "refNumber": "REF4168O",
+    "company": {
+     "identifier": "CityofPhiladelphia",
+     "name": "City of Philadelphia"
+    },
+    "releasedDate": "2025-11-14T23:18:50.537Z",
+    "location": {
+     "city": "Philadelphia",
+     "region": "PA",
+     "country": "us",
+     "address": "1234 Market Street",
+     "postalCode": "19107",
+     "remote": false,
+     "hybrid": false,
+     "latitude": "39.95187800000001",
+     "longitude": "-75.160975",
+     "fullLocation": "Philadelphia, PA, United States"
+    },
+    "industry": {
+     "id": "government_administration",
+     "label": "Government Administration"
+    },
+    "department": {
+     "id": "12604351",
+     "label": "Office of Innovation & Technology"
+    },
+    "function": {
+     "id": "information_technology",
+     "label": "Information Technology"
+    },
+    "typeOfEmployment": {
+     "id": "permanent",
+     "label": "Full-time"
+    },
+    "experienceLevel": {
+     "id": "mid_senior_level",
+     "label": "Mid-Senior Level"
+    },
+    "customField": [
+     {
+      "fieldId": "COUNTRY",
+      "fieldLabel": "Country/Region",
+      "valueId": "us",
+      "valueLabel": "United States"
+     },
+     {
+      "fieldId": "58b7e580e4b0885c92cd9bbb",
+      "fieldLabel": "Department",
+      "valueId": "12604351",
+      "valueLabel": "Office of Innovation & Technology"
+     },
+     {
+      "fieldId": "57d19d56e4b01750798cd648",
+      "fieldLabel": "Brands",
+      "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+      "valueLabel": "City of Philadelphia"
+     },
+     {
+      "fieldId": "57e021e5e4b0107f7afa3e37",
+      "fieldLabel": "Job Type",
+      "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+      "valueLabel": "Exempt"
+     }
+    ],
+    "visibility": "PUBLIC",
+    "ref": "https://api.smartrecruiters.com/v1/companies/CityofPhiladelphia/postings/744000093791515",
+    "language": {
+     "code": "en",
+     "label": "English",
+     "labelNative": "English (US)"
+    }
+   }
+  ]
+ },
+ "details": {
+  "744000146469759": {
+   "id": "744000146469759",
+   "name": "Junior Cloud Engineer",
+   "uuid": "a688021f-9d27-414a-8f53-2de088b20a93",
+   "jobId": "6bcc9ac6-2d7d-4de2-941f-f914acf4acef",
+   "jobAdId": "d94a3a57-963f-4e14-941f-80b2224741d4",
+   "defaultJobAd": true,
+   "refNumber": "REF4565K",
+   "company": {
+    "name": "City of Philadelphia",
+    "identifier": "CityofPhiladelphia"
+   },
+   "location": {
+    "city": "Philadelphia",
+    "region": "PA",
+    "country": "us",
+    "address": "1234 Market Street",
+    "postalCode": "19107",
+    "remote": false,
+    "hybrid": false,
+    "latitude": "39.9518153",
+    "longitude": "-75.1611403",
+    "fullLocation": "Philadelphia, PA, United States"
+   },
+   "customField": [
+    {
+     "fieldId": "COUNTRY",
+     "fieldLabel": "Country/Region",
+     "valueId": "us",
+     "valueLabel": "United States"
+    },
+    {
+     "fieldId": "58b7e580e4b0885c92cd9bbb",
+     "fieldLabel": "Department",
+     "valueId": "12604351",
+     "valueLabel": "Office of Innovation & Technology"
+    },
+    {
+     "fieldId": "57d19d56e4b01750798cd648",
+     "fieldLabel": "Brands",
+     "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+     "valueLabel": "City of Philadelphia"
+    },
+    {
+     "fieldId": "57e021e5e4b0107f7afa3e37",
+     "fieldLabel": "Job Type",
+     "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+     "valueLabel": "Exempt"
+    }
+   ],
+   "releasedDate": "2026-08-31T13:17:11.465Z",
+   "creator": {
+    "name": "",
+    "avatarUrl": ""
+   },
+   "postingUrl": "https://jobs.smartrecruiters.com/CityofPhiladelphia/744000146469759-junior-cloud-engineer",
+   "applyUrl": "https://jobs.smartrecruiters.com/CityofPhiladelphia/744000146469759-junior-cloud-engineer?oga=true",
+   "referralUrl": "https://jobs.smartrecruiters.com/external-referrals/company/CityofPhiladelphia/publication/a688021f-9d27-414a-8f53-2de088b20a93?dcr_ci=CityofPhiladelphia",
+   "jobAd": {
+    "sections": {
+     "companyDescription": {
+      "title": "Company Description",
+      "text": "<p>A best-in-class city that attracts best-in-class talent, Philadelphia is an incredible place to build a career. From our thriving arts scene and rich history to our culture of passion and grit, there are countless reasons to love living and working here. With a workforce of over 30,000 people, and more than 1,000 different job categories, the City of Philadelphia offers boundless opportunities to make an impact.</p><p>As an employer, the City of Philadelphia values inclusion, integrity, innovation, empowerment, and hard work above all else. We offer a vibrant work environment, comprehensive health care and benefits, and the experience you need to grow and excel. If you’re interested in working with a passionate team of people who care about the future of Philadelphia, start here.</p><p><strong>What We Offer:</strong></p><p><strong><em>Impact</em></strong><em> - The work you do here matters to millions. </em></p><p><strong><em>Growth</em></strong><em> - Philadelphia is growing, why not grow with it? </em></p><p><strong><em>Diversity &amp; Inclusion</em></strong><em> - Find a career in a place where everyone belongs.</em></p><p><strong><em>Benefits -</em></strong><em> We care about your well being.</em></p><p>The Office of Innovation &amp; Technology (OIT) is the central IT agency for the City of Philadelphia headed by the Chief Information Officer (CIO). OIT oversees all major information and communications technology initiatives for the City of Philadelphia - increasing the effectiveness of the information technology infrastructure, where the services provided are advanced, optimized, and responsive to the needs of the City of Philadelphia’s businesses, residents, and visitors. OIT responsibilities include: identifying the most effective approach for implementing new information technology directions throughout city government; improving the value of the city’s technology assets and the return on the city’s technology investments; ensuring data security continuity; planning for continuing operations in the event of disruption of information technology or communications services; and supporting accountable, efficient and effective government across every city department, board, commission and agency.</p>"
+     },
+     "jobDescription": {
+      "title": "Job Description",
+      "text": "<p>Do you want to be at the forefront of CoP’s emerging cloud practice? We are seeking a junior engineer to support and expand our Cloud computing environment that has already provided great value to the City of Philadelphia by enabling modernization and optimization strategies. An ideal candidate is expected to operate independently, have a results-oriented mindset, and foster an environment of continuous improvement. A Cloud Engineer must possess strong interpersonal skills and regularly work with IT leaders and engineers in other departments.</p><p>This is primarily a cloud administration position focused on a hybrid cloud/on-premises environment across AWS GovCloud and Standard (Commercial) Cloud organizations. An ideal candidate will have a background in AWS, either professionally or managing their own accounts, and a solid basis in programming skills (ideally, Python). Although there is overlap with the skills and competencies associated with a DevOps role, this is not a DevOps role.</p><p>Essential Functions</p><ul><li>Work in tandem with our architecture and engineering teams to identify and implement optimal cloud-based solutions</li><li>Manage a multi-account, multi-organization cloud environment in AWS</li><li>Plan and design cloud workloads to meet business needs with a focus on security</li><li>Document standard, best practices, and procedures across the environment</li><li>Automate infrastructure configuration and deployment throughout the development lifecycle</li><li>Manage and govern cloud environments. Monitor and optimize services to control costs and usage</li><li>Employ exceptional problem-solving skills, with the ability to see and solve issues before they affect business productivity</li><li>Stay current with industry trends and new services</li><li>Forecast cloud services costs for new workloads</li><li>Optimize existing workloads for cost and reliability</li></ul>"
+     },
+     "qualifications": {
+      "title": "Qualifications",
+      "text": "<ul><li>AWS experience</li><li>Automating environments using Infrastructure as Code.</li><li>Familiarity with network technologies (VPCs, VPNs, Transit Gateways, Route53, Load Balancers, etc.)</li><li>Cloud architecture design (Well-Architected Framework)</li><li>Understanding of data and data integration concepts (SQL, data governance, enterprise patterns)</li><li>Python experience preferred.</li></ul><p><strong>Additional:&#xa0;</strong>&#xa0;</p><ul><li>Able to provide strong references successfully demonstrating such abilities&#xa0;and experience as defined above</li><li>Employment is contingent upon passing a CJIS background check</li><li>The employee must be a City of Philadelphia resident within six months of hire</li></ul><p><strong>Competencies, Knowledge, Skills and Abilities</strong></p><ul><li>Experience in AWS and architecture design.</li><li>Knowledge of design principles in cloud environments.</li><li>Familiarity with:<ul><li>IAM and security in the Cloud;</li><li>cost optimization in AWS; and</li><li>networking.</li></ul></li><li>Excellent interpersonal skills and ability to help project teams meet their goals while addressing enterprise concepts such as standards and security</li></ul><p>&#xa0;</p>"
+     },
+     "additionalInformation": {
+      "title": "Additional Information",
+      "text": "<p>Salary:&#xa0;$70k-$75k</p><p><strong>Salary cannot exceed $75,000</strong></p><p>Important: To apply, candidates must provide a cover letter and a resume.</p><p><strong>Work Setting: in-person (onsite)</strong></p><p><strong>Discover the Perks of Being a City of Philadelphia Employee:</strong><br>\n•&#xa0;&#xa0; &#xa0;We offer Comprehensive health coverage for employees and their eligible dependents<br>\n•&#xa0;&#xa0; &#xa0;Our wellness program offers eligibility into the discounted medical plan<br>\n•&#xa0;&#xa0; &#xa0;Employees receive paid vacation, sick leave, and holidays<br>\n•&#xa0;&#xa0; &#xa0;Generous retirement savings options are available<br>\n•&#xa0;&#xa0; &#xa0;<strong>Pay off your student loans faster</strong> - As a qualifying employer, City of Philadelphia employees are eligible to participate in the Public Service Loan Forgiveness program. Join the ranks of hundreds of employees who have already benefited from this program and achieved student loan forgiveness.<br>\n•&#xa0;&#xa0; &#xa0;<strong>Enjoy a Free Commute on SEPTA</strong> - Starting September 1, 2023, eligible City employees will no longer have to worry about paying for SEPTA public transportation. Whether you're a full-time, part-time, or provisional employee, you can seize the opportunity to sign up for the SEPTA Key Advantage Program and receive free Key cards for free rides on SEPTA buses, trains, trolleys, and regional rails.<br>\n•&#xa0;&#xa0; &#xa0;<strong>Unlock Tuition Discounts and Scholarships</strong> - The City of Philadelphia has forged partnerships with over a dozen esteemed colleges and universities in the area, ensuring that our employees have access to a wide range of tuition discounts and scholarships. Experience savings of 10% to 40% on your educational expenses, extending not only to City employees but in some cases, spouse and dependents too!<br>\nJoin the City of Philadelphia team today and seize these incredible benefits designed to enhance your financial well-being and personal growth!</p><p><br>\n*The successful candidate must be a city of Philadelphia resident within six months of hire</p><p><br>\nEffective May 22, 2023, vaccinations are no longer required for new employees that work in non-medical, non-emergency or patient facing positions with the City of Philadelphia. As a result, only employees in positions providing services that are patient-facing medical care (ex: Nurses, doctors, emergency medical personnel), must be fully vaccinated.</p><p><br>\nThe City of Philadelphia is an Equal Opportunity employer and does not permit discrimination based on race, ethnicity, color, sex, sexual orientation, gender identity, religion, national origin, ancestry, age, disability, marital status, source of income, familial status, genetic information or domestic or sexual violence victim status. If you believe you were discriminated against, call the Philadelphia Commission on Human Relations at 215-686-4670 or send an email to faqpchr@phila.gov.</p>"
+     }
+    }
+   },
+   "compensation": {
+    "min": 70000,
+    "max": 75000,
+    "currency": "USD",
+    "period": "YEARLY"
+   },
+   "active": true,
+   "visibility": "PUBLIC",
+   "industry": {
+    "id": "government_administration",
+    "label": "Government Administration"
+   },
+   "function": {
+    "id": "information_technology",
+    "label": "Information Technology"
+   },
+   "department": {
+    "id": 12604351,
+    "label": "Office of Innovation & Technology"
+   },
+   "experienceLevel": {
+    "id": "entry_level",
+    "label": "Entry Level"
+   },
+   "typeOfEmployment": {
+    "id": "permanent",
+    "label": "Full-time"
+   },
+   "language": {
+    "code": "en",
+    "label": "English",
+    "labelNative": "English (US)"
+   }
+  },
+  "744000155338399": {
+   "id": "744000155338399",
+   "name": "Technical Support Specialist",
+   "uuid": "a786bacf-5849-40be-94b0-5bcdb8810ac9",
+   "jobId": "7ab1bc92-2d3e-44ec-bfb5-a694c3e6d3f2",
+   "jobAdId": "fd42a1b4-61b0-47a1-9c72-39e064e437aa",
+   "defaultJobAd": true,
+   "refNumber": "REF4604B",
+   "company": {
+    "name": "City of Philadelphia",
+    "identifier": "CityofPhiladelphia"
+   },
+   "location": {
+    "city": "Philadelphia",
+    "region": "PA",
+    "country": "us",
+    "address": "1234 Market Street",
+    "postalCode": "19107",
+    "remote": false,
+    "hybrid": false,
+    "latitude": "39.9518153",
+    "longitude": "-75.1611403",
+    "fullLocation": "Philadelphia, PA, United States"
+   },
+   "customField": [
+    {
+     "fieldId": "COUNTRY",
+     "fieldLabel": "Country/Region",
+     "valueId": "us",
+     "valueLabel": "United States"
+    },
+    {
+     "fieldId": "58b7e580e4b0885c92cd9bbb",
+     "fieldLabel": "Department",
+     "valueId": "12604351",
+     "valueLabel": "Office of Innovation & Technology"
+    },
+    {
+     "fieldId": "57d19d56e4b01750798cd648",
+     "fieldLabel": "Brands",
+     "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+     "valueLabel": "City of Philadelphia"
+    },
+    {
+     "fieldId": "57e021e5e4b0107f7afa3e37",
+     "fieldLabel": "Job Type",
+     "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+     "valueLabel": "Exempt"
+    }
+   ],
+   "releasedDate": "2026-10-13T18:53:42.884Z",
+   "creator": {
+    "name": "",
+    "avatarUrl": ""
+   },
+   "postingUrl": "https://jobs.smartrecruiters.com/CityofPhiladelphia/744000155338399-technical-support-specialist",
+   "applyUrl": "https://jobs.smartrecruiters.com/CityofPhiladelphia/744000155338399-technical-support-specialist?oga=true",
+   "referralUrl": "https://jobs.smartrecruiters.com/external-referrals/company/CityofPhiladelphia/publication/a786bacf-5849-40be-94b0-5bcdb8810ac9?dcr_ci=CityofPhiladelphia",
+   "jobAd": {
+    "sections": {
+     "companyDescription": {
+      "title": "Company Description",
+      "text": "<p>A best-in-class city that attracts best-in-class talent, Philadelphia is an incredible place to build a career. From our thriving arts scene and rich history to our culture of passion and grit, there are countless reasons to love living and working here. With a workforce of over 30,000 people, and more than 1,000 different job categories, the City of Philadelphia offers boundless opportunities to make an impact.</p><p>As an employer, the City of Philadelphia values inclusion, integrity, innovation, empowerment, and hard work above all else. We offer a vibrant work environment, comprehensive health care and benefits, and the experience you need to grow and excel. If you’re interested in working with a passionate team of people who care about the future of Philadelphia, start here.</p><p><strong>What We Offer:</strong></p><p><strong><em>Impact</em></strong><em> - The work you do here matters to millions. </em></p><p><strong><em>Growth</em></strong><em> - Philadelphia is growing, why not grow with it? </em></p><p><strong><em>Diversity &amp; Inclusion</em></strong><em> - Find a career in a place where everyone belongs.</em></p><p><strong><em>Benefits -</em></strong><em> We care about your well being.</em></p><p>The Office of Innovation &amp; Technology (OIT) is the central IT agency for the City of Philadelphia headed by the Chief Information Officer (CIO). OIT oversees all major information and communications technology initiatives for the City of Philadelphia - increasing the effectiveness of the information technology infrastructure, where the services provided are advanced, optimized, and responsive to the needs of the City of Philadelphia’s businesses, residents, and visitors. OIT responsibilities include: identifying the most effective approach for implementing new information technology directions throughout city government; improving the value of the city’s technology assets and the return on the city’s technology investments; ensuring data security continuity; planning for continuing operations in the event of disruption of information technology or communications services; and supporting accountable, efficient and effective government across every city department, board, commission and agency.</p>"
+     },
+     "jobDescription": {
+      "title": "Job Description",
+      "text": "<p>The Technical Support Specialist works as part of a highly collaborative group that’s responsible for installation, configuration, and management of desktop and laptop computer systems. In addition to providing desktop support, you will participate in projects such as our ongoing Active Directory migration and multi-factor authentication rollout that require the Technical Support Specialist to learn new technologies and provide support for the creation of new processes for the team. The Technical Support Specialist will report to the Water Information Center Manager.&#xa0;This is a great opportunity for someone looking to increase their technical knowledge and abilities while at the same time using that knowledge to positively impact services for Philadelphia residents.</p><p><strong>Essential Functions</strong></p><p><strong>Customer Relations:</strong></p><ul><li>Provide 1st tier support to customers</li><li>Answer help desk calls and create tickets in incident tracking system documenting support requests</li><li>Resolve assigned support tickets while keeping end user informed of the status of their request</li><li>Provide support to remote facilities using both remote tools and traveling to various facilities</li><li>Respond to end user inquiries by phone\\email\\chat</li><li>Create clear and detailed documentation</li><li>Explain technical issues to end users</li></ul><p><strong>Technical:</strong></p><ul><li>Troubleshoot issues with Windows operating systems, printers, and installed software</li><li>Configure laptops and desktops by installing operating system and updating needed drivers and firmware</li><li>Create and deploy images for laptops and desktops</li><li>Install software</li><li>Determine technical issues to escalate to tier 2 &amp; tier 3 to support customers</li></ul><p>&#xa0;</p>"
+     },
+     "qualifications": {
+      "title": "Qualifications",
+      "text": "<ul><li>High School Diploma or GED</li><li>Knowledge of PC hardware &amp; A+ certification</li><li>Minimum 2 years of experience in a Desktop Support role</li><li>Must have a valid PA Driver’s License and the ability to lift 50 lbs.</li></ul><p><em>NOTE: &#xa0;Microsoft Certified Professional (MCP) Certification (Windows 10) or an associate degree in Information Technology or Computer Technology can be substituted for any of the above experience</em></p><p><strong>Skills:</strong></p><ul><li>A+ Certification</li><li>Ability to work independently and as a team member</li><li>Excellent communication skills to translate technical language to non-technical personnel and customers</li><li>Excellent customer service skills</li><li>Excellent time-management skills</li><li>Ability to meet multiple competing deadlines</li><li>Ability to overcome obstacles to customer solutions to satisfy customers</li><li>Ability to quickly learn new technologies</li></ul><p><strong>Knowledge Of:</strong></p><ul><li>MS Office and other PC software</li><li>Adobe Acrobat</li><li>Web Browsers (Chrome, IE, Firefox)</li><li>Windows desktop operating systems</li><li>Software licensing</li><li>Printers</li><li>Remote Desktop</li><li>VPN Software</li></ul>"
+     },
+     "additionalInformation": {
+      "title": "Additional Information",
+      "text": "<p><strong>Salary Range cannot exceed $60,000</strong></p><p>Important: To apply, candidates must provide a cover letter and a resume.</p><p>Work Setting: in-person (onsite)</p><p>The successful applicant will be required to submit to a fingerprint background check per CJIS policy.<br>\n<br>\n<strong>Discover the Perks of Being a City of Philadelphia Employee</strong>:<br>\n• &#xa0; &#xa0;We offer Comprehensive health coverage for employees and their eligible dependents<br>\n• &#xa0; &#xa0;Our wellness program offers eligibility into the discounted medical plan<br>\n• &#xa0; &#xa0;Employees receive paid vacation, sick leave, and holidays<br>\n• &#xa0; &#xa0;Generous retirement savings options are available<br>\n• &#xa0; &#xa0;<strong>Pay off your student loans faster </strong>- As a qualifying employer, City of Philadelphia employees are eligible to participate in the Public Service Loan Forgiveness program. Join the ranks of hundreds of employees who have already benefited from this program and achieved student loan forgiveness.<br>\n• &#xa0; &#xa0;<strong>Enjoy a Free Commute on SEPTA</strong> - Starting September 1, 2023, eligible City employees will no longer have to worry about paying for SEPTA public transportation. Whether you're a full-time, part-time, or provisional employee, you can seize the opportunity to sign up for the SEPTA Key Advantage Program and receive free Key cards for free rides on SEPTA buses, trains, trolleys, and regional rails.<br>\n• &#xa0; &#xa0;<strong>Unlock Tuition Discounts and Scholarships </strong>- The City of Philadelphia has forged partnerships with over a dozen esteemed colleges and universities in the area, ensuring that our employees have access to a wide range of tuition discounts and scholarships. Experience savings of 10% to 40% on your educational expenses, extending not only to City employees but in some cases, spouse and dependents too!<br>\nJoin the City of Philadelphia team today and seize these incredible benefits designed to enhance your financial well-being and personal growth!</p><p>*The successful candidate must be a city of Philadelphia resident within six months of hire</p><p>Effective May 22, 2023, vaccinations are no longer required for new employees that work in non-medical, non-emergency or patient facing positions with the City of Philadelphia. As a result, only employees in positions providing services that are patient-facing medical care (ex: Nurses, doctors, emergency medical personnel), must be fully vaccinated.</p><p>The City of Philadelphia is an Equal Opportunity employer and does not permit discrimination based on race, ethnicity, color, sex, sexual orientation, gender identity, religion, national origin, ancestry, age, disability, marital status, source of income, familial status, genetic information or domestic or sexual violence victim status. If you believe you were discriminated against, call the Philadelphia Commission on Human Relations at 215-686-4670 or send an email to faqpchr@phila.gov.</p>"
+     }
+    }
+   },
+   "compensation": {
+    "max": 60000,
+    "currency": "USD",
+    "period": "YEARLY"
+   },
+   "active": true,
+   "visibility": "PUBLIC",
+   "industry": {
+    "id": "government_administration",
+    "label": "Government Administration"
+   },
+   "function": {
+    "id": "information_technology",
+    "label": "Information Technology"
+   },
+   "department": {
+    "id": 12604351,
+    "label": "Office of Innovation & Technology"
+   },
+   "experienceLevel": {
+    "id": "entry_level",
+    "label": "Entry Level"
+   },
+   "typeOfEmployment": {
+    "id": "permanent",
+    "label": "Full-time"
+   },
+   "language": {
+    "code": "en",
+    "label": "English",
+    "labelNative": "English (US)"
+   }
+  },
+  "744000155798810": {
+   "id": "744000155798810",
+   "name": "EBS Technical – Interface Lead",
+   "uuid": "8ca88f83-dfdb-4753-b40a-155ef0d20f4a",
+   "jobId": "81ecb157-f6bd-4dc0-9de4-952bee394faa",
+   "jobAdId": "68249072-654d-4ae4-a38a-724734e81591",
+   "defaultJobAd": true,
+   "refNumber": "REF4585L",
+   "company": {
+    "name": "City of Philadelphia",
+    "identifier": "CityofPhiladelphia"
+   },
+   "location": {
+    "city": "Philadelphia",
+    "region": "PA",
+    "country": "us",
+    "address": "4 East Penn Square",
+    "postalCode": "19103",
+    "remote": false,
+    "hybrid": false,
+    "latitude": "39.9521104",
+    "longitude": "-75.1628819",
+    "fullLocation": "Philadelphia, PA, United States"
+   },
+   "customField": [
+    {
+     "fieldId": "COUNTRY",
+     "fieldLabel": "Country/Region",
+     "valueId": "us",
+     "valueLabel": "United States"
+    },
+    {
+     "fieldId": "58b7e580e4b0885c92cd9bbb",
+     "fieldLabel": "Department",
+     "valueId": "16180811",
+     "valueLabel": "Finance - Interface Lead"
+    },
+    {
+     "fieldId": "65984bc2953138061efc8c44",
+     "fieldLabel": "Minimum Education Required",
+     "valueId": "8cc3b4e6-854e-4c88-8df7-bf73fe2164c8",
+     "valueLabel": "College degree"
+    },
+    {
+     "fieldId": "57d19d56e4b01750798cd648",
+     "fieldLabel": "Brands",
+     "valueId": "76b4527f-92cb-4689-a582-c67ab34faf40",
+     "valueLabel": "City of Philadelphia"
+    },
+    {
+     "fieldId": "57e021e5e4b0107f7afa3e37",
+     "fieldLabel": "Job Type",
+     "valueId": "52b3cc30-d54b-4942-8e73-0fb8d2c9d5b0",
+     "valueLabel": "Exempt"
+    }
+   ],
+   "releasedDate": "2026-10-15T15:58:25.580Z",
+   "creator": {
+    "name": "",
+    "avatarUrl": ""
+   },
+   "postingUrl": "https://jobs.smartrecruiters.com/CityofPhiladelphia/744000155798810-ebs-technical-interface-lead",
+   "applyUrl": "https://jobs.smartrecruiters.com/CityofPhiladelphia/744000155798810-ebs-technical-interface-lead?oga=true",
+   "referralUrl": "https://jobs.smartrecruiters.com/external-referrals/company/CityofPhiladelphia/publication/8ca88f83-dfdb-4753-b40a-155ef0d20f4a?dcr_ci=CityofPhiladelphia",
+   "jobAd": {
+    "sections": {
+     "companyDescription": {
+      "title": "Company Description",
+      "text": "<p>A best-in-class city that attracts best-in-class talent, Philadelphia is an incredible place to build a career. From our thriving arts scene and rich history to our culture of passion and grit, there are countless reasons to love living and working here. With a workforce of over 30,000 people, and more than 1,000 different job categories, the City of Philadelphia offers boundless opportunities to make an impact.</p><p>As an employer, the City of Philadelphia values inclusion, integrity, innovation, empowerment, and hard work above all else. We offer a vibrant work environment, comprehensive health care and benefits, and the experience you need to grow and excel. If you’re interested in working with a passionate team of people who care about the future of Philadelphia, start here.</p><p><em><strong>What we offer</strong></em></p><ul><li><strong>Impact&#xa0;</strong>- The work you do here matters to millions.&#xa0;</li><li><strong>Growth</strong>&#xa0;- Philadelphia is growing, why not grow with it?&#xa0;</li><li><strong>Diversity &amp; Inclusion</strong>&#xa0;- Find a career in a place where everyone belongs.</li><li><strong>Benefits</strong>&#xa0;- We care about your well-being.</li></ul><p><strong><em>Agency Description</em></strong></p><p>The Office of Director of Finance was created by the Philadelphia Home Rule Charter, adopted by the electors of the City on April 17, 1951, to give the Mayor and the City government a principal officer responsible for the financial, accounting, and budgeting functions of the executive branch. The Director of Finance is thus the chief financial officer of the City, and all powers and duties concerning finances, accounting, and budgeting in the executive branch are directly or indirectly the Director's. The Director of Finance is also the Chairman of the Board of Pensions and Retirements and an ex-officio member of the board of various quasi-governmental agencies, including the Pennsylvania Intergovernmental Cooperation Authority. The City of Philadelphia operates on a fiscal year between July 1st and June 30th.</p><p>&#xa0;</p><p>The Office of the Director of Finance (Finance) is charged with overseeing the City’s financial, accounting, and budgetary functions, including:&#xa0;</p><ul><li><p>Establishing fiscal policy guidelines.&#xa0;</p></li></ul><ul><li><p>Overseeing the City’s budget and financial management programs.&#xa0;</p></li></ul><ul><li><p>Recording and accounting all City financial activities.&#xa0;</p></li></ul><p>Finance administers the City’s payroll activities and risk management functions, issues financial reports, and oversees expenditures and reports on all grants. Finance strives to ensure that the City maintains long-term fiscal stability while meeting its policy goals.</p>"
+     },
+     "jobDescription": {
+      "title": "Job Description",
+      "text": "<p><strong>Overview</strong>&#xa0;</p><p>The Interface Lead will play a key role in modernizing, optimizing, managing, coordinating, and supporting system interfaces/integrations across OnePhilly. This position is responsible for leading the design, development, implementation, and maintenance of all system interfaces and data integrations between the core Oracle/ERP OnePhilly platform and external city systems, third-party vendors, pension boards, and financial institutions. This position requires strong technical and analytical capabilities, excellent communication skills, and the ability to quickly learn and adapt to new technologies. The Interface Lead will work directly with the Director, collaborating closely on interface strategy, documentation, testing, and ongoing improvements.&#xa0;</p><p><strong>Key Responsibilities</strong>&#xa0;</p><ul><li><p>Leadership &amp; Strategic Alignment: Collaborate directly with the Director of OnePhilly to prioritize interface needs, escalate critical issues, and provide ongoing updates on interface performance and project progress.&#xa0;</p></li></ul><ul><li><p>&#xa0;Integration Strategy &amp; Architecture: Define and execute the interface development strategy, ensuring integrations align with City architectural standards, data security policies, and the overarching OnePhilly project roadmap.&#xa0;</p></li></ul><ul><li><p>End-to-End Delivery: Lead the full lifecycle of data interfaces, including requirements gathering, data mapping, technical specification design, building, testing, and deployment.&#xa0;</p></li></ul><ul><li><p>Stakeholder &amp; Vendor Coordination: Serve as the primary technical point of contact for external benefit vendors, banks, vendors, and 50+ city operating departments to facilitate seamless data exchange.&#xa0;</p></li></ul><ul><li><p>Quality Assurance &amp; Testing: Formulate strict testing protocols (Unit, System Integration, and User Acceptance Testing) to ensure HR, OTL, payroll, pension, and benefit transactions process with 100% data integrity.&#xa0;</p></li></ul><ul><li><p>Monitoring &amp; Incident Management: Oversee daily interface processing, error-handling protocols, and performance tuning. Quickly diagnose, troubleshoot, and resolve critical data mismatches or interface failures.&#xa0;</p></li></ul><ul><li><p>Compliance &amp; Security: Ensure all inbound and outbound file transfers (SFTP, Direct Access, flat files) comply with modern data security policies, PII regulations, and strict audit requirements.&#xa0;</p></li></ul><ul><li><p>Team Leadership: Provide guidance and mentorship to developers, data analysts, and business analysts working on data integrations.&#xa0;</p></li></ul><p><strong>Required Skills &amp; Qualifications</strong>&#xa0;</p><ul><li><p>Strong technical and analytical skills with the ability to interpret complex data and system interactions&#xa0;</p></li></ul><ul><li><p>Demonstrated ability to learn quickly and adapt to new software, tools, and technologies.&#xa0;</p></li></ul><ul><li><p>Experience with interface testing, troubleshooting, and documentation.&#xa0;</p></li></ul><ul><li><p>Excellent communication skills, including the ability to convey technical concepts to non-technical stakeholders.&#xa0;</p></li></ul><ul><li><p>High attention to detail and strong organizational skills.&#xa0;</p></li></ul><ul><li><p>Ability to work independently and collaboratively in a fast-paced environment.&#xa0;</p></li></ul><ul><li><p>Familiarity with system integrations, data mapping, or workflow design is a plus&#xa0;</p></li></ul><ul><li><p>Expertise with Windows MS Office suite is a must.&#xa0;</p></li></ul>"
+     },
+     "qualifications": {
+      "title": "Qualifications",
+      "text": "<p><strong>Education and Experience:&#xa0;</strong></p><p>Completion of a Bachelor’s Degree Computer Science, Information Systems, Information Technology, Data Analytics,&#xa0; or a closely related field.&#xa0;</p><p>Five years of progressively responsible experience supporting, developing, testing, or managing enterprise system interfaces and data integrations.&#xa0;</p><p>At least two years of experience coordinating technical work, or providing functional or technical guidance to developers, analysts, vendors, or project teams.</p>"
+     },
+     "additionalInformation": {
+      "title": "Additional Information",
+      "text": "<p><strong>TO APPLY:</strong>&#xa0;<strong>Interested candidates must submit a cover letter, resume, and references.</strong></p><p>Salary Range:&#xa0;$85,000 - $95,000</p><p><strong>Discover the Perks of Being a City of Philadelphia Employee:</strong></p><ul><li><strong>Transportation</strong>: City employees get unlimited <strong>FREE</strong> public transportation all year long through SEPTA’s Key Advantage program.&#xa0;Employees can ride on SEPTA buses, subways, trolleys, and regional rail for their daily commute and more.</li><li>Parental Benefits: The City offers its employees 8&#xa0;weeks of paid parental leave.</li><li>We offer Comprehensive health coverage for employees and their eligible dependents.</li><li>Our wellness program offers eligibility into the discounted medical plan</li><li>Employees receive paid vacation, sick leave, and holidays</li><li>Generous retirement savings options are available</li><li><strong>Pay off your student loans faster</strong> - As a qualifying employer, City of Philadelphia employees are eligible to participate in the Public Service Loan Forgiveness program. Join the ranks of hundreds of employees who have already benefited from this program and achieved student loan forgiveness.</li><li><strong>Unlock Tuition Discounts and Scholarships</strong> - The City of Philadelphia has forged partnerships with over a dozen esteemed colleges and universities in the area, ensuring that our employees have access to a wide range of tuition discounts and scholarships. Experience savings of 10% to 40% on your educational expenses, extending not only to City employees but in some cases, spouse and dependents too!</li></ul><p>Join the City of Philadelphia team today and seize these incredible benefits designed to enhance your financial well-being and personal growth!</p><p><em><strong>*The successful candidate must be a city of Philadelphia resident within six months of hire</strong></em></p><p>Effective May 22, 2023, vaccinations are <strong>no longer required</strong> for new employees that work in non-medical, non-emergency or patient facing positions with the City of Philadelphia. As a result, only employees in positions providing services that are patient-facing medical care (ex: Nurses, doctors, emergency medical personnel), must be fully vaccinated.</p><p>The City of Philadelphia is an Equal Opportunity employer and does not permit discrimination based on race, ethnicity, color, sex, sexual orientation, gender identity, religion, national origin, ancestry, age, disability, marital status, source of income, familial status, genetic information or domestic or sexual violence victim status. If you believe you were discriminated against, call the Philadelphia Commission on Human Relations at 215-686-4670 or send an email to faqpchr@phila.gov.</p><p>For more information, go to: Human Relations Website: <a href=\"http://www.phila.gov/humanrelations/Pages/default.aspx\" rel=\"noopener noreferrer\">http://www.phila.gov/humanrelations/Pages/default.aspx</a></p>"
+     }
+    }
+   },
+   "compensation": {
+    "min": 85000,
+    "max": 95000,
+    "currency": "USD",
+    "period": "YEARLY"
+   },
+   "active": true,
+   "visibility": "PUBLIC",
+   "industry": {
+    "id": "government_administration",
+    "label": "Government Administration"
+   },
+   "function": {
+    "id": "other",
+    "label": "Other"
+   },
+   "department": {
+    "id": 16180811,
+    "label": "Finance - Interface Lead"
+   },
+   "experienceLevel": {
+    "id": "mid_senior_level",
+    "label": "Mid-Senior Level"
+   },
+   "typeOfEmployment": {
+    "id": "permanent",
+    "label": "Full-time"
+   },
+   "language": {
+    "code": "en",
+    "label": "English",
+    "labelNative": "English (US)"
+   }
+  }
+ }
+}
