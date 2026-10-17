@@ -1,11 +1,13 @@
 /* "profile" experiment: an application-ready profile, modeled on what LinkedIn Easy Apply, Indeed Apply,
    ZipRecruiter 1-Click Apply and Handshake collect so a person can apply quickly and completely.
-   Adds to Profile, Settings: phone, headline, resume link, about you, LinkedIn, portfolio, school, major,
-   graduation month, GPA (optional), most recent employer.
-   Adds to Profile, Preferences: work authorization, sponsorship, earliest start, opportunity types, a default note.
+   Adds to Profile setup: phone, headline, resume link, about you, LinkedIn, portfolio, school, major,
+   graduation month, GPA (optional), most recent employer, work authorization, sponsorship, earliest start,
+   opportunity types and the questions employers' own forms ask. uaply-nav.js puts each field on its step (STEPS there);
+   the group headings below ("sec", "title") only sort the fields and are not shown in the guided setup.
    Shows an "application readiness" score with one-tap links to whatever is missing, validates links and phone,
    and warns when the authorization and sponsorship answers contradict each other.
-   Deliberately does not ask for demographic or EEO data. Everything is optional except what an employer needs.
+   This file does not ask for demographic or EEO data (the optional voluntary questions live in uaply-nav.js and are
+   never sent). Everything is optional except what an employer needs.
    Fields are listed in SPEC, so adding one is a one-line change. */
 (function(){
 function once(src,a,b){if(src.indexOf(a)<0)throw new Error("patch target not found: "+a.slice(0,40));return src.replace(a,function(){return b})}

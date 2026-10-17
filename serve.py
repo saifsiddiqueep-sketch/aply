@@ -25,6 +25,12 @@ Serves ROOT; each urlpath=file alias maps one URL to a file outside ROOT (e.g. /
   POST /api/feedback      store feedback sent through the assistant
   GET  /feedback          the feedback summary page (this server only listens on this computer)
   GET  /help/articles.json  the help articles the assistant answers from
+  POST /api/auth/verify, /api/auth/resend   the 6-digit code that proves an email is the person's own
+  POST /api/auth/google/token   "Continue with Google" through Google's own button
+  POST /api/setup/save-google, save-stripe, save-ats, remove-ats   the other boxes on /setup (this computer only)
+  GET  /api/billing/status, POST /api/billing/checkout, /api/billing/portal, /api/billing/webhook   Plus and Pro (billing_api.py)
+  GET  /api/employer/me, /api/employer/logo/<id>, POST /api/employer/...   Hiring mode, sandbox only (employers_api.py)
+  GET  /healthz           for the host's health check
 Accounts use an HttpOnly session cookie. When a signed-in user swipes right, a receipt goes to their email."""
 import sys, os, json, http.server, base64, hmac, threading, time
 

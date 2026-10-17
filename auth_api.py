@@ -23,8 +23,9 @@ also forgets their application records (see uaply_api.forget_user). App stores r
 Password reset: request_reset() emails a one-hour, single-use link; reset_password() sets the new password, ends every
 session of that account and works for Google-only accounts too (it then gains a password).
 
-Not built yet: email verification at sign-up. A hosted database (instead of this file) is the production
-step: this module is the local stand-in that already behaves like one.
+Email verification: a new password account gets a 6-digit code by email (email_codes above); a "Continue with Google" account
+counts as verified only when Google is the authority on that address (see oauth_login). A hosted database (instead of this file) is the production step: this module is the local stand-in
+that already behaves like one.
 """
 import hashlib
 import hmac

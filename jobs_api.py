@@ -134,10 +134,6 @@ def _us_ok(loc, remote):
 SAL_RE = re.compile(r"\$\s?(\d{2,3}(?:,\d{3})+|\d{2,3}\s?[kK])\s*(?:-|–|—|to)\s*\$?\s*(\d{2,3}(?:,\d{3})+|\d{2,3}\s?[kK])")
 YRS_RE = re.compile(r"(\d{1,2})\+?\s*(?:or more\s*)?(?:years|yrs)", re.I)
 
-EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-RECRUITING_RE = re.compile(r"career|jobs|recruit|talent|hiring|apply|people@|hr@", re.I)
-NOT_CONTACT_RE = re.compile(r"scam|fraud|phish|abuse|security|privacy|legal|compliance|no-?reply|donotreply|\.(png|jpg|gif)$", re.I)
-
 _cache = {}
 _lock = threading.Lock()
 _disk = {"loaded": False, "dirty": False}
@@ -187,14 +183,6 @@ def _save_disk():
         os.replace(tmp, path)
     except Exception as e:                      # jobs still work from memory; only a restart would have to wait for every feed again
         sys.stderr.write("[uaply] could not save the job cache: %s: %s\n" % (type(e).__name__, str(e)[:200]))
-
-
-def _contact(text):
-    """A recruiting address printed in the posting, if there is one. Only recruiting-looking mailboxes qualify."""
-    for m in EMAIL_RE.findall(text or ""):
-        if RECRUITING_RE.search(m.split("@")[0]) and not NOT_CONTACT_RE.search(m):
-            return m
-    return ""
 
 
 def _get(url):

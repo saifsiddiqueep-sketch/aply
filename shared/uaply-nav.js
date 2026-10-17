@@ -1,6 +1,7 @@
 /* "nav" experiment for the sandbox and dev instances (never loaded by prod).
-   Bottom navigation with three dropdowns: Services (Jobs, Internships, Coop), Dashboard (Applied, Interview, Rejected),
-   Profile (Settings, Preferences, Filters). patch() edits an in-memory copy of index.html; apply() builds the UI. */
+   Bottom navigation with three dropdowns: Services (Full-time, Part-time, Internships, Coop), Dashboard (Overview, Applied,
+   Accepted, Rejected, Interviews), Profile (Profile setup, Filters, Account, Plan & billing, Data & privacy).
+   patch() edits an in-memory copy of index.html; apply() builds the UI. */
 (function(){
 function once(src,a,b){if(src.indexOf(a)<0)throw new Error("patch target not found: "+a.slice(0,40));return src.replace(a,function(){return b})}
 
@@ -1040,7 +1041,8 @@ function apply(w,host){
     sync();
   })();
 
-  /* Settings: target titles, level readout, voluntary questions. Preferences: distance (only for hybrid or on-site). */
+  /* Profile setup: target titles and the level readout (Jobs you want), home address and distance (Where and pay; distance only
+     for hybrid or on-site), work eligibility and the voluntary questions (Eligibility and extras). */
   (function(){
     function syncMeta(){if(w.__uaplySyncPrefs)w.__uaplySyncPrefs()}
     /* target titles: the main title plus up to four more */
@@ -1131,7 +1133,7 @@ function apply(w,host){
       if(vol.length){L.push("","Voluntary self-identification:");vol.forEach(function(x){add(x[0],x[1])})}
       return L.join("\n");
     };
-    /* distance moves to Preferences and shows only for hybrid or on-site */
+    /* distance moves into Profile setup, Where and pay, and shows only for hybrid or on-site */
     var mf=null;
     if(!NEAR){   /* the sandbox keeps the commute slider in Filters instead */
       mf=d.createElement("div");mf.className="field full";mf.id="aMilesF";mf.appendChild(d.getElementById("fMilesWrap"));
@@ -1145,7 +1147,7 @@ function apply(w,host){
     paintTitles();fillEeo();fillAddr();paintLevel();vis();A.renderAll();
   })();
 
-  /* resume file and resume link live in Preferences */
+  /* resume file and resume link: Profile setup, Background and links */
   (function(){
     var rf=d.createElement("div");rf.className="field full";rf.id="aResF";
     rf.innerHTML='<span class="l">Resume</span><div id="resNow"></div>'+
@@ -1275,10 +1277,6 @@ function apply(w,host){
     paintCount();
   })();
 
-  /* message to the hiring manager on swipe right: opt-in (off by default), Plus and Pro only. It goes out with the
-     application, so only to employers that agreed to receive applications through UAply (the server decides that).
-     The owner's legal review advised against writing messages for recruiters; the product owner chose to include it on
-     2026-10-13, so it needs the attorney review before launch. */
   /* ---------- real plans: the server keeps the plan, Stripe takes the payment ---------- */
   var BILL={enabled:false,plan:"free",signedIn:false,plans:{free:{name:"Free",price:0,cap:50},plus:{name:"Plus",price:9.99,cap:250},pro:{name:"Pro",price:19.99,cap:0}}};
   function loadBilling(){return w.fetch("/api/billing/status",{credentials:"same-origin"}).then(function(r){return r.ok?r.json():null}).then(function(j){if(j){j._asked=BILL._asked;BILL=j;if(!acctSec.hidden&&sub.prof==="plan")renderAcct("plan")}}).catch(function(){})}
@@ -1323,11 +1321,15 @@ function apply(w,host){
     setTimeout(function(){sub.prof="plan";cur="prof";go("prof");renderAcct("plan");msg(b==="success"?"Thank you! Your plan is being activated; it shows here in a few seconds.":b==="cancel"?"Checkout canceled. Nothing was charged.":"Billing updated.");
       var n=0,t=setInterval(function(){loadBilling();if(++n>=5)clearInterval(t)},2000)},300);
   })();
+  /* message to the hiring manager on swipe right: opt-in (off by default), Plus and Pro only. It goes out with the
+     application, so only to employers that agreed to receive applications through UAply (the server decides that).
+     The owner's legal review advised against writing messages for recruiters; the product owner chose to include it on
+     2026-10-13, so it needs the attorney review before launch. */
   function autoAllowed(){if(REL||(typeof SRV!=="undefined"&&SRV&&SRV.up))return BILL.plan!=="free"||!BILL.enabled;var s=planState();return s.plan!==PLANS.trial&&s.ok}
   w.__uaplyAutoMsg=function(){return autoAllowed()&&!!acct.fAuto};
-  /* what the application sends besides the profile: the details saved under Resume and links (phone, LinkedIn, portfolio, About you, resume link) win over the optional profile form */
+  /* what the application sends besides the profile: the details saved in Profile setup, Background and links (phone, LinkedIn, portfolio, About you, resume link) win over the optional profile form */
   w.__uaplyApplyExt=function(){var x=Object.assign({},XV());var ph=phoneOf(),li=linkOf("linkedin"),pf=linkOf("portfolio"),su=summaryOf(),rs=resumeLinkOf();if(ph)x.phone=ph;if(li)x.linkedin=li;if(pf)x.portfolio=pf;if(su)x.summary=su;if(rs)x.resume=rs;var ad=acct.addr||{};if(ad.zip)x.zip=ad.zip;if(A.S.profile&&A.S.profile.reloc)x.relocate="yes";if(ad.state)x.state=ad.state;x.ack=x.ack==="yes";return x};
-  w.__uaplyResume=function(){return acct.resumeData&&DATA_URL.test(acct.resumeData)?{name:acct.resumeName,size:acct.resumeSize,data:acct.resumeData}:null};   /* the file uploaded under Resume and links */
+  w.__uaplyResume=function(){return acct.resumeData&&DATA_URL.test(acct.resumeData)?{name:acct.resumeName,size:acct.resumeSize,data:acct.resumeData}:null};   /* the file uploaded in Profile setup, Background and links */
   w.__uaplyMessage=function(job,m,p){
     var skills=(m.matched||[]).slice(0,3),name=p.name||"[Your name]",sumv=summaryOf();
     var fit=skills.length?"My experience with "+skills.join(", ")+" lines up with what the role asks for":"My background lines up well with what the role asks for";
@@ -1361,7 +1363,6 @@ function apply(w,host){
 
   /* resume, plan and data panels */
   var acctSec=d.createElement("div");acctSec.id="acctSec";acctSec.className="form";acctSec.hidden=true;form.after(acctSec);
-  var AUTH=["Authorized to work in the US without sponsorship","Authorized now, will need sponsorship later","Need sponsorship now","Authorized to work outside the US"];
   var NOTICE=["Immediately","2 weeks","1 month","2 months or more"];
   function msg(t){var m=d.getElementById("aMsg");if(!m)return;m.textContent=t;if(t&&m.scrollIntoView)m.scrollIntoView({block:"nearest",behavior:"smooth"})}
   function cleanUrl(u){u=String(u||"").trim();if(!u)return "";if(!URL_OK.test(u))u="https://"+u;try{var x=new w.URL(u);return /^https?:$/.test(x.protocol)?x.href.slice(0,300):null}catch(e){return null}}
@@ -1765,11 +1766,12 @@ function apply(w,host){
       var nv=chk("svNps");if(nv!=="")sv.nps=+nv;
       var any=sv.reason||sv.outcome||sv.better.trim()||sv.return.trim()||nv!=="";
       b.disabled=true;
-      var go=function(){AUI.survey=false;AUI.delOpen=true;renderAcct("account");var dp2=d.getElementById("sDelPw");if(dp2)dp2.focus();msg(any?"Thank you, that really helps us.":"")};
-      if(!any){go();return}
+      /* not called "go": that name is the screen router, and a var here would hide it in this whole click handler */
+      var toDelete=function(){AUI.survey=false;AUI.delOpen=true;renderAcct("account");var dp2=d.getElementById("sDelPw");if(dp2)dp2.focus();msg(any?"Thank you, that really helps us.":"")};
+      if(!any){toDelete();return}
       msg("Sending…");
       /* the survey is sent without waiting on the result: a problem here must never get in the way of deleting an account */
-      apiPost("/api/feedback",{topic:"exit",survey:sv,source:"delete",page:"Account"}).then(go,go);
+      apiPost("/api/feedback",{topic:"exit",survey:sv,source:"delete",page:"Account"}).then(toDelete,toDelete);
       return;
     }
     if(a==="sdelgo"){
@@ -2026,7 +2028,7 @@ function apply(w,host){
     if(k==="svc"){A.setType(sub.svc);A.show("swipe");savePrefs()}
     else if(k==="dash"){A.show("apps");d.getElementById("pane-apps").hidden=true;renderTrack();tp.hidden=false}
     else{
-      /* Settings, Preferences and Filters are one form. Moving between them must not reload the saved copy,
+      /* Profile setup and Filters are one form. Moving between them must not reload the saved copy,
          or whatever was typed and not yet saved would be thrown away. */
       if(d.getElementById("pane-profile").hidden)A.show("profile");
       section(sub.prof);

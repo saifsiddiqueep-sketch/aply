@@ -5,6 +5,8 @@ public server, needs OWNER_PASSWORD.
 
   GET  /setup                 the checklist
   POST /api/setup/test-mail   send one test email to the owner (owner_copy, else the SMTP from address)
+  POST /api/setup/save-mail, save-google, save-stripe   the Connect boxes: write the git-ignored uaply-config.json (never in a test run)
+  POST /api/setup/save-ats, remove-ats                  an employer's hiring-system key, in the git-ignored employer list
 """
 import html
 import re
