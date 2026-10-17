@@ -147,6 +147,8 @@ t("the test button says the password or key is missing", (out["ok"], "no passwor
 # the Connect an employer's hiring system box
 import jobs_api  # noqa: E402
 os.environ["UAPLY_DATA_DIR"] = TMP
+code_copy = os.path.join(os.path.dirname(os.path.abspath(jobs_api.__file__)), "uaply-partners.json")      # the owner's real list, if any (only its date is looked at)
+code_stamp = os.path.exists(code_copy) and os.stat(code_copy).st_mtime_ns
 s, out = setup_api.save_ats({"kind": "workday", "board": "acme", "api_key": "abcdefgh1234"})
 t("an unknown hiring system is refused", (s, out["ok"]), (400, False))
 s, out = setup_api.save_ats({"kind": "greenhouse", "board": "ac/me", "api_key": "abcdefgh1234"})
@@ -160,6 +162,8 @@ setup_api.save_ats({"kind": "greenhouse", "board": "acme", "api_key": "gh-test-k
 t("saving the same board again replaces its key, other connections stay", (jobs_api.ats_connections().get(("greenhouse", "acme")), sorted(jobs_api.ats_connections())), ("gh-test-key-5678", [("greenhouse", "acme"), ("lever", "acme")]))
 setup_api.remove_ats({"kind": "lever", "board": "acme"})
 t("a connection can be removed", sorted(jobs_api.ats_connections()), [("greenhouse", "acme")])
+t("with UAPLY_DATA_DIR set the employer list is written there, and the one next to the code is never created or changed",
+  (os.path.exists(os.path.join(TMP, "uaply-partners.json")), os.path.exists(code_copy) and os.stat(code_copy).st_mtime_ns), (True, code_stamp))
 
 # the setup page is the owner's guide to switching test mode off: clickable steps, the exact addresses to give Google, and anchors the sign-in screen links to
 page = setup_api.page("localhost:8767", "http").decode("utf-8")

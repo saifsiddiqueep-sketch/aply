@@ -505,11 +505,13 @@ def _clean(v, n):
 
 
 def partners_file(for_writing=False):
-    """Where the employer list is kept: on a host on the persistent disk (UAPLY_DATA_DIR), else next to the code. With for_writing, the path to create."""
-    places = [os.path.join(os.environ["UAPLY_DATA_DIR"], "uaply-partners.json")] if os.environ.get("UAPLY_DATA_DIR") else []
-    places += [os.path.join(ROOT, "uaply-partners.json")]
-    found = next((p for p in places if os.path.exists(p)), None)
-    return found or (places[-1] if for_writing else None)
+    """Where the employer list is kept: on a host on the persistent disk (UAPLY_DATA_DIR), else next to the code. With for_writing, the path to create.
+    With UAPLY_DATA_DIR set, ONLY that folder is used. It used to fall back to the file next to the code, so a test run (which always sets
+    UAPLY_DATA_DIR) read the owner's real employer list and the Connect box test wrote a test key into it; and on a host a first save went
+    to the code folder, which a redeploy wipes."""
+    folder = os.environ.get("UAPLY_DATA_DIR") or ROOT
+    path = os.path.join(folder, "uaply-partners.json")
+    return path if (for_writing or os.path.exists(path)) else None
 
 
 def _file_stamp(path):
