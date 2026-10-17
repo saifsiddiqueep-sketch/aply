@@ -28,13 +28,13 @@ console.log("Python files");
 /* On Windows "python" is often only a Microsoft Store shortcut; fall back to the "py" launcher when it does not run. */
 const py = process.platform !== "win32" ? "python3"
   : (spawnSync("python", ["--version"], { encoding: "utf8" }).status === 0 ? "python" : "py");
-["serve.py", "jobs_api.py", "uaply_api.py", "auth_api.py", "chat_api.py"].forEach((f) => {
+fs.readdirSync(".").filter((f) => f.endsWith(".py")).forEach((f) => {     /* every server module, not a hand-kept list (it had missed 8 of 13) */
   const r = spawnSync(py, ["-m", "py_compile", f], { encoding: "utf8" });
   r.status === 0 ? ok(f) : bad(f + "\n" + (r.stderr || r.error));
 });
 
 console.log("JSON files");
-["uaply-config.example.json", ".claude/launch.json", "help/articles.json"].forEach((f) => {
+fs.readdirSync(".").filter((f) => f.endsWith(".json") && !["uaply-config.json", "uaply-partners.json"].includes(f)).concat(   /* never the owner's secret files: an error message could quote them */[".claude/launch.json", "help/articles.json", "mobile/capacitor.config.json"]).filter((f) => fs.existsSync(f)).forEach((f) => {
   try { JSON.parse(fs.readFileSync(f, "utf8")); ok(f); } catch (e) { bad(f + ": " + e.message); }
 });
 
