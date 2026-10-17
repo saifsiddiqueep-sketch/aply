@@ -5,7 +5,35 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const CHROME = path.join(process.env.LOCALAPPDATA || "", "Google", "Chrome", "Application", "chrome.exe");
+// Which Chrome to start: UAPLY_CHROME if set, else the usual Windows install, else common Linux/Mac places
+// (a Playwright Chromium under /opt/pw-browsers, google-chrome, chromium, the Mac app).
+function findChrome() {
+  if (process.env.UAPLY_CHROME) return process.env.UAPLY_CHROME;
+  const win = path.join(process.env.LOCALAPPDATA || "", "Google", "Chrome", "Application", "chrome.exe");
+  if (fs.existsSync(win)) return win;
+  const pw = process.env.PLAYWRIGHT_BROWSERS_PATH || "/opt/pw-browsers";
+  try {
+    for (const d of fs.readdirSync(pw).filter((n) => /^chromium-\d+$/.test(n)).sort().reverse()) {
+      for (const sub of ["chrome-linux", "chrome-linux64"]) {
+        const p = path.join(pw, d, sub, "chrome");
+        if (fs.existsSync(p)) return p;
+      }
+    }
+  } catch (e) {}
+  const dirs = (process.env.PATH || "").split(path.delimiter);
+  for (const name of ["google-chrome", "google-chrome-stable", "chromium", "chromium-browser"]) {
+    for (const d of dirs) { const p = path.join(d, name); if (d && fs.existsSync(p)) return p; }
+  }
+  const mac = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+  if (fs.existsSync(mac)) return mac;
+  return win;                                             // not found: keep the old path so the error names it
+}
+const CHROME = findChrome();
+// Chrome refuses to start as root on Linux (containers) unless its sandbox is off
+const EXTRA = process.platform === "linux" && process.getuid && process.getuid() === 0 ? ["--no-sandbox"] : [];
+// Chrome keeps a socket file under TMPDIR, and on Linux/Mac a socket path longer than about 100 characters fails, so Chrome
+// never answers. A long TMPDIR (a test runner's own folder) did that: then Chrome and its profile use /tmp instead.
+const TMP = process.platform !== "win32" && os.tmpdir().length > 60 && fs.existsSync("/tmp") ? "/tmp" : os.tmpdir();
 
 let failed = false;                                       // set when the test prints a FAIL line, so the runner (run-all-tests.sh) can see it
 const _log = console.log;
@@ -18,9 +46,9 @@ setTimeout(() => { console.log("TEST SCRIPT FAILED: no result after " + Math.rou
 async function launch() {
   for (let attempt = 1; attempt <= 3; attempt++) {
     const port = 9300 + Math.floor(Math.random() * 500);
-    const profile = fs.mkdtempSync(path.join(os.tmpdir(), "uaply-cdp-"));
-    const proc = spawn(CHROME, ["--headless=new", "--disable-gpu", "--remote-debugging-port=" + port, "--user-data-dir=" + profile,
-      "--window-size=" + (process.env.W || 1100) + "," + (process.env.H || 900), "about:blank"], { stdio: "ignore" });
+    const profile = fs.mkdtempSync(path.join(TMP, "uaply-cdp-"));
+    const proc = spawn(CHROME, [...EXTRA, "--headless=new", "--disable-gpu", "--remote-debugging-port=" + port, "--user-data-dir=" + profile,
+      "--window-size=" + (process.env.W || 1100) + "," + (process.env.H || 900), "about:blank"], { stdio: "ignore", env: Object.assign({}, process.env, { TMPDIR: TMP }) });
     let tab;
     for (let i = 0; i < 75 && !tab; i++) {
       try { tab = (await (await fetch("http://127.0.0.1:" + port + "/json")).json()).find((t) => t.type === "page"); } catch (e) {}

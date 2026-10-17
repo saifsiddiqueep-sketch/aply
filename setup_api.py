@@ -175,14 +175,14 @@ def save_ats(payload):
     board = str(payload.get("board") or "").strip()
     key = str(payload.get("api_key") or "").strip()
     if not ats_api.valid_connection(kind, board, key):
-        return 400, {"ok": False, "message": "Choose Greenhouse or Lever, give the board name from the employer's job-board address (letters, numbers, - and _), and paste the key they created."}
+        return 400, {"ok": False, "message": "Choose Greenhouse, Lever, Ashby or SmartRecruiters, give the board name from the employer's job-board address (letters, numbers, - and _), and paste the key they created."}
     path = jobs_api.partners_file(for_writing=True)
     data = _read_partners(path)
     keep = [c for c in (data.get("ats_connections") or []) if isinstance(c, dict) and (c.get("kind"), c.get("board")) != (kind, board)]
     keep.append({"kind": kind, "board": board, "api_key": key})
     data["ats_connections"] = keep
     _write_partners(path, data)
-    return 200, {"ok": True, "saved": True, "message": "Connected. Real %s postings from %s now say Apply instantly, and a swipe right sends the application into their system." % (kind.capitalize(), board)}
+    return 200, {"ok": True, "saved": True, "message": "Connected. Real %s postings from %s now say Apply instantly, and a swipe right sends the application into their system." % (ats_api.NAMES[kind], board)}
 
 
 def remove_ats(payload):
@@ -366,7 +366,7 @@ def page(host, proto):
         rows.insert(0, '<article><b>Why you still see the test inbox and a test sign-in</b><p class="m">Until the first two items below are connected, this computer cannot show Google\'s real account chooser '
                        'and cannot send real email, so sign-up codes and receipts are saved in the <a href="/outbox">test inbox</a> instead. Connect both and the app behaves like the live site: '
                        'Google\'s own "Continue with Google" button, and real emails in real inboxes.</p></article>')
-    conn_html = "".join('<p class="m">%s / %s <button type="button" class="rm" data-k="%s" data-b="%s">Disconnect</button></p>' % (e(k.capitalize()), e(b), e(k), e(b)) for k, b in connections()).replace("%", "%%")
+    conn_html = "".join('<p class="m">%s / %s <button type="button" class="rm" data-k="%s" data-b="%s">Disconnect</button></p>' % (e(ats_api.NAMES.get(k, k)), e(b), e(k), e(b)) for k, b in connections()).replace("%", "%%")
     fs = feed_status()
     feeds_html = ("".join('<p class="m">%s: <b>%s</b>%s</p>' % (e(label), "saved" if fs[n] else "not added yet",
                                                                  (' <button type="button" class="fx" data-n="%s">Remove</button>' % n) if fs[n] else "")
@@ -408,8 +408,9 @@ code{background:var(--bg);padding:1px 5px;border-radius:5px}
 <p><input id="gp" type="password" placeholder="Brevo SMTP key or Gmail App Password" autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><input id="gc" type="email" placeholder="Send copies and tests to (optional)" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><button id="sv" type="button">Save and send a test email</button> <span id="sr" class="m" role="status"></span></p></article>
-<article id="ats"><b>Connect an employer's hiring system</b><p class="m">For an employer that uses Greenhouse or Lever and gave you the key they created. Their real postings then say <b>Apply instantly</b>. The key is saved only in uaply-partners.json on this computer and is never shown again.</p>
-<p><select id="ak" style="padding:8px;border:1px solid var(--line);border-radius:8px"><option value="greenhouse">Greenhouse</option><option value="lever">Lever</option></select>
+<article id="ats"><b>Connect an employer's hiring system</b><p class="m">For an employer that uses Greenhouse, Lever, Ashby or SmartRecruiters and gave you the key they created. Their real postings then say <b>Apply instantly</b>. The key is saved only in uaply-partners.json on this computer and is never shown again.</p>
+<p class="m">Where the employer makes the key: <b>Greenhouse</b> Configure, Dev Center, API Credential Management (a Job Board API key). <b>Lever</b> Settings, Integrations and API (a Postings API key, made by a Super Admin). <b>Ashby</b> Admin, Integrations, API Keys (a key with the Candidates write and Jobs read permissions). <b>SmartRecruiters</b> Settings, Admin, Credential Manager (an Application API key). The board name is the one in the employer's job-board address: boards.greenhouse.io/<i>board</i>, jobs.lever.co/<i>site</i>, jobs.ashbyhq.com/<i>board</i> or jobs.smartrecruiters.com/<i>company</i>.</p>
+<p><select id="ak" aria-label="Hiring system" style="padding:8px;border:1px solid var(--line);border-radius:8px"><option value="greenhouse">Greenhouse</option><option value="lever">Lever</option><option value="ashby">Ashby</option><option value="smartrecruiters">SmartRecruiters</option></select>
 <input id="ab" type="text" placeholder="Board name, e.g. acme" style="width:200px;max-width:50vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><input id="aa" type="password" placeholder="The employer's API key" autocomplete="off" style="width:280px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><button id="as" type="button">Connect</button> <span id="ar" class="m" role="status"></span></p>

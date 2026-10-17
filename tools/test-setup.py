@@ -162,6 +162,16 @@ setup_api.save_ats({"kind": "greenhouse", "board": "acme", "api_key": "gh-test-k
 t("saving the same board again replaces its key, other connections stay", (jobs_api.ats_connections().get(("greenhouse", "acme")), sorted(jobs_api.ats_connections())), ("gh-test-key-5678", [("greenhouse", "acme"), ("lever", "acme")]))
 setup_api.remove_ats({"kind": "lever", "board": "acme"})
 t("a connection can be removed", sorted(jobs_api.ats_connections()), [("greenhouse", "acme")])
+s, out = setup_api.save_ats({"kind": "smartrecruiters", "board": "CityofPhiladelphia", "api_key": "sr-test-token-1234"})
+s2, out2 = setup_api.save_ats({"kind": "ashby", "board": "acme", "api_key": "ashby-test-key-1"})
+page = setup_api.page("localhost:8767", "http").decode()
+t("Ashby and SmartRecruiters connect too, named properly in the answer and on the page",
+  ((s, s2), "Real SmartRecruiters postings" in out["message"], "SmartRecruiters / CityofPhiladelphia" in page, "Ashby / acme" in page), ((200, 200), True, True, True))
+t("the box offers all four systems and says where each employer makes its key",
+  all(x in page for x in ('<option value="ashby">', '<option value="smartrecruiters">', "Credential Manager", "Candidates write")), True)
+t("neither key is ever on the page", ("sr-test-token" in page, "ashby-test-key" in page), (False, False))
+setup_api.remove_ats({"kind": "smartrecruiters", "board": "CityofPhiladelphia"})
+setup_api.remove_ats({"kind": "ashby", "board": "acme"})
 t("with UAPLY_DATA_DIR set the employer list is written there, and the one next to the code is never created or changed",
   (os.path.exists(os.path.join(TMP, "uaply-partners.json")), os.path.exists(code_copy) and os.stat(code_copy).st_mtime_ns), (True, code_stamp))
 
