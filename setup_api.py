@@ -61,13 +61,14 @@ def checks(host, proto):
     smtp_ok = bool(s.get("host") and s.get("from_addr") and _real(s.get("password"), ("a gmail app password", "the-sending")))
     return [
         {"name": "Sign in with Google", "ok": g_ok,
-         "detail": ("On. Google's own button shows on the sign-in screen, including accounts already signed in on that browser." if g_ok else
+         "detail": (("On. Google's own button shows on the sign-in screen, including accounts already signed in on that browser." +
+                     ("" if google_auth.enabled() else " iPhone and iPad also need the client secret (they use Google's full-page sign-in): add it to UAPLY_CONFIG_JSON on the host.")) if g_ok else
                     ("The client ID does not look right (it should end in .apps.googleusercontent.com)." if g_id and not CLIENT_RE.match(g_id) and not g.get("auth_url") else
-                     "Off. Add your Google client ID (the public one; no secret is needed).")),
-         "todo": ["Open https://console.cloud.google.com/apis/credentials/consent and set up the consent screen: type External, app name UAply, your Gmail as the support and developer email. Then press Publish app so anyone can sign in (the scopes openid, email and profile need no review).",
-                  "Open https://console.cloud.google.com/apis/credentials/oauthclient and create an OAuth client ID of type Web application (Google asks you to create a project first if you have none).",
-                  "Under Authorized JavaScript origins add each of these, exactly as written: " + "  and  ".join(origins(host, proto)) + ". Open this app at localhost, not 127.0.0.1, because Google treats them as different addresses. Add your real website address here too when you have one.",
-                  "Copy the Client ID Google shows (it ends in .apps.googleusercontent.com) and paste it in the Connect Google box below. No secret is needed."] if not g_ok else []},
+                     "Off. Add your Google client ID (the public one). The client secret is only needed on the hosted site, for iPhone and iPad.")),
+         "todo": ["Open https://console.cloud.google.com/auth/overview (Google Auth Platform) and press Get started: app name UAply, your Gmail as the support email, Audience External, your Gmail as the contact. Then on the Audience page press Publish app so anyone can sign in (sign-in only uses openid, email and profile, which need no review).",
+                  "Open https://console.cloud.google.com/auth/clients and press Create client, type Web application, name UAply web.",
+                  "Under Authorized JavaScript origins add each of these, exactly as written: " + "  and  ".join(origins(host, proto)) + ". Open this app at localhost, not 127.0.0.1, because Google treats them as different addresses. For the live site add https://uaply.net, https://www.uaply.net and https://uaply-dev.onrender.com, and under Authorized redirect URIs the same three addresses followed by /api/auth/google/callback.",
+                  "Press Create. Copy the Client ID (it ends in .apps.googleusercontent.com) and paste it in the Connect Google box below. Google shows the client secret only this once: keep it for the hosted site (UAPLY_CONFIG_JSON), never paste it into a page or chat."] if not g_ok else []},
         {"name": "Email sending (password resets, receipts, copies)", "ok": smtp_ok,
          "detail": ("An email login is set. Use the button below to send yourself a test." if smtp_ok else
                     "Off. Until this is set, emails go only to the simulated test inbox (/outbox) and password reset links cannot reach real people."),
@@ -302,7 +303,7 @@ code{background:var(--bg);padding:1px 5px;border-radius:5px}
 </style></head><body><main><h1>UAply setup</h1><p class="m">What is switched on, and what still needs a key. Secrets are never shown here.</p>
 %s
 <article id="google"><b>Connect Google sign-in</b><p class="m">Google needs to be told which addresses may show its button. Add each of these under Authorized JavaScript origins:</p>@@ORIGINS@@
-<p class="m">Then paste the Client ID from Google Cloud Console (the long address ending in .apps.googleusercontent.com). It is public, so it is safe to paste here. It is saved only on this computer.</p>
+<p class="m">Then paste the Client ID from Google Cloud Console (the long address ending in .apps.googleusercontent.com). It is public, so it is safe to paste here. It is saved only on this computer. The client secret is not needed here; on the hosted site it goes into UAPLY_CONFIG_JSON so iPhones and iPads can sign in.</p>
 <p><input id="gi" type="text" placeholder="123456789-abc.apps.googleusercontent.com" style="width:340px;max-width:90vw;padding:8px;border:1px solid var(--line);border-radius:8px"></p>
 <p><button id="gs" type="button">Save Google client ID</button> <span id="gr" class="m" role="status"></span></p></article>
 <article id="gmail"><b>Connect email (Brevo or Gmail)</b><p class="m">How UAply sends sign-up codes, receipts and applications. <b>Brevo</b> sends from your own domain (for example uaplytechnologies@uaply.net): paste that address, Brevo's SMTP login and an SMTP key from Brevo, SMTP &amp; API, SMTP tab. <b>Gmail</b>: paste the Gmail address and its App Password (a 16-letter code from myaccount.google.com/apppasswords, not your normal password). It is saved only in uaply-config.json on this computer, which is never uploaded, and a test email is sent right away.</p>

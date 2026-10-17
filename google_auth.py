@@ -15,10 +15,14 @@ How it works:
      its signature; we still check issuer, audience (our client ID), expiry, nonce, and that Google marked the email verified.
   5. auth_api.oauth_login() finds or creates the account and the caller starts the normal session cookie.
 
-Switching it on (free): create an OAuth client in Google Cloud Console (APIs and Services, Credentials, "Web application"),
-add the redirect URI shown by /api/auth/providers, then put this in uaply-config.json (git-ignored):
-  "google": {"client_id": "...apps.googleusercontent.com", "client_secret": "...", "public_url": "https://your-site"}
-`public_url` is optional locally (the server uses the address in the browser). Without a client ID the button is hidden.
+Two ways in, both switched on by the same OAuth client (Google Auth Platform, Clients, "Web application"; step by step in
+DEPLOY.md, "Google sign-in"):
+  * Google's own button (verify_credential below) needs only the public client ID and each site address under Authorized
+    JavaScript origins. Used on computers and Android phones.
+  * This full-page redirect needs the client secret too, and each address + /api/auth/google/callback under Authorized redirect
+    URIs. Used on iPhone and iPad, where Google says its button needs a full-page flow (Safari blocks the pop-up's cookies).
+  "google": {"client_id": "...apps.googleusercontent.com", "client_secret": "..."}   (uaply-config.json, or UAPLY_CONFIG_JSON on a host)
+Without a client ID the button is hidden.
 For tests only, "auth_url", "token_url" and "issuers" can point at a stand-in provider (tools/mock-google.py).
 """
 import base64
@@ -68,8 +72,13 @@ def button_enabled():
 
 
 def redirect_uri(host, proto="http"):
+    """Where Google sends the browser back: the very address the person is on. The state cookie set by start() lives only on that
+    address, so returning to another one (public_url https://uaply.net while the person is on www.uaply.net or the onrender.com address)
+    would lose it and every sign-in there would fail as "expired". Each address used must be listed in Google Cloud Console under
+    Authorized redirect URIs; Google refuses any address that is not (so a forged Host header cannot send anyone elsewhere).
+    public_url is only the fallback when the request names no host."""
     s = _settings()
-    base = s["public_url"] or ("%s://%s" % (proto, host))
+    base = ("%s://%s" % (proto, host)) if host else (s["public_url"] or "http://localhost")
     return base + "/api/auth/google/callback"
 
 

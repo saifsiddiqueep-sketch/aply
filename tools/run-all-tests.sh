@@ -90,11 +90,13 @@ wait_port 18768
 run "Google sign-in, attacks and failures" python tools/test-google.py 18768
 run "Continue with Google button: tokens, forged tokens, linking, cookies" python tools/test-google-token.py 18768
 run "sign-up and email-code screens in a browser, Google button area" env W=390 H=844 PORT=18768 node tools/cdp.js tools/ui-verify.js
+run "Continue with Google on an iPhone (full-page sign-in), and hidden inside the phone apps" env W=390 H=844 PORT=18768 MOCK_GOOGLE_PORT=8790 node tools/cdp.js tools/ui-google-ios.js
 
 step "Public server behind HTTPS (how a real host runs it)"
 PIDS="$PIDS $(UAPLY_DATA_DIR="$TMP/pub" HOST=0.0.0.0 OWNER_PASSWORD=ownerpw UAPLY_CONFIG_JSON='{}' start python serve.py 18772 dev --api)"
 wait_port 18772
 run "cookies, headers, owner pages, path traversal, limits" python tools/test-public.py 18772
+run "sign-in as the live site runs it (uaply.net, www, onrender.com): cookies, same-site check, Google tokens and linking, restart, lock-out, codes" python tools/test-public-auth.py 18780
 
 step "Real email sending (against a stand-in mail server)"
 PIDS="$PIDS $(start python tools/fake-smtp.py 12525 "$TMP/smtp/mail.jsonl")"

@@ -6,6 +6,28 @@ production page and only changes when the owner decides.
 
 ## Unreleased (sandbox and dev)
 
+### Sign-in ready for the live site (uaply.net), iPhones and Google
+- **Continue with Google on iPhone and iPad** now uses Google's full-page sign-in (a white "Continue with Google" button with
+  Google's G), because Google says its pop-up button needs that on iPhone (Safari's tracking protection breaks the pop-up).
+  Computers and Android phones keep Google's own button. The full-page sign-in needs the client secret on the server.
+- **The phone apps hide Google** on Android too, not only iPhone: Google refuses to sign anyone in inside an app's built-in web
+  view. Password sign-up works there.
+- **Someone can no longer sign up first with another person's Gmail** and keep a way in: when Google proves a Gmail (or Google
+  Workspace) address and links it to a password account that never confirmed its email, that password is removed and every other
+  session of the account is signed out. The person is told and can add a password with Forgot password. Likewise, using an emailed
+  reset link on an account whose email was never confirmed unlinks a Google login Google did not vouch for.
+- **Password guessing is stopped even when the attacker fakes a new address for every try**: on top of 5 wrong passwords per
+  connection, one account takes at most 20 wrong passwords in 15 minutes from all connections together. Forgot password and Google
+  still work during that time. Old rate-limit entries are forgotten after an hour, so the server's memory cannot grow without end.
+- **Google returns people to the address they started on** (uaply.net, www.uaply.net or the onrender.com address) instead of always
+  the configured public address, where the sign-in cookie did not exist and every full-page Google sign-in failed as "expired".
+- After coming back from Google, the "Signed in with Google" message (or the reason it failed) no longer vanishes when the
+  page's other start-up answers arrive a moment later.
+- New tests: `tools/test-public-auth.py` (71 checks, the server as Render runs it: cookies, the same-site check for every real
+  address, good and forged Google tokens, linking, a restart, password rules, lock-out, codes) and `tools/ui-google-ios.js`
+  (21 checks in a real browser as an iPhone, through a stand-in Google). The /setup page's Google steps use Google's current
+  console pages (Google Auth Platform).
+
 ### Post a job from an existing job post (sandbox) — Mohammed
 - **Post a job** shows two options on one page. Option 1, at the top: "Start from your existing job post": paste a link, or
   paste the job text, and UAply fills in the form (title, job type, work style, place, pay, years, education, skills, majors,

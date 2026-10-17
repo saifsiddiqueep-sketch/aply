@@ -1,6 +1,8 @@
 """Tests the server the way a real host runs it: public (HOST=0.0.0.0), behind an HTTPS proxy, with an owner password.
   HOST=0.0.0.0 OWNER_PASSWORD=ownerpw UAPLY_DATA_DIR=<empty folder> python serve.py 8772 dev --api
-  python tools/test-public.py [port]"""
+  python tools/test-public.py [port] [address]
+The address defaults to 127.0.0.1. A server started with HOST=127.0.0.2 is also public (any address other than 127.0.0.1) yet is
+not reachable from other computers, which makes it the safer way to run this test."""
 import base64
 import http.client
 import json
@@ -8,6 +10,7 @@ import socket
 import sys
 
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8772
+ADDR = sys.argv[2] if len(sys.argv) > 2 else "127.0.0.1"
 HOST = "uaply.example"
 R = []
 
@@ -25,7 +28,7 @@ def req(method, path, body=None, headers=None, proto="https", host=HOST, origin=
     h.update(headers or {})
     if body is not None:
         h["Content-Type"] = "application/json"
-    c = http.client.HTTPConnection("127.0.0.1", PORT, timeout=30)
+    c = http.client.HTTPConnection(ADDR, PORT, timeout=30)
     c.request(method, path, body=json.dumps(body) if body is not None else None, headers=h)
     r = c.getresponse()
     data = r.read()
@@ -82,7 +85,7 @@ t("a JSON list instead of an object is a 400", req("POST", "/api/auth/login", [1
 
 # odd addresses must get a clean answer, never a dropped connection, and never the source code
 def raw_status(request_bytes):
-    s = socket.create_connection(("127.0.0.1", PORT), timeout=10)
+    s = socket.create_connection((ADDR, PORT), timeout=10)
     s.sendall(request_bytes)
     first = s.recv(200).split(b"\r\n")[0]
     s.close()
