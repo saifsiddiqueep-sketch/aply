@@ -61,7 +61,7 @@ HOOK = "http://127.0.0.1:%d/apply" % srv.server_address[1]
 
 # ---- a stand-in mail server ----
 mail_file = os.path.join(TMP, "mail.jsonl")
-smtp_port = 2529
+smtp_port = int(sys.argv[1]) if len(sys.argv) > 1 else 2529     # a free port can be given: python tools/test-delivery.py PORT
 proc = subprocess.Popen([sys.executable, os.path.join(HERE, "fake-smtp.py"), str(smtp_port), mail_file], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1.5)
 
@@ -210,6 +210,24 @@ try:
 finally:
     time.sleep = real_sleep
 t("an employer system that stays down: three tries, then failed", (out["status"], len(Employer.calls)), ("failed", 3))
+
+# an unexpected error while sending must end as "failed", never stay on "sending" (that blocked every retry as a duplicate)
+reset()
+real_post = uaply_api._post_webhook
+
+
+def broken(*a, **k):
+    raise KeyError("something nobody expected")
+uaply_api._post_webhook = broken
+try:
+    code, out = apply("Hook Only Co", email_addr="crash@example.com")
+    crashed = False
+except Exception:
+    code, out, crashed = 0, {}, True
+uaply_api._post_webhook = real_post
+t("an unexpected error while sending is reported as failed, not a crash", (crashed, out.get("status")), (False, "failed"))
+code, out = apply("Hook Only Co", email_addr="crash@example.com")
+t("...and trying again really sends it (not refused as a duplicate)", (out["status"], len(Employer.calls)), ("sent", 1))
 
 # 6. no secret: still sent, but unsigned
 reset()

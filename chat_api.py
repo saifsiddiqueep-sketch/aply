@@ -365,8 +365,8 @@ def feedback(p, ip, user=None, notify=None):
             os.makedirs(DATA, exist_ok=True)
             with open(os.path.join(DATA, "feedback.jsonl"), "a", encoding="utf-8") as f:
                 f.write(json.dumps(rec) + "\n")
-        except Exception:
-            pass
+        except Exception as e:                       # kept in memory for the Feedback page, but lost on restart: tell the owner
+            print("UAply Assistant: could not save feedback to disk (%s: %s)" % (type(e).__name__, str(e)[:160]), file=sys.stderr)
     return 200, {"ok": True, "id": rec["id"], "delivery": delivery}
 
 

@@ -270,7 +270,11 @@ class H(http.server.SimpleHTTPRequestHandler):
                 n = 0
             if not 0 < n <= 512000:
                 return self._refuse(400, {"error": "bad size"})
-            code, out = billing_api.webhook(self.rfile.read(n), self.headers.get("Stripe-Signature") or "")
+            try:
+                code, out = billing_api.webhook(self.rfile.read(n), self.headers.get("Stripe-Signature") or "")
+            except Exception as e:                      # say so (Stripe then sends the event again later) instead of dropping the connection
+                log_oops(p, e)
+                code, out = 500, {"error": OOPS}
             return self._send(code, out)
         if not api or p not in ("/api/apply", "/api/decision", "/api/auth/signup", "/api/auth/login", "/api/auth/logout",
                                 "/api/auth/delete", "/api/auth/forgot", "/api/auth/reset", "/api/auth/change-password",

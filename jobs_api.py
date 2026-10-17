@@ -185,8 +185,8 @@ def _save_disk():
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(snap, f)
         os.replace(tmp, path)
-    except Exception:
-        pass
+    except Exception as e:                      # jobs still work from memory; only a restart would have to wait for every feed again
+        sys.stderr.write("[uaply] could not save the job cache: %s: %s\n" % (type(e).__name__, str(e)[:200]))
 
 
 def _contact(text):
