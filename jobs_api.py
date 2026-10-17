@@ -143,7 +143,7 @@ _lock = threading.Lock()
 _disk = {"loaded": False, "dirty": False}
 hide_errors = False                # serve.py sets this on a hosted server: the public job list then says "unavailable right now" instead of a raw network error
 DISK_MAX_AGE = 24 * 3600          # never trust a saved copy older than a day
-CACHE_VERSION = 6                  # raise this whenever the rules for keeping or classifying postings change: older saved copies are then ignored
+CACHE_VERSION = 7                 # raise this whenever the rules for keeping or classifying postings change: older saved copies are then ignored
 
 
 def _cache_file():
@@ -353,6 +353,8 @@ def _normalize(raw, kind, name, board=None):
         return None
     if FOREIGN_RE.search(title) and not EXPLICIT_US.search(loc):
         return None                                     # a region-specific role (for example "ANZ" or "Toronto") listed as just "Remote"
+    if raw["url"].startswith("http://"):                # some employers list their careers page as http:// (Squarespace, Block): open it securely
+        raw = dict(raw, url="https://" + raw["url"][len("http://"):])
     if not raw["url"].startswith("https://"):
         return None
     hay = (title + " ") * 2 + text

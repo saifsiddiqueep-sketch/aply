@@ -118,6 +118,9 @@ Swipe right fills in the employer's real application form, asks only what the pe
   addresses, which bounced). `UAPLY_CONFIG_FILE=none` now makes every server skip the owner's file; the full run sets it.
 - New tests: `test-autofill.py` (34, real forms saved in `tools/fixtures/`), more in `test-ats-flow.py` (20); `tools/shot-autofill.js` shows the
   whole flow in the sandbox at phone size.
+- **Squarespace and Block jobs are back (28 more jobs).** Both list their job links as http:// instead of https://, and UAply dropped every
+  such job. Those links now open securely (https://, which both sites serve); a link that is not a web address is still dropped. The
+  feed-health bot found both boards "empty"; all 30 boards now answer with jobs.
 - **Webflow's jobs are back.** Webflow moved its job board from Greenhouse (404 since October 2026) to Ashby; UAply now reads it there
   (9 US jobs on October 16).
 - **A refused request always gets its answer.** When the server refuses a request without reading what was sent (a garbled length, too
