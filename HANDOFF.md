@@ -106,17 +106,35 @@ signed webhook to an employer who agreed, 3) save, receipt with every answer rea
   Jobs read) and SmartRecruiters (`/postings/{uuid}/configuration` + `/postings/{uuid}/candidates`, `x-smarttoken`, resume as base64 object,
   answers as `[{id, records:[{fields}]}]`) connectors; one shared answer function (`autofill._answer`) for every system; stand-ins and 58 new
   checks; the Connect box offers four systems; SmartRecruiters postings record their uuid. Not yet tried with a real key.
-- Bots still running when this was written (their branches arrive as PRs into sandbox; merge each when GitHub's check is green):
-  `bot1-audit-oct17` (makes `tools/cdp.js` find Chrome through `UAPLY_CHROME`, runs the suite in the cloud, walks the site as a new person,
-  checks the Start controls and first open, fixes small things), `bot4-google-stripe-ready` (Google sign-in and Stripe checked against current
-  Google Identity Services and Stripe rules, PKCE/FedCM/cert caching if missing, webhook hardening and tests for forged, replayed, old,
-  declined and cancelled events, the owner's two checklists in DEPLOY.md), `bot5-resume-parse` (`resume_parse.py`, `POST /api/profile/resume`,
-  `shared/uaply-resume.js` "Fill from your resume" in Profile setup, sandbox only, adds `pypdf` to requirements.txt, `tools/test-resume.py`).
+- Bot 5 → PR #37 merged into sandbox: `resume_parse.py` (pdf through pypdf in a limited separate process, docx, txt), `POST /api/profile/resume`,
+  the sandbox experiment "Fill from your resume" in Profile setup → Background and links (fills empty fields only, Replace per field, source
+  line per answer), `pypdf` in requirements.txt, 250 parser checks and 22 browser checks. No OCR for scanned resumes.
+- Bot 1 → PR #38 merged into sandbox: `tools/cdp.js` finds Chrome through `UAPLY_CHROME`, the Windows path, Playwright's Chromium or the Mac
+  app (the whole browser suite now runs in the cloud and on a Mac); the first-open location button no longer stays greyed out; `/api/auth/me`
+  returns the real plan; the help assistant answers "Is my data sold?"; sign-up on a hosted site without email no longer promises receipts;
+  the phone test follows the one-word tabs. 41 of 48 groups pass in the cloud (the rest need the live job feeds). Findings not fixed there:
+  Pass and Apply under the bottom bar on first open (Bot 2 is on it, branch `bot2-buttons-above-bar`); the legal index's "AI draft" note and
+  "Effective [launch date]" (owner and attorney); small items (favicon, robots.txt, the default 404 page, "You want $0k+", the Account subtitle).
+- Bot 4 → PR #39 merged into sandbox: "Continue with Google" is Google's full-page sign-in on every device once the client secret is set
+  (the app runs in a srcdoc frame where `location.origin` is "null", which can make Google's pop-up button fail; it also always goes through
+  FedCM now); token checks with 60 s skew, a one-day maximum life, capped key refetches; Stripe: a plan changes only from a signed webhook and
+  the subscription is re-read from Stripe, only the exact Plus and Pro prices count, a live server ignores test-mode events, the API version
+  is pinned, `invoice.paid` and `invoice.payment_failed` handled (the plan pauses after the 3rd failed renewal), handled event ids kept 30 days,
+  deleting an account cancels the subscription first (the account is kept if Stripe refuses); `/setup#google` and DEPLOY.md sections 3 and 4
+  carry the owner's two checklists (Google: Branding with authorized domains uaply.net and uaply.onrender.com, Publish app, the Web client with
+  the three origins and redirect URIs; Stripe: terms first, the test-card rehearsal, activation, prices, portal, Smart Retries, the webhook's
+  six events, the four Render settings, Radar rules, one real purchase). The start-up log line now shows Google and payments status.
+  Before live payments the lawyer must replace "UAply is currently free" in `legal/terms.html` with paid-plan and automatic-renewal terms.
+- Still running when this was written: Bot 2 (`bot2-buttons-above-bar`): the swipe buttons always visible above the bottom bar on first open at
+  390×844, 375×667, 440×956 and 1280×800, with a browser test that fails before and passes after; the Account subtitle, the "$0k+" line, the
+  pricing help answer, the location prompt only after Agree, `/favicon.ico`, `/robots.txt`, the app's own 404 page, "Back to UAply" on legal pages.
+- The record PDF: `marketing/UAply-record-2026-10-17.pdf` (the cloud session as a transcript, this handoff, the changelog, every commit).
 
 ## What is still open
 1. Owner steps above (disk, email, Google, Stripe, domain). Until then: accounts temporary, no codes, no Google, no payments.
-2. Finish and merge the three bot PRs; run the full suite with Chrome on the laptop on the merged sandbox; check the new Profile setup screens
-   and the Connect box in a browser.
+2. Merge Bot 2's PR (swipe buttons above the bar) when its check is green; run the full suite with Chrome on the laptop on the merged sandbox
+   (`UAPLY_CHROME` is only needed where Chrome is not in the usual place); check the new Profile setup screens, "Fill from your resume", the
+   Connect box and the Plan screen's new messages in a browser.
 3. A PR sandbox → dev with the above once the suite is green (hiring mode stays out), then tag rc.10 and verify the live site.
 4. The one-time question box for a required field the profile cannot answer, on screen (today the swipe becomes "finish on their site" when
    the app cannot ask it); Workable connector; the employer outreach kit (how to connect each hiring system + the consent letter); Hiring mode
