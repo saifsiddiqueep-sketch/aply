@@ -79,7 +79,7 @@ var CSS=`
 .nitem:hover,.nitem:focus-visible{background:var(--bg)}
 .nitem[aria-checked="true"]{color:var(--accent);background:var(--bg)}
 .nitem .c{font:500 12px var(--mono);color:var(--muted)}
-.toast{bottom:var(--above-nav,calc(88px + env(safe-area-inset-bottom,0px)));pointer-events:none}.toast button{pointer-events:auto}
+.toast{bottom:var(--toast-at,var(--above-nav,calc(88px + env(safe-area-inset-bottom,0px))));pointer-events:none}.toast button{pointer-events:auto}
 body{padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
 #pane-track .stats{grid-template-columns:repeat(4,1fr)}
 #pane-track .row{flex-wrap:wrap}
@@ -296,6 +296,14 @@ function apply(w,host){
   function aboveNav(){var r=nav.getBoundingClientRect();if(!r.height)return;d.documentElement.style.setProperty("--above-nav",(Math.max(0,Math.round(w.innerHeight-r.top))+10)+"px")}
   aboveNav();w.addEventListener("resize",aboveNav);d.addEventListener("scroll",aboveNav,{passive:true,capture:true});
   if(w.ResizeObserver)new w.ResizeObserver(aboveNav).observe(d.body);
+  /* on the job deck the message also clears the Pass / Undo / Apply row: it used to sit on top of it (390x844: the message's
+     Undo link lay on the Apply button, so a tap on Apply right after a pass undid the pass). Worked out each time a message appears. */
+  function toastAt(){
+    var a=d.querySelector("#pane-swipe:not([hidden]) .actions"),nr=nav.getBoundingClientRect(),y=nr.height?nr.top:w.innerHeight;
+    if(a){var r=a.getBoundingClientRect();if(r.height&&r.bottom>0&&r.top<y)y=Math.min(y,r.top)}
+    d.documentElement.style.setProperty("--toast-at",(Math.max(0,Math.round(w.innerHeight-y))+8)+"px");
+  }
+  new w.MutationObserver(function(ms){for(var i=0;i<ms.length;i++)for(var j=0;j<ms[i].addedNodes.length;j++){var n=ms[i].addedNodes[j];if(n.nodeType===1&&(n.classList.contains("toast")||n.querySelector&&n.querySelector(".toast"))){toastAt();return}}}).observe(d.body,{childList:true,subtree:true});
   /* fine print: always one tap away (App Store and Google Play also expect a reachable privacy policy) */
   var lp=(host&&host.defaultView&&host.defaultView.location.pathname)||"/",LB=/\/(sandbox|dev)\/$/.test(lp)?"../legal/":"legal/";
   var legalbar=d.createElement("div");legalbar.id="legalbar";

@@ -95,7 +95,12 @@ module.exports = async ({ ev, sleep, nav, send, logs, shot }) => {
   // the moment right after a swipe, with its message showing, is when taps most often land on the wrong thing
   await ev(F + ".getElementById('nb-svc').click()"); await sleep(300);
   await menu("nb-svc", "Full-time");
+  await ev("(()=>{const m=" + F + ".getElementById('main');if(m)m.scrollTop=0})()");
   await ev(F + ".getElementById('btnNo').click()"); await sleep(900);
+  // as the screen is (nothing scrolled first): the message must not lie on Pass, Undo or Apply (it did at 390x844: its Undo link
+  // sat on Apply, so tapping Apply right after a pass undid the pass)
+  const onBtns = await ev("(()=>{const d=" + F + ";const out=[];for(const id of ['btnNo','btnUndo','btnYes']){const e=d.getElementById(id),r=e.getBoundingClientRect();if(r.bottom>innerHeight||r.top<0)continue;for(const [fx,fy] of [[.5,.5],[.2,.3],[.8,.3],[.2,.7],[.8,.7]]){const h=d.elementFromPoint(r.left+r.width*fx,r.top+r.height*fy);if(h&&!(h===e||e.contains(h))&&h.closest('.toast')){out.push(id);break}}}return out.join(',')})()");
+  check("the message after a swipe does not cover Pass, Undo or Apply", onBtns === "", onBtns);
   screens.push(["right after a swipe (message showing)", await coverage("after swipe")]);
   for (const [name, covered] of screens) check("nothing covers a button: " + name, covered.length === 0, covered.slice(0, 4).join("; "));
   await shot((process.env.OUT || require("os").tmpdir()) + "/phone-after-swipe.png");
