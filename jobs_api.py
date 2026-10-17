@@ -97,6 +97,8 @@ SOURCES = [
     ("usajobs", "philadelphia", "USAJOBS"),   # every federal posting within 25 miles of Philadelphia (needs feed_keys.usajobs)
     ("usajobs", "students", "USAJOBS"),       # the same area, only the Students and Recent graduates hiring paths (Pathways)
 ]
+VIA = {"greenhouse": "%s on Greenhouse", "lever": "%s on Lever", "ashby": "%s on Ashby", "smartrecruiters": "%s on SmartRecruiters",
+       "jobicy": "Jobicy", "muse": "The Muse", "usajobs": "USAJOBS", "remotive": "Remotive"}       # the short credit line each source's jobs carry
 MULTI = ("jobicy", "muse", "usajobs")         # several feeds share one display name
 # The two USAJOBS searches (documented at developer.usajobs.gov/api-reference/get-api-search; several values are joined with ';')
 USAJOBS_QUERIES = {
@@ -165,7 +167,7 @@ _lock = threading.Lock()
 _disk = {"loaded": False, "dirty": False}
 hide_errors = False                # serve.py sets this on a hosted server: the public job list then says "unavailable right now" instead of a raw network error
 DISK_MAX_AGE = 24 * 3600          # never trust a saved copy older than a day
-CACHE_VERSION = 7                 # raise this whenever the rules for keeping or classifying postings change: older saved copies are then ignored
+CACHE_VERSION = 8                # raise this whenever the rules for keeping or classifying postings change: older saved copies are then ignored
 
 
 def _cache_file():
@@ -557,6 +559,9 @@ def _normalize(raw, kind, name, board=None):
                sal=raw.get("sal") or _salary(raw["salary_text"], text), yrs=yrs, edu=edu, skills=skills, blurb=blurb, desc=desc,
                type=typ, url=raw["url"], source=src, contact="", apply="link", live=True, ats=ats,
                posted=raw.get("posted", 0), perks=_perks(text), comm=bool(COMM_RE.search(text)))
+    # Credit every feed, on the card ("via ...") and in the application record ("credit"): each free feed asks for it, and an employer board is the employer's own
+    out["via"] = VIA.get(kind, "%s").replace("%s", name)
+    out["credit"] = "via USAJOBS; apply on the official announcement" if kind == "usajobs" else "via " + out["via"]
     if (raw.get("announcement") or "").startswith("https://"):
         out["announcement"] = raw["announcement"]                 # USAJOBS: the official announcement, kept next to the apply link
     return out

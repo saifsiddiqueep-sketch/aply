@@ -67,7 +67,7 @@ function apply(w,host){
     if(w.__uaplyRetryPending)setTimeout(w.__uaplyRetryPending,1500);   /* applications that were waiting for a connection */
     var all=readCache(),ids={};all.forEach(function(j){ids[j.id]=1});
     var byId={};fresh.forEach(function(j){byId[j.id]=j;if(!ids[j.id])all.push(j)});
-    all.forEach(function(c){var f=byId[c.id];if(f){c.posted=f.posted;c.perks=f.perks;c.type=f.type;c.comm=!!f.comm}});   /* keep saved copies current */
+    all.forEach(function(c){var f=byId[c.id];if(f){c.posted=f.posted;c.perks=f.perks;c.type=f.type;c.comm=!!f.comm;c.via=f.via}});   /* keep saved copies current */
     writeCache(all);
     var src=Object.keys(data.sources||{}).map(function(k){return k+": "+data.sources[k]}).join(" · ");
     say("Real postings: "+fresh.length+" loaded ("+added+" new). "+src);
