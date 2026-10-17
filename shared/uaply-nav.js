@@ -657,7 +657,11 @@ function apply(w,host){
   function nearAsk(c){   /* shows the browser's own "Allow location?" prompt; the card says what is happening and what came of it */
     var yes=c.querySelector('[data-near="yes"]'),was=c.querySelector("b").textContent;
     yes.disabled=true;yes.textContent="Waiting for your browser…";
+    /* a browser that never answers (its prompt ignored, hidden behind another window, or not shown at all) used to leave this button
+       greyed out for good: after 20 seconds give the button back, and a late answer still counts */
+    var answered=false,guard=w.setTimeout(function(){if(!answered&&c.isConnected){nearBox("again")}},20000);
     askDevice(function(ok,why){
+      answered=true;w.clearTimeout(guard);
       if(ok||!c.isConnected)return;
       var mode=why==="denied"?"blocked":why==="nofix"?"nofix":"again";
       nearBox(mode);
