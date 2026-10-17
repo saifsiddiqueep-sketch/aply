@@ -378,8 +378,10 @@ def _fetch_raw(kind, token, name):
                             posted=_ts(j.get("pubDate")),
                             fallback=(j.get("jobIndustry") or [None])[0]))
     elif kind == "muse":
+        key = feed_keys().get("muse")         # registered key (The Muse: required beyond testing; 3,600 requests an hour instead of 500)
         for page in (1, 2):
-            data = _get("https://www.themuse.com/api/public/jobs?page=%d&level=%s" % (page, urllib.parse.quote(token)))
+            data = _get("https://www.themuse.com/api/public/jobs?page=%d&level=%s" % (page, urllib.parse.quote(token)) +
+                        ("&api_key=%s" % urllib.parse.quote(key, safe="") if key else ""))
             for j in data.get("results", []):
                 locs = [l.get("name", "") for l in j.get("locations", [])]
                 loc = ", ".join(locs[:2]) + (" +%d more" % (len(locs) - 2) if len(locs) > 2 else "")
